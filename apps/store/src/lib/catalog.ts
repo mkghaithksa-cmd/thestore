@@ -46,4 +46,7 @@ export async function fetchSettings(): Promise<StoreSettings> {
 }
 
 export const formatSar = (n: number) =>
-  `${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ر.س`
+  `${n.toLocaleString('en-US', {
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })} ر.س`
