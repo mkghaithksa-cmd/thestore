@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة مدير غيث</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: admin console. Right sidebar (RTL) + top bar + work area; tables and a step-by-step work-order panel. Review bar and drawer carry reviewer notes. Tokens from Design System Foundations. */
+:root{
+  --primary-50:#f0f9ff;--primary-100:#e0f2fe;--primary-500:#38bdf8;--primary-600:#0ea5e9;--primary-700:#0369a1;
+  --n50:#f8fafc;--n100:#f1f5f9;--n200:#e2e8f0;--n300:#cbd5e1;--n400:#94a3b8;--n500:#566377;--n700:#334155;--n900:#0f172a;
+  --surface:#ffffff;
+  --ok-50:#f0fdf4;--ok-500:#22c55e;--ok-700:#15803d;
+  --warn-50:#fffbeb;--warn-500:#f59e0b;--warn-700:#b45309;
+  --bad-50:#fef2f2;--bad-500:#ef4444;--bad-700:#b91c1c;
+  --pur-50:#faf5ff;--pur-700:#7e22ce;--org-50:#fff7ed;--org-700:#c2410c;
+  --btn-text:#ffffff;
+  --font:"IBM Plex Sans Arabic","Tajawal",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
+  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
+  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --pur-50:#241437;--pur-700:#d8b4fe;--org-50:#2e1a0a;--org-700:#fdba74;--btn-text:#06202f;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
+  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
+  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --pur-50:#241437;--pur-700:#d8b4fe;--org-50:#2e1a0a;--org-700:#fdba74;--btn-text:#06202f;color-scheme:dark}
+*{box-sizing:border-box}
+.grid2>*,.kpis>*{min-width:0}
+[hidden]{display:none!important}
+body{background:var(--n50);color:var(--n900);font-family:var(--font);direction:rtl;font-size:14px;line-height:1.65;padding:0}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--primary-600);outline-offset:2px}
+.review{background:var(--n900);color:var(--n50);font-size:13px;position:sticky;top:env(safe-area-inset-top,0px);z-index:30}
+:root[data-theme="dark"] .review{background:#020617;color:#e2e8f0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .review{background:#020617;color:#e2e8f0}}
+.review .in{display:flex;align-items:center;gap:12px;min-height:42px;flex-wrap:wrap;padding:6px 16px}
+.review button{background:rgba(148,163,184,.22);border:0;color:inherit;border-radius:8px;padding:5px 12px;font-size:12px}
+.pill{background:var(--primary-600);color:#06202f;border-radius:99px;padding:1px 10px;font-size:11px;font-weight:600}
+.sp{flex:1}
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 42px)}
+.side{background:var(--surface);border-inline-end:1px solid var(--n200);padding:16px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:42px;align-self:start;height:calc(100vh - 42px);overflow-y:auto}
+.brand{display:flex;gap:8px;align-items:center;font-weight:700;font-size:20px;color:var(--primary-700);padding:4px 10px 14px}
+.brand svg{width:26px;height:26px}
+.side button.nv{display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;background:none;border-radius:8px;color:var(--n700);text-align:start;font-weight:500;width:100%}
+.side button.nv:hover{background:var(--n100)}
+.side button.nv.on{background:var(--primary-50);color:var(--primary-700);font-weight:600}
+.side button.nv svg{width:18px;height:18px;flex:none}
+.side button.nv .cnt{margin-inline-start:auto;background:var(--bad-500);color:#fff;border-radius:99px;font-size:11px;min-width:20px;text-align:center;padding:0 6px}
+.side .who{margin-top:auto;border-top:1px solid var(--n200);padding:12px 8px 0;font-size:13px}
+.side .who span{color:var(--n500);display:block;font-size:12px}
+.work{padding:24px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.ph h1{font-size:22px;margin:0;font-weight:700}
+.ph p{margin:2px 0 0;color:var(--n500)}
+.card{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:16px}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.wrapr{flex-wrap:wrap}
+.muted{color:var(--n500);font-size:12.5px}
+.h3{font-size:15px;font-weight:600;margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:14px;text-align:start;display:flex;flex-direction:column;gap:2px}
+.kpi:hover{border-color:var(--primary-600)}
+.kpi b{font-size:26px;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{color:var(--n500);font-size:13px}
+.kpi.warn b{color:var(--warn-700)}.kpi.bad b{color:var(--bad-700)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:start;color:var(--n500);font-weight:500;font-size:12px;padding:10px 12px;border-bottom:1px solid var(--n200);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--n100);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr.clk{cursor:pointer}
+tbody tr.clk:hover{background:var(--n100)}
+td b{font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:2px 10px;border-radius:99px;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-ok{background:var(--ok-50);color:var(--ok-700)}.b-warn{background:var(--warn-50);color:var(--warn-700)}
+.b-info{background:var(--primary-50);color:var(--primary-700)}.b-bad{background:var(--bad-50);color:var(--bad-700)}.b-gray{background:var(--n100);color:var(--n700)}
+.b-pur{background:var(--pur-50);color:var(--pur-700)}.b-org{background:var(--org-50);color:var(--org-700)}
+.btn{height:38px;border-radius:8px;border:0;background:var(--primary-700);color:var(--btn-text);font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 16px;white-space:nowrap}
+.btn:hover{filter:brightness(1.07)}
+.btn.sec{background:var(--primary-50);color:var(--primary-700)}
+.btn.ghost{background:none;border:1px solid var(--n300);color:var(--n700)}
+.btn.danger{background:var(--bad-50);color:var(--bad-700)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.input,.sel{height:38px;border:1px solid var(--n300);border-radius:8px;background:var(--surface);padding:0 12px;width:100%}
+textarea.input{height:auto;padding:10px 12px}
+.input:focus,.sel:focus{border-color:var(--primary-600);outline:2px solid var(--primary-100)}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:13px;font-weight:500}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--n200);margin-bottom:14px;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 14px;color:var(--n500);font-weight:500;white-space:nowrap}
+.tabs button.on{color:var(--primary-700);border-color:var(--primary-600);font-weight:600}
+.alert{border-radius:10px;padding:10px 12px;font-size:13.5px;display:flex;gap:8px;align-items:flex-start}
+.alert.info{background:var(--primary-50);color:var(--primary-700)}.alert.warn{background:var(--warn-50);color:var(--warn-700)}.alert.ok{background:var(--ok-50);color:var(--ok-700)}.alert.bad{background:var(--bad-50);color:var(--bad-700)}
+.list{display:flex;flex-direction:column}
+.list>div{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--n100)}
+.list>div:last-child{border-bottom:0}
+.stepper{display:flex;flex-direction:column}
+.sp1{display:flex;gap:12px;position:relative;padding-bottom:14px}
+.sp1:last-child{padding-bottom:0}
+.sp1::before{content:"";position:absolute;inset-inline-start:11px;top:26px;bottom:0;width:2px;background:var(--n200)}
+.sp1:last-child::before{display:none}
+.sp1 .c{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--n100);color:var(--n400);border:2px solid var(--n200);font-size:12px}
+.sp1.done .c{background:var(--ok-500);border-color:var(--ok-500);color:#fff}
+.sp1.done::before{background:var(--ok-500)}
+.sp1.now .c{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
+.sp1.skip{opacity:.5}
+.sp1 b{font-weight:600}
+.opt{display:flex;gap:10px;align-items:center;border:1px solid var(--n300);border-radius:8px;padding:10px 12px;background:var(--surface);width:100%;text-align:start}
+.opt.on{border-color:var(--primary-600);background:var(--primary-50)}
+.opt .r{width:16px;height:16px;border-radius:50%;border:2px solid var(--n300);flex:none}
+.opt.on .r{border:5px solid var(--primary-600)}
+.opt[disabled]{opacity:.5;cursor:not-allowed}
+.msg{background:var(--n100);border-radius:10px;padding:12px;font-size:13.5px;white-space:pre-line;border:1px dashed var(--n300)}
+.sum div{display:flex;justify-content:space-between;padding:4px 0;font-variant-numeric:tabular-nums;gap:10px}
+.sum .tot{border-top:1px dashed var(--n300);margin-top:6px;padding-top:8px;font-weight:700;font-size:15px}
+.toast{position:fixed;bottom:22px;inset-inline:0;margin-inline:auto;width:max-content;max-width:90vw;background:var(--n900);color:var(--n50);padding:10px 16px;border-radius:10px;z-index:60}
+:root[data-theme="dark"] .toast{background:#e2e8f0;color:#0f172a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toast{background:#e2e8f0;color:#0f172a}}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.modal>div{background:var(--surface);width:100%;max-width:440px;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.drawer{position:fixed;top:0;bottom:0;inset-inline-end:0;width:360px;max-width:92vw;background:var(--surface);border-inline-start:1px solid var(--n200);z-index:40;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:-8px 0 30px rgba(15,23,42,.15)}
+.drawer h2{font-size:15px;margin:0 0 8px;font-weight:600}
+.drawer ul{margin:0;padding-inline-start:18px;color:var(--n700)}
+.drawer li{margin-bottom:6px}
+.tag{font-size:12px;color:var(--primary-700);background:var(--primary-50);padding:2px 10px;border-radius:99px;display:inline-block;margin-bottom:8px}
+.sys{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sys span{font-size:12px;border:1px dashed var(--n300);color:var(--n500);padding:2px 9px;border-radius:6px}
+.steps{display:flex;flex-direction:column;gap:2px}
+.steps button{text-align:start;background:none;border:0;padding:7px 10px;border-radius:8px;color:var(--n700);display:flex;gap:8px;align-items:center}
+.steps button:hover{background:var(--n100)}
+.steps button.on{background:var(--primary-50);color:var(--primary-700);font-weight:600}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px;border-inline-end:0;border-bottom:1px solid var(--n200)}
+  .side .brand,.side .who{display:none}
+  .side button.nv{width:auto;white-space:nowrap}
+  .grid2{grid-template-columns:1fr}
+  .work{padding:16px}
+}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--n100);border-radius:10px;padding:3px;gap:3px}.seg button{border:0;background:none;border-radius:8px;height:36px;color:var(--n500);font-weight:500}.seg button.on{background:var(--surface);color:var(--primary-700);box-shadow:0 1px 2px rgba(15,23,42,.12);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.two>*{min-width:0}
+.badge.xs{font-size:11px;padding:1px 8px}
+.items{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.it{display:flex;gap:8px;align-items:center;border:1px solid var(--n300);border-radius:8px;padding:6px 8px;background:var(--surface)}
+.it.on{border-color:var(--primary-600);background:var(--primary-50)}
+.it .tg{flex:1;min-width:0;display:flex;gap:8px;align-items:center;background:none;border:0;text-align:start;padding:4px 2px;flex-wrap:wrap}
+.it .ck{width:18px;height:18px;border-radius:5px;border:2px solid var(--n300);display:grid;place-items:center;flex:none;color:#fff}
+.it.on .ck{background:var(--primary-600);border-color:var(--primary-600)}
+.it .nm{font-weight:600}
+.it .pr{margin-inline-start:auto;font-weight:600}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--n300);border-radius:8px;overflow:hidden;flex:none}
+.qty button{width:30px;height:30px;border:0;background:var(--n100);font-size:16px}
+.qty span{min-width:30px;text-align:center;font-variant-numeric:tabular-nums}
+.mx>div{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--n100)}
+.mx>div:last-child{border-bottom:0}
+.tmodal{max-width:400px!important;max-height:92vh;overflow-y:auto;background:var(--n100)!important}
+.tphone{display:flex;flex-direction:column;gap:12px;background:var(--n50);border-radius:14px;padding:12px}
+.tp-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tp-c,.tp-s{background:var(--surface);border:1px solid var(--n200);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+.gl{stroke:var(--n200);stroke-width:1}
+.ax{fill:var(--n500);font-size:11px;font-family:var(--font)}
+.vl{fill:var(--n700);font-size:11px;font-weight:600;font-family:var(--font)}
+.bar{fill:var(--primary-600)}
+table.pm td,table.pm th{text-align:center}table.pm td:first-child,table.pm th:first-child{text-align:start}
+.chk,.sw{position:relative;display:inline-block;cursor:pointer}
+.chk input,.sw input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.chk span{display:block;width:20px;height:20px;border-radius:5px;border:2px solid var(--n300);background:var(--surface)}
+.chk input:checked+span{background:var(--primary-600);border-color:var(--primary-600);box-shadow:inset 0 0 0 3px var(--surface)}
+.chk input:disabled+span{opacity:.5}
+.chk input:focus-visible+span,.sw input:focus-visible+span{outline:2px solid var(--primary-600);outline-offset:2px}
+.sw{width:40px;height:22px}
+.sw span{position:absolute;inset:0;border-radius:99px;background:var(--n300);transition:background .15s}
+.sw span::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw input:checked+span{background:var(--primary-600)}
+.sw input:checked+span::after{transform:translateX(-18px)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--primary-50);color:var(--primary-700);border-radius:99px;padding:3px 6px 3px 12px;font-size:13px}
+.chip button{border:0;background:none;color:inherit;font-size:16px;line-height:1;padding:0 4px}
+.dbtn{border:1px solid var(--n300);background:var(--surface);border-radius:99px;padding:5px 14px;color:var(--n500)}
+.dbtn.on{background:var(--primary-700);border-color:var(--primary-700);color:var(--btn-text)}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.cards3>*{min-width:0}
+.badge.xs{font-size:11px;padding:1px 8px}
+@media (prefers-reduced-motion:reduce){.sw span,.sw span::after{transition:none}}
+</style>
+
+<div class="review" id="review"></div>
+<div class="shell"><nav class="side" id="side"></nav><main class="work" id="work"></main></div>
+<aside class="drawer" id="drawer" hidden></aside>
+<div id="overlay"></div>
+
+<script>
+const ICON={
+ dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 9h8V3h-8z"/>',
+ check:'<path d="M5 12l5 5 9-10"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5M17 4.5a3.5 3.5 0 0 1 0 7M19 15c2 .7 3 2.2 3 5"/>',
+ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>',
+ box:'<path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"/>',
+ chart:'<path d="M4 20V4M4 20h16M8 16v-5M12 16V8M16 16v-3"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+ plug:'<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/>',
+ log:'<path d="M5 3h14v18H5zM9 8h6M9 12h6M9 16h4"/>',
+ drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ bell:'<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/>'
+};
+const ic=(n,s)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ${s?`style="width:${s}px;height:${s}px"`:''}>${ICON[n]}</svg>`;
+const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+const BADGE={'ناجح':'b-ok','فاشل':'b-bad','معلّق':'b-warn','نشط':'b-ok','معطل':'b-gray','منشور':'b-ok','مسودة':'b-gray','بانتظار القرار':'b-warn','معتمد':'b-ok','مرفوض':'b-bad','متصل':'b-ok','غير مفعل':'b-gray','تحت الحد':'b-bad'};
+const bd=(t,label)=>`<span class="badge ${BADGE[t]||'b-gray'}"><i></i>${label||t}</span>`;
+const opts=(arr,sel,blank)=>(blank?`<option value="">${blank}</option>`:'')+arr.map(x=>`<option ${x===sel?'selected':''}>${x}</option>`).join('');
+
+const PAGES_RBAC=['لوحة الإدارة','الطلبات والمتجر','المواعيد والبلاغات','أوامر العمل','العملاء والأجهزة','المدفوعات والعهد','المخزون','المنتجات والكتالوج','التقارير','المستخدمون والأدوار','الإعدادات والتكاملات','سجل التدقيق'];
+const mk=(v,a,e,p)=>({v,a,e,p});
+const allp=on=>PAGES_RBAC.map(()=>mk(on,on,on,on));
+const ROLES={
+ 'مدير النظام':allp(true),
+ 'موظف عمليات':[mk(1,0,0,0),mk(1,1,1,0),mk(1,1,1,0),mk(1,1,1,0),mk(1,1,1,0),mk(1,1,1,0),mk(1,1,1,0),mk(1,0,0,0),mk(1,0,0,0),mk(0,0,0,0),mk(0,0,0,0),mk(0,0,0,0)],
+ 'خدمة عملاء':[mk(1,0,0,0),mk(1,0,0,0),mk(1,1,1,0),mk(1,0,0,0),mk(1,1,1,0),mk(0,0,0,0),mk(0,0,0,0),mk(1,0,0,0),mk(0,0,0,0),mk(0,0,0,0),mk(0,0,0,0),mk(0,0,0,0)]
+};
+Object.keys(ROLES).forEach(k=>{ROLES[k]=ROLES[k].map(o=>({v:!!o.v,a:!!o.a,e:!!o.e,p:!!o.p}))});
+const S={page:'dash',drawer:false,toast:'',modal:null,role:'موظف عمليات',period:'7',repTab:'sales',prodTab:'products',logF:'all',
+ users:[
+  {id:1,name:'ريان العتيبي',phone:'0501112233',role:'مدير النظام',active:true,last:'اليوم 09:12'},
+  {id:2,name:'سارة العمري',phone:'0554445566',role:'موظف عمليات',active:true,last:'اليوم 08:40'},
+  {id:3,name:'ليلى الشهري',phone:'0567778899',role:'خدمة عملاء',active:true,last:'أمس 17:05'},
+  {id:4,name:'ياسر القرني',phone:'0540001122',role:'موظف عمليات',active:false,last:'3 أكتوبر'}],
+ products:[
+  {id:1,name:'جهاز تنقية منزلي 5 مراحل',type:'جهاز',price:1450,pub:true},
+  {id:2,name:'جهاز تنقية مكتبي',type:'جهاز',price:890,pub:true},
+  {id:3,name:'طقم فلاتر 5 مراحل',type:'فلتر',price:180,pub:true},
+  {id:4,name:'فلتر كربون',type:'فلتر',price:65,pub:true},
+  {id:5,name:'باقة جهاز وفلاتر وتركيب',type:'باقة',price:1690,pub:true},
+  {id:6,name:'خرطوم وقطع توصيل',type:'قطعة',price:45,pub:false},
+  {id:7,name:'رسوم الفحص',type:'خدمة',price:60,pub:true}],
+ compat:[
+  {f:'فلتر رواسب',models:['GH-500','GH-300'],stage:1,months:6},
+  {f:'فلتر كربون',models:['GH-500','GH-300'],stage:2,months:6},
+  {f:'غشاء RO',models:['GH-500'],stage:3,months:12},
+  {f:'فلتر كربون ما بعد التنقية',models:['GH-500'],stage:5,months:6}],
+ set:{districts:['العزيزية','الشوقية','الشرائع','النسيم','العوالي','الكعكية','الزاهر'],days:{'الأحد':1,'الاثنين':1,'الثلاثاء':1,'الأربعاء':1,'الخميس':1,'الجمعة':0,'السبت':0},
+  vat:15,inspect:60,install:150,ship:35,alertDays:30,linkHours:24,otpMin:2,otpTries:3,maxEmg:1,noShowFee:true},
+ integ:{moy:{on:true,env:'تجريبي'},ship:{on:true,env:'تجريبي'},ledger:{on:false,env:'تجريبي'}},
+ ilog:[
+  {id:'L-912',sys:'ميسر',ev:'تأكيد دفع PR-773',t:'12:41',st:'ناجح'},
+  {id:'L-911',sys:'شركة الشحن',ev:'إنشاء شحنة ST-10490',t:'12:30',st:'فاشل',err:'رقم الجوال غير صالح لدى المزود'},
+  {id:'L-910',sys:'الأستاذ',ev:'مزامنة فاتورة INV-2210',t:'11:58',st:'معلّق'},
+  {id:'L-909',sys:'ميسر',ev:'رابط سداد ST-10489',t:'11:10',st:'ناجح'}],
+ appr:[
+  {id:'R-41',kind:'استرداد',title:'استرداد 1,667.5 ر.س لطلب ST-10477',why:'نفد المخزون بعد الدفع',by:'سارة العمري',st:'بانتظار القرار'},
+  {id:'J-12',kind:'تسوية جرد',title:'غشاء RO: نقص 2 قطعة',why:'فرق جرد أسبوعي',by:'سارة العمري',st:'بانتظار القرار'},
+  {id:'W-2030',kind:'مراجعة أمر عمل',title:'WO-2030 · طارئ، لا يوجد ماء',why:'مراجعة التقرير والمرفقات قبل الإغلاق',by:'سارة العمري',st:'بانتظار القرار'}],
+ audit:[
+  {t:'اليوم 09:30',who:'سارة العمري',what:'حدد ساعة موعد AP-3007 (10:00 ص)',kind:'مواعيد'},
+  {t:'اليوم 09:12',who:'ريان العتيبي',what:'سجّل الدخول إلى لوحة المدير',kind:'دخول'},
+  {t:'أمس 17:20',who:'ليلى الشهري',what:'سجلت رد العميل على صيانة مستحقة: أجّل',kind:'مواعيد'},
+  {t:'أمس 15:02',who:'سارة العمري',what:'فتحت عهدة OH-118 على الفني ماجد الحربي',kind:'مدفوعات'},
+  {t:'3 أكتوبر',who:'ريان العتيبي',what:'عطّل حساب ياسر القرني',kind:'مستخدمون'}]
+};
+const audit=(what,kind)=>S.audit.unshift({t:'الآن',who:'ريان العتيبي',what,kind});
+
+const NOTES={
+ dash:{t:'لوحة المدير',r:['ملخص المبيعات والعمليات وما ينتظر قرار المدير: موافقات، تكاملات متعثرة، أصناف ناقصة.','كل بطاقة تفتح صفحتها.'],s:['التقارير ومؤشرات الأداء']},
+ appr:{t:'الموافقات',r:['كل ما يحتاج اعتماد مدير: الاستردادات، تسويات الجرد، مراجعة أوامر العمل قبل الإغلاق.','الرفض يتطلب سببًا ويُحفظ في سجل التدقيق.','الموظف يقدّم الطلب، والمدير وحده يقرر.'],s:['المدفوعات','المخزون','أوامر العمل']},
+ users:{t:'المستخدمون',r:['إضافة الحسابات وتعطيلها وإعادة التعيين.','الفني ليس مستخدمًا في النظام: لا يظهر هنا ولا يُنشأ له حساب.','لا يُحذف مستخدم له سجل، يُعطَّل فقط.'],s:['المستخدمون والصلاحيات']},
+ roles:{t:'الأدوار والصلاحيات',r:['صلاحيات ديناميكية: لكل دور وكل صفحة أربع خانات: عرض، إضافة، تعديل، اعتماد.','يمكن إنشاء أدوار جديدة، وتعيين دور لكل مستخدم.','دور مدير النظام مقفل بكل الصلاحيات.','الصلاحية تُطبَّق في الواجهة وعلى الخادم معًا.'],s:['RBAC','سجل التدقيق']},
+ catalog:{t:'المنتجات والكتالوج',r:['المنتج المنشور فقط يظهر في المتجر.','توافق الفلاتر: يربط الفلتر بالموديل والمرحلة وعمره الافتراضي، ومنه تُحسب مواعيد الصيانة.','الباقة تُفكَّك إلى مكوناتها للمخزون والفاتورة.'],s:['المنتجات والكتالوج','فلاتر التوافق','سياسات العمر']},
+ reports:{t:'التقارير',r:['مبيعات وعملاء وصيانة ومخزون ومالية، حسب فترة.','الأرقام هنا أمثلة للتصميم فقط.'],s:['التقارير ومؤشرات الأداء']},
+ settings:{t:'الإعدادات التشغيلية',r:['نطاق مكة والأحياء المخدومة، أيام العمل، الضريبة والرسوم، وقواعد التشغيل.','هذه القيم تستخدمها واجهة العميل والموظف مباشرة بدل كتابتها ثابتة.','كل تعديل يُسجل في سجل التدقيق.'],s:['السلة والنطاق الجغرافي','المواعيد']},
+ integ:{t:'التكاملات',r:['ميسر للدفع، شركة الشحن للتتبع، الأستاذ المحاسبي لمزامنة الفواتير.','سجل التكاملات: ناجح، فاشل، معلّق، مع إعادة المحاولة.','مفاتيح الربط تُحفظ مشفرة ولا تُعرض كاملة.'],s:['ميسر','شركة الشحن','الأستاذ']},
+ audit:{t:'سجل التدقيق',r:['من نفّذ الإجراء ومتى وما الذي تغيّر.','لا يمكن تعديل السجل أو حذفه.'],s:['سجل التدقيق']}
+};
+const PAGES=[['dash','لوحة المدير','dash'],['appr','الموافقات','check'],['users','المستخدمون','users'],['roles','الأدوار والصلاحيات','key'],['catalog','المنتجات والكتالوج','box'],['reports','التقارير','chart'],['settings','الإعدادات','gear'],['integ','التكاملات','plug'],['audit','سجل التدقيق','log']];
+
+function toast(m){S.toast=m;render();setTimeout(()=>{S.toast='';render()},2000)}
+function go(p){S.page=p;S.modal=null;render();window.scrollTo(0,0)}
+const pend=()=>S.appr.filter(a=>a.st==='بانتظار القرار').length;
+const failed=()=>S.ilog.filter(l=>l.st==='يحتاج تدخل').length;
+
+function bars(vals,labels,max,unit){
+ const W=560,H=230,L=48,B=30,T=14,R=10,n=vals.length,cw=(W-L-R)/n,bw=Math.min(46,cw*.55);
+ const ticks=[0,1,2,3,4].map(i=>Math.round(max*i/4));
+ const y=v=>T+(H-T-B)*(1-v/max);
+ return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${unit||'رسم بياني'}: ${labels.map((l,i)=>l+' '+fmt(vals[i])).join('، ')}" style="width:100%;height:auto;display:block"><title>${unit||'رسم بياني'}</title>
+ ${ticks.map(t=>`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" class="gl"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" class="ax" direction="ltr" style="unicode-bidi:plaintext">${fmt(t)}</text>`).join('')}
+ ${vals.map((v,i)=>{const x=L+cw*i+(cw-bw)/2;return `<rect x="${x}" y="${y(v)}" width="${bw}" height="${H-B-y(v)}" rx="4" class="bar"/><text x="${x+bw/2}" y="${y(v)-5}" text-anchor="middle" class="vl">${fmt(v)}</text><text x="${x+bw/2}" y="${H-10}" text-anchor="middle" class="ax">${labels[i]}</text>`}).join('')}
+ </svg><div class="muted">${unit||''}</div>`;
+}
+
+const V={
+dash:()=>`<div class="ph"><div><h1>لوحة المدير</h1><p>الخميس 10 أكتوبر · أرقام تجريبية</p></div></div>
+ <div class="kpis">
+  <div class="kpi"><b>6,100</b><span>مبيعات اليوم (ر.س)</span></div>
+  <div class="kpi"><b>9</b><span>طلبات جديدة اليوم</span></div>
+  <div class="kpi bad"><b>2</b><span>بلاغات طارئة مفتوحة</span></div>
+  <button class="kpi warn" data-go="appr"><b>${pend()}</b><span>موافقات تنتظرك</span></button>
+  <button class="kpi ${failed()?'bad':''}" data-go="integ"><b>${failed()}</b><span>عمليات تكامل متعثرة</span></button>
+  <button class="kpi" data-go="users"><b>${S.users.filter(u=>u.active).length}</b><span>مستخدم نشط</span></button></div>
+ <div class="grid2"><div class="card"><div class="row between"><h3 class="h3">المبيعات آخر 7 أيام</h3><button class="btn sm sec" data-go="reports">كل التقارير</button></div>${bars([4200,5100,3800,6900,5600,7400,6100],['الجمعة','السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'],8000,'ريال سعودي')}</div>
+ <div class="card"><h3 class="h3" style="margin-bottom:6px">يحتاج انتباهك</h3><div class="list">
+  ${pend()?`<div>${bd('بانتظار القرار')}<span style="flex:1">${pend()} طلبات اعتماد</span><button class="btn sm sec" data-go="appr">مراجعة</button></div>`:''}
+  ${S.ilog.filter(l=>l.st==='فاشل').map(l=>`<div>${bd('فاشل')}<span style="flex:1">${l.sys}: ${l.ev}</span><button class="btn sm sec" data-go="integ">معالجة</button></div>`).join('')}
+  <div>${bd('تحت الحد')}<span style="flex:1">3 أصناف تحت حد إعادة الطلب</span></div>
+  <div>${bd('معلّق','عهدة')}<span style="flex:1">عهدة OH-118 بانتظار التسليم</span></div></div></div></div>`,
+appr:()=>`<div class="ph"><div><h1>الموافقات</h1><p>طلبات تنتظر قرار المدير</p></div></div>
+ <div class="stack">${S.appr.map(a=>`<div class="card"><div class="row between wrapr"><div><span class="badge b-info xs">${a.kind}</span> <b>${a.title}</b><div class="muted">${a.why} · قدّمه ${a.by}</div></div>
+ <div class="row">${a.st==='بانتظار القرار'?`<button class="btn sm" data-ap="ok:${a.id}">اعتماد</button><button class="btn sm danger" data-modal="reject:${a.id}">رفض</button>`:bd(a.st)}</div></div></div>`).join('')||'<div class="card muted">لا توجد طلبات.</div>'}</div>`,
+users:()=>`<div class="ph"><div><h1>المستخدمون</h1><p>حسابات الموظفين. الفنيون بدون حسابات.</p></div><button class="btn" data-modal="adduser">${ic('plus',16)} إضافة مستخدم</button></div>
+ <div class="card tw"><table><thead><tr><th>الاسم</th><th>الجوال</th><th>الدور</th><th>آخر دخول</th><th>الحالة</th><th></th></tr></thead><tbody>${S.users.map(u=>`<tr><td><b>${u.name}</b></td><td class="num" dir="ltr" style="text-align:start">${u.phone}</td><td><select class="sel" aria-label="دور ${u.name}" data-urole="${u.id}" style="min-width:130px" ${u.id===1?'disabled':''}>${opts(Object.keys(ROLES),u.role)}</select></td><td>${u.last}</td><td>${bd(u.active?'نشط':'معطل')}</td>
+ <td><div class="row">${u.id===1?'':`<button class="btn sm ghost" data-utog="${u.id}">${u.active?'تعطيل':'تفعيل'}</button><button class="btn sm ghost" data-ureset="${u.id}">إعادة تعيين</button>`}</div></td></tr>`).join('')}</tbody></table></div>`,
+roles:()=>{const r=S.role,locked=r==='مدير النظام',P=ROLES[r];return `<div class="ph"><div><h1>الأدوار والصلاحيات</h1><p>حدد ما يراه كل دور وما يستطيع فعله في كل صفحة</p></div><button class="btn" data-modal="addrole">${ic('plus',16)} دور جديد</button></div>
+ <div class="tabs">${Object.keys(ROLES).map(k=>`<button data-role="${k}" class="${r===k?'on':''}">${k}</button>`).join('')}</div>
+ ${locked?`<div class="alert info" style="margin-bottom:12px">${ic('key',18)}<div>دور مدير النظام مقفل بكل الصلاحيات ولا يُعدَّل.</div></div>`:''}
+ <div class="card tw"><table class="pm"><thead><tr><th>الصفحة</th><th>عرض</th><th>إضافة</th><th>تعديل</th><th>اعتماد</th></tr></thead><tbody>${PAGES_RBAC.map((pg,i)=>`<tr><td>${pg}</td>${['v','a','e','p'].map(k=>`<td><label class="chk"><input type="checkbox" data-perm="${i}:${k}" ${P[i][k]?'checked':''} ${locked?'disabled':''} aria-label="${pg} ${k}"><span></span></label></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+ <p class="muted" style="margin-top:8px">المستخدمون بهذا الدور: ${S.users.filter(u=>u.role===r).map(u=>u.name).join('، ')||'لا أحد'}</p>`},
+catalog:()=>`<div class="ph"><div><h1>المنتجات والكتالوج</h1><p>ما يظهر في المتجر وكيف تُحسب مواعيد الصيانة</p></div>${S.prodTab==='products'?`<button class="btn" data-modal="addprod">${ic('plus',16)} إضافة منتج</button>`:''}</div>
+ <div class="tabs"><button data-ptab="products" class="${S.prodTab==='products'?'on':''}">المنتجات</button><button data-ptab="compat" class="${S.prodTab==='compat'?'on':''}">توافق الفلاتر والعمر الافتراضي</button><button data-ptab="bundles" class="${S.prodTab==='bundles'?'on':''}">الباقات</button></div>
+ ${S.prodTab==='products'?`<div class="card tw"><table><thead><tr><th>المنتج</th><th>النوع</th><th>السعر (ر.س)</th><th>الحالة</th><th>نشر</th><th></th></tr></thead><tbody>${S.products.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.type}</td><td class="num">${fmt(p.price)}</td><td>${bd(p.pub?'منشور':'مسودة')}</td><td><label class="sw"><input type="checkbox" data-pub="${p.id}" ${p.pub?'checked':''} aria-label="نشر ${p.name}"><span></span></label></td><td><button class="btn sm ghost" data-modal="price:${p.id}">تعديل السعر</button></td></tr>`).join('')}</tbody></table></div>`
+ :S.prodTab==='compat'?`<div class="card tw"><table><thead><tr><th>الفلتر</th><th>الموديلات المتوافقة</th><th>المرحلة</th><th>العمر الافتراضي (شهر)</th></tr></thead><tbody>${S.compat.map((c,i)=>`<tr><td><b>${c.f}</b></td><td>${c.models.map(m=>`<span class="badge b-info xs">${m}</span>`).join(' ')}</td><td class="num">${c.stage}</td><td><input class="input" type="number" min="1" max="36" value="${c.months}" data-life="${i}" style="width:90px" aria-label="العمر ${c.f}"></td></tr>`).join('')}</tbody></table></div><p class="muted" style="margin-top:8px">يُحسب موعد الصيانة القادم من تاريخ آخر تغيير + العمر الافتراضي للفلتر.</p>`
+ :`<div class="card stack"><div class="row between wrapr"><b>باقة جهاز وفلاتر وتركيب</b>${bd('منشور')}</div><div class="list"><div><span style="flex:1">جهاز GH-500</span><span class="num">1,450</span></div><div><span style="flex:1">طقم فلاتر إضافي</span><span class="num">180</span></div><div><span style="flex:1">خدمة التركيب داخل مكة</span><span class="num">150</span></div></div>
+ <div class="sum"><div><span>مجموع المكونات</span><span>1,780</span></div><div><span>سعر الباقة</span><span>1,690</span></div><div class="tot"><span>خصم الباقة</span><span>90 ر.س</span></div></div><div class="muted">عند البيع تُفكَّك الباقة إلى مكوناتها: يُصرف الجهاز والفلاتر من المخزون، وتُنشأ زيارة التركيب، وتظهر البنود في الفاتورة.</div></div>`}`,
+reports:()=>{const x=S.period==='30'?4.2:1,tabs=[['sales','المبيعات'],['maint','الصيانة'],['stock','المخزون'],['fin','المالية']];
+ const K=(a)=>`<div class="kpis">${a.map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('')}</div>`;
+ let body='';
+ if(S.repTab==='sales')body=K([[fmt(Math.round(39100*x)),'إجمالي المبيعات (ر.س)'],[Math.round(64*x),'عدد الطلبات'],['611','متوسط الطلب (ر.س)'],['22%','طلبات الشحن خارج مكة']])+`<div class="card"><h3 class="h3">${S.period==='30'?'المبيعات الأسبوعية':'المبيعات اليومية'}</h3>${S.period==='30'?bars([21000,24500,19800,26300],['الأسبوع 1','الأسبوع 2','الأسبوع 3','الأسبوع 4'],30000,'ريال سعودي'):bars([4200,5100,3800,6900,5600,7400,6100],['الجمعة','السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'],8000,'ريال سعودي')}</div>`;
+ if(S.repTab==='maint')body=K([[Math.round(18*x),'بلاغات طارئة'],[Math.round(41*x),'صيانات دورية منفذة'],['5.2 ساعة','متوسط زمن الاستجابة'],['78%','قبول العميل للإصلاح']])+`<div class="card"><h3 class="h3">البلاغات حسب نوع العطل</h3>${bars([Math.round(8*x),Math.round(5*x),Math.round(3*x),Math.round(2*x)],['تسريب','لا ماء','طعم/رائحة','صوت/توقف'],Math.round(10*x),'عدد البلاغات')}</div>`;
+ if(S.repTab==='stock')body=K([['3','أصناف تحت الحد'],['48,200','قيمة المخزون (ر.س)'],[Math.round(27*x),'حركات مخزون'],['1','تسويات بانتظار الاعتماد']])+`<div class="card"><h3 class="h3">استهلاك القطع</h3>${bars([Math.round(14*x),Math.round(9*x),Math.round(6*x),Math.round(4*x)],['فلتر كربون','فلتر رواسب','خرطوم','غشاء RO'],Math.round(16*x),'عدد القطع المصروفة')}</div>`;
+ if(S.repTab==='fin')body=K([[fmt(Math.round(31400*x)),'محصّل إلكترونيًا (ر.س)'],[fmt(Math.round(7700*x)),'محصّل نقدًا عبر الفنيين'],['1','عهدة مفتوحة'],[fmt(Math.round(350*x)),'استردادات']])+`<div class="card"><h3 class="h3">التحصيل حسب الطريقة</h3>${bars([Math.round(31400*x),Math.round(7700*x)],['إلكتروني (ميسر)','نقدي (عهد)'],Math.round(40000*x),'ريال سعودي')}</div>`;
+ return `<div class="ph"><div><h1>التقارير</h1><p>أرقام تجريبية للتصميم</p></div><div class="seg" style="min-width:200px"><button data-period="7" class="${S.period==='7'?'on':''}">7 أيام</button><button data-period="30" class="${S.period==='30'?'on':''}">30 يومًا</button></div></div>
+ <div class="tabs">${tabs.map(([k,l])=>`<button data-rtab="${k}" class="${S.repTab===k?'on':''}">${l}</button>`).join('')}</div><div class="stack">${body}</div>`},
+settings:()=>{const s=S.set;return `<div class="ph"><div><h1>الإعدادات التشغيلية</h1><p>قيم تستخدمها واجهات العميل والموظف</p></div><button class="btn" data-saveset="1">حفظ التغييرات</button></div>
+ <div class="grid2"><div class="stack">
+ <div class="card stack"><h3 class="h3">نطاق الخدمة (مكة المكرمة)</h3><div class="chips">${s.districts.map((d,i)=>`<span class="chip">${d}<button data-deldist="${i}" aria-label="حذف ${d}">×</button></span>`).join('')}</div><div class="row"><input class="input" id="newdist" placeholder="أضف حيًا"><button class="btn sec" data-adddist="1">إضافة</button></div><div class="muted">العناوين خارج هذه الأحياء لا تظهر لها خدمة الصيانة ولا التركيب.</div></div>
+ <div class="card stack"><h3 class="h3">أيام العمل الميداني</h3><div class="chips">${Object.keys(s.days).map(d=>`<button class="dbtn ${s.days[d]?'on':''}" data-day="${d}">${d}</button>`).join('')}</div><div class="muted">تظهر للعميل أيام الحجز المتاحة من هذه القائمة.</div></div></div>
+ <div class="stack"><div class="card stack"><h3 class="h3">الرسوم والضريبة</h3><div class="two"><div class="field"><label for="s_vat">ضريبة القيمة المضافة %</label><input class="input" id="s_vat" type="number" value="${s.vat}"></div><div class="field"><label for="s_inspect">رسوم الفحص (ر.س)</label><input class="input" id="s_inspect" type="number" value="${s.inspect}"></div><div class="field"><label for="s_install">رسوم التركيب (ر.س)</label><input class="input" id="s_install" type="number" value="${s.install}"></div><div class="field"><label for="s_ship">رسوم الشحن (ر.س)</label><input class="input" id="s_ship" type="number" value="${s.ship}"></div></div></div>
+ <div class="card stack"><h3 class="h3">قواعد التشغيل</h3><div class="two"><div class="field"><label for="s_alertDays">فترة تنبيه الصيانة (يوم)</label><input class="input" id="s_alertDays" type="number" value="${s.alertDays}"></div><div class="field"><label for="s_linkHours">صلاحية رابط الفني (ساعة)</label><input class="input" id="s_linkHours" type="number" value="${s.linkHours}"></div><div class="field"><label for="s_otpMin">صلاحية رمز OTP (دقيقة)</label><input class="input" id="s_otpMin" type="number" value="${s.otpMin}"></div><div class="field"><label for="s_otpTries">محاولات OTP قبل الإيقاف</label><input class="input" id="s_otpTries" type="number" value="${s.otpTries}"></div><div class="field"><label for="s_maxEmg">أقصى بلاغات طارئة مفتوحة لكل رقم</label><input class="input" id="s_maxEmg" type="number" value="${s.maxEmg}"></div></div>
+ <label class="row"><span class="sw"><input type="checkbox" data-nsf="1" ${s.noShowFee?'checked':''}><span></span></span><span>تحصيل رسوم الفحص إذا لم يتواجد العميل</span></label></div></div></div>`},
+integ:()=>{const i=S.integ;const card=(k,name,desc)=>`<div class="card stack"><div class="row between"><b>${name}</b>${bd(i[k].on?'متصل':'غير مفعل')}</div><div class="muted">${desc}</div><div class="field"><label>مفتاح الربط</label><input class="input" dir="ltr" style="text-align:start" value="sk_test_••••••••••3f9a" readonly aria-label="مفتاح ${name}"></div><div class="row wrapr"><label class="row"><span class="sw"><input type="checkbox" data-itog="${k}" ${i[k].on?'checked':''}><span></span></span><span>مفعّل</span></label><span class="badge b-gray xs">${i[k].env}</span><span class="sp"></span><button class="btn sm sec" data-itest="${k}">اختبار الاتصال</button></div></div>`;
+ return `<div class="ph"><div><h1>التكاملات</h1><p>الخدمات الخارجية وسجل نتائجها</p></div></div>
+ <div class="cards3">${card('moy','ميسر (الدفع)','روابط السداد والتحقق من نتيجة الدفع.')}${card('ship','شركة الشحن','إنشاء الشحنة ورقم التتبع.')}${card('ledger','الأستاذ المحاسبي','مزامنة الفواتير والمدفوعات.')}</div>
+ <h3 class="h3" style="margin:20px 0 8px">سجل التكاملات</h3><div class="card tw"><table><thead><tr><th>الرقم</th><th>النظام</th><th>الحدث</th><th>الوقت</th><th>الحالة</th><th></th></tr></thead><tbody>${S.ilog.map(l=>`<tr><td class="num">${l.id}</td><td>${l.sys}</td><td>${l.ev}${l.err&&l.st==='فاشل'?`<div class="muted" style="color:var(--bad-700)">${l.err}</div>`:''}</td><td>${l.t}</td><td>${bd(l.st)}</td><td>${l.st!=='ناجح'?`<button class="btn sm" data-retry="${l.id}">إعادة المحاولة</button>`:''}</td></tr>`).join('')}</tbody></table></div>`},
+audit:()=>{const kinds=['all',...new Set(S.audit.map(a=>a.kind))];const rows=S.audit.filter(a=>S.logF==='all'||a.kind===S.logF);return `<div class="ph"><div><h1>سجل التدقيق</h1><p>من نفّذ الإجراء ومتى وما الذي تغيّر</p></div><div class="field" style="min-width:180px"><label for="lf">تصفية</label><select class="sel" id="lf">${kinds.map(k=>`<option value="${k}" ${S.logF===k?'selected':''}>${k==='all'?'كل الأنواع':k}</option>`).join('')}</select></div></div>
+ <div class="card tw"><table><thead><tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>النوع</th></tr></thead><tbody>${rows.map(a=>`<tr><td>${a.t}</td><td><b>${a.who}</b></td><td>${a.what}</td><td><span class="badge b-gray xs">${a.kind}</span></td></tr>`).join('')}</tbody></table></div>`}
+};
+
+function modalHtml(){
+ const m=S.modal;if(!m)return '';
+ const [k,id]=m.split(':');let b='';
+ if(k==='adduser')b=`<h3 class="h3">إضافة مستخدم</h3><div class="field"><label for="au_name">الاسم</label><input class="input" id="au_name"></div><div class="field"><label for="au_phone">رقم الجوال</label><input class="input" id="au_phone" dir="ltr" style="text-align:start"></div><div class="field"><label for="au_role">الدور</label><select class="sel" id="au_role">${opts(Object.keys(ROLES).filter(r=>r!=='مدير النظام'),'')}</select></div><div class="row"><button class="btn" data-mok="adduser:0">إضافة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='addrole')b=`<h3 class="h3">دور جديد</h3><div class="field"><label for="ar_name">اسم الدور</label><input class="input" id="ar_name" placeholder="مثال: مسؤول مخزون"></div><div class="field"><label for="ar_copy">نسخ الصلاحيات من</label><select class="sel" id="ar_copy">${opts(Object.keys(ROLES),'خدمة عملاء')}</select></div><div class="row"><button class="btn" data-mok="addrole:0">إنشاء</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='addprod')b=`<h3 class="h3">إضافة منتج</h3><div class="field"><label for="ap_name">الاسم</label><input class="input" id="ap_name"></div><div class="two"><div class="field"><label for="ap_type">النوع</label><select class="sel" id="ap_type">${opts(['جهاز','فلتر','قطعة','خدمة','باقة'],'')}</select></div><div class="field"><label for="ap_price">السعر (ر.س)</label><input class="input" id="ap_price" type="number"></div></div><div class="muted">يُحفظ كمسودة حتى تنشره.</div><div class="row"><button class="btn" data-mok="addprod:0">حفظ كمسودة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='price'){const p=S.products.find(x=>x.id==id);b=`<h3 class="h3">تعديل سعر ${p.name}</h3><div class="field"><label for="pp">السعر الجديد (ر.س)</label><input class="input" id="pp" type="number" value="${p.price}"></div><div class="row"><button class="btn" data-mok="price:${id}">حفظ</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`}
+ if(k==='reject'){b=`<h3 class="h3">رفض الطلب ${id}</h3><div class="field"><label for="rj">سبب الرفض (إلزامي)</label><input class="input" id="rj"></div><div class="row"><button class="btn danger" data-mok="reject:${id}">تأكيد الرفض</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`}
+ return `<div class="modal" role="dialog" aria-modal="true"><div>${b}</div></div>`;
+}
+
+function render(){
+ const n=NOTES[S.page];
+ document.getElementById('review').innerHTML=`<div class="in"><span class="pill">وضع المراجعة</span><b>لوحة مدير النظام · ${n.t}</b><span class="sp"></span><button data-drawer="1">${S.drawer?'إخفاء الملاحظات':'الملاحظات'}</button></div>`;
+ const badge={appr:pend(),integ:failed()};
+ document.getElementById('side').innerHTML=`<div class="brand">${ic('drop')} غيث</div>`+PAGES.map(([k,l,i])=>`<button class="nv ${(S.page===k||(k==='catalog'&&S.page==='prodform'))?'on':''}" data-go="${k}">${ic(i)}${l}${badge[k]?`<span class="cnt">${badge[k]}</span>`:''}</button>`).join('')+`<div class="who"><b>ريان العتيبي</b><span>مدير النظام</span></div>`;
+ document.getElementById('work').innerHTML=V[S.page]();
+ document.getElementById('overlay').innerHTML=modalHtml()+(S.toast?`<div class="toast">${S.toast}</div>`:'');
+ const d=document.getElementById('drawer');d.hidden=!S.drawer;
+ d.innerHTML=`<div><span class="tag">ملاحظات المراجعة</span><h2>${n.t}</h2><ul>${n.r.map(x=>`<li>${x}</li>`).join('')}</ul><div class="sys">${n.s.map(x=>`<span>${x}</span>`).join('')}</div></div>
+ <div><h2>الصفحات</h2><div class="steps">${PAGES.map(([k,l])=>`<button data-go="${k}" class="${(S.page===k||(k==='catalog'&&S.page==='prodform'))?'on':''}">${l}</button>`).join('')}</div></div>`;
+}
+
+document.addEventListener('click',e=>{
+ const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+ if(d.drawer){S.drawer=!S.drawer;render();return}
+ if(d.go){go(d.go);return}
+ if(d.modal){S.modal=d.modal;render();return}
+ if(d.mclose){S.modal=null;render();return}
+ if(d.mok){const[k,id]=d.mok.split(':');mok(k,id);return}
+ if(d.ap){const[k,id]=d.ap.split(':');const a=S.appr.find(x=>x.id===id);a.st='معتمد';audit('اعتمد '+a.kind+' '+id,'موافقات');toast('تم الاعتماد');return}
+ if(d.utog){const u=S.users.find(x=>x.id==d.utog);u.active=!u.active;audit((u.active?'فعّل':'عطّل')+' حساب '+u.name,'مستخدمون');toast(u.active?'تم تفعيل الحساب':'تم تعطيل الحساب');return}
+ if(d.ureset){const u=S.users.find(x=>x.id==d.ureset);audit('أعاد تعيين دخول '+u.name,'مستخدمون');toast('أُرسل رابط إعادة التعيين إلى '+u.name);return}
+ if(d.role){S.role=d.role;render();return}
+ if(d.ptab){S.prodTab=d.ptab;render();return}
+ if(d.period){S.period=d.period;render();return}
+ if(d.rtab){S.repTab=d.rtab;render();return}
+ if(d.day){S.set.days[d.day]=S.set.days[d.day]?0:1;render();return}
+ if(d.deldist){S.set.districts.splice(+d.deldist,1);render();return}
+ if(d.adddist){const v=document.getElementById('newdist').value.trim();if(!v){toast('اكتب اسم الحي');return}S.set.districts.push(v);render();return}
+ if(d.saveset){const s=S.set;['vat','inspect','install','ship','alertDays','linkHours','otpMin','otpTries','maxEmg'].forEach(k=>{const el=document.getElementById('s_'+k);if(el)s[k]=+el.value});audit('عدّل الإعدادات التشغيلية (الضريبة '+s.vat+'%، الفحص '+s.inspect+'، التركيب '+s.install+')','إعدادات');toast('حُفظت الإعدادات وطُبقت على الواجهات');return}
+ if(d.itest){toast(S.integ[d.itest].on?'نجح الاتصال':'فعّل التكامل أولًا');return}
+ if(d.retry){const l=S.ilog.find(x=>x.id===d.retry);l.st='ناجح';delete l.err;audit('أعاد محاولة '+l.id+' ('+l.sys+')','تكاملات');toast('نجحت إعادة المحاولة');return}
+});
+document.addEventListener('change',e=>{
+ const i=e.target,d=i.dataset;
+ if(d.perm){const[idx,k]=d.perm.split(':');const P=ROLES[S.role][+idx];P[k]=i.checked;if(i.checked&&k!=='v')P.v=true;if(!i.checked&&k==='v'){P.a=P.e=P.p=false}audit('عدّل صلاحية «'+PAGES_RBAC[+idx]+'» للدور '+S.role,'صلاحيات');render();return}
+ if(d.urole){const u=S.users.find(x=>x.id==d.urole);u.role=i.value;audit('غيّر دور '+u.name+' إلى '+u.role,'مستخدمون');toast('تم تغيير الدور');return}
+ if(d.pub){const p=S.products.find(x=>x.id==d.pub);p.pub=i.checked;audit((p.pub?'نشر ':'أخفى ')+p.name,'منتجات');render();return}
+ if(d.life!==undefined){const c=S.compat[+d.life];c.months=+i.value;audit('عدّل العمر الافتراضي لـ '+c.f+' إلى '+c.months+' شهر','منتجات');toast('حُفظ العمر الافتراضي، وستُحسب المواعيد القادمة منه');return}
+ if(d.itog){S.integ[d.itog].on=i.checked;audit((i.checked?'فعّل':'عطّل')+' تكامل '+d.itog,'تكاملات');render();return}
+ if(d.nsf){S.set.noShowFee=i.checked;return}
+ if(i.id==='lf'){S.logF=i.value;render()}
+});
+function mok(k,id){
+ if(k==='adduser'){const n=document.getElementById('au_name').value.trim(),p=document.getElementById('au_phone').value.trim();if(!n||p.length<9){toast('الاسم ورقم الجوال مطلوبان');return}S.users.push({id:Date.now(),name:n,phone:p,role:document.getElementById('au_role').value,active:true,last:'لم يدخل بعد'});audit('أضاف المستخدم '+n,'مستخدمون');S.modal=null;toast('أُضيف المستخدم وأُرسلت دعوة التفعيل')}
+ else if(k==='addrole'){const n=document.getElementById('ar_name').value.trim();if(!n||ROLES[n]){toast('اكتب اسمًا جديدًا للدور');return}ROLES[n]=ROLES[document.getElementById('ar_copy').value].map(o=>({...o}));S.role=n;audit('أنشأ الدور '+n,'صلاحيات');S.modal=null;toast('أُنشئ الدور، عدّل صلاحياته')}
+ else if(k==='addprod'){const n=document.getElementById('ap_name').value.trim(),p=+document.getElementById('ap_price').value;if(!n||!(p>0)){toast('الاسم والسعر مطلوبان');return}S.products.push({id:Date.now(),name:n,type:document.getElementById('ap_type').value,price:p,pub:false});audit('أضاف المنتج '+n+' كمسودة','منتجات');S.modal=null;toast('حُفظ كمسودة')}
+ else if(k==='price'){const v=+document.getElementById('pp').value;if(!(v>0)){toast('أدخل سعرًا صحيحًا');return}const p=S.products.find(x=>x.id==id);audit('غيّر سعر '+p.name+' من '+fmt(p.price)+' إلى '+fmt(v),'منتجات');p.price=v;S.modal=null;toast('حُدّث السعر')}
+ else if(k==='reject'){const r=document.getElementById('rj').value.trim();if(!r){toast('اكتب سبب الرفض');return}const a=S.appr.find(x=>x.id===id);a.st='مرفوض';audit('رفض '+a.kind+' '+id+': '+r,'موافقات');S.modal=null;toast('تم الرفض وحُفظ السبب')}
+ render();
+}
+/* ===== catalog v2: categories, brands, full product form ===== */
+S.cats=[
+ {id:1,name:'أجهزة التنقية',parent:0,vis:true},{id:2,name:'أجهزة منزلية',parent:1,vis:true},{id:3,name:'أجهزة مكتبية',parent:1,vis:true},
+ {id:4,name:'الفلاتر',parent:0,vis:true},{id:5,name:'فلاتر رواسب وكربون',parent:4,vis:true},{id:6,name:'أغشية RO',parent:4,vis:true},
+ {id:7,name:'قطع الغيار',parent:0,vis:true},{id:8,name:'الخدمات',parent:0,vis:false},{id:9,name:'الباقات',parent:0,vis:true}];
+S.brands=[{id:1,name:'غيث',country:'السعودية'},{id:2,name:'أكوا برو',country:'إيطاليا'},{id:3,name:'بيور فلو',country:'الصين'}];
+const PT=['جهاز','فلتر','قطعة','خدمة','باقة'],UNITS=['قطعة','طقم','متر','خدمة'],MODELS=['GH-500','GH-300'];
+S.products=[
+ {id:1,sku:'DEV-GH500',name:'جهاز تنقية منزلي 5 مراحل',nameEn:'Home Purifier 5-Stage',type:'جهاز',cat:2,brand:1,model:'GH-500',price:1450,cost:980,track:true,reorder:4,unit:'قطعة',warranty:24,life:'',stage:'',installable:true,models:[],desc:'جهاز تناضح عكسي بخمس مراحل.',specs:[{k:'عدد المراحل',v:'5'},{k:'سعة الخزان',v:'12 لتر'}],pub:true,home:true},
+ {id:2,sku:'DEV-GH300',name:'جهاز تنقية مكتبي',nameEn:'Office Purifier',type:'جهاز',cat:3,brand:1,model:'GH-300',price:890,cost:600,track:true,reorder:4,unit:'قطعة',warranty:12,life:'',stage:'',installable:true,models:[],desc:'جهاز مدمج للمكاتب.',specs:[{k:'عدد المراحل',v:'3'},{k:'السعة',v:'6 لتر'}],pub:true,home:false},
+ {id:3,sku:'FLT-SET5',name:'طقم فلاتر 5 مراحل',nameEn:'5-Stage Filter Set',type:'فلتر',cat:5,brand:1,model:'',price:180,cost:110,track:true,reorder:10,unit:'طقم',warranty:0,life:6,stage:'',installable:false,models:['GH-500'],desc:'طقم كامل للجهاز المنزلي.',specs:[],pub:true,home:true},
+ {id:4,sku:'FLT-CAR',name:'فلتر كربون',nameEn:'Carbon Filter',type:'فلتر',cat:5,brand:1,model:'',price:65,cost:38,track:true,reorder:10,unit:'قطعة',warranty:0,life:6,stage:2,installable:false,models:['GH-500','GH-300'],desc:'',specs:[],pub:true,home:false},
+ {id:5,sku:'BND-500',name:'باقة جهاز وفلاتر وتركيب',nameEn:'Device Bundle',type:'باقة',cat:9,brand:1,model:'',price:1690,cost:1240,track:false,reorder:0,unit:'قطعة',warranty:24,life:'',stage:'',installable:true,models:[],desc:'جهاز مع طقم فلاتر إضافي وخدمة التركيب.',specs:[],pub:true,home:true},
+ {id:6,sku:'PRT-HOSE',name:'خرطوم وقطع توصيل',nameEn:'Hose Kit',type:'قطعة',cat:7,brand:3,model:'',price:45,cost:22,track:true,reorder:15,unit:'قطعة',warranty:0,life:'',stage:'',installable:false,models:['GH-500','GH-300'],desc:'',specs:[],pub:false,home:false},
+ {id:7,sku:'SRV-INSP',name:'رسوم الفحص',nameEn:'Inspection Fee',type:'خدمة',cat:8,brand:0,model:'',price:60,cost:0,track:false,reorder:0,unit:'خدمة',warranty:0,life:'',stage:'',installable:false,models:[],desc:'تُحصَّل بعد الفحص مع القطع.',specs:[],pub:true,home:false}];
+S.pfil={q:'',cat:'',brand:'',type:'',st:''};
+S.pf=null;S.pfId=null;S.pfErr=[];
+const catName=id=>(S.cats.find(c=>c.id==id)||{}).name||'-';
+const catPath=id=>{const c=S.cats.find(x=>x.id==id);if(!c)return '-';return c.parent?catName(c.parent)+' › '+c.name:c.name};
+const brandName=id=>(S.brands.find(b=>b.id==id)||{}).name||'-';
+const kids=id=>S.cats.filter(c=>c.parent==id);
+const inCat=(id,pid)=>pid==id||(S.cats.find(c=>c.id==pid)||{}).parent==id;
+const catCount=id=>S.products.filter(p=>inCat(id,p.cat)).length;
+const catOpts=sel=>S.cats.filter(c=>!c.parent).map(c=>`<option value="${c.id}" ${sel==c.id?'selected':''}>${c.name}</option>`+kids(c.id).map(k=>`<option value="${k.id}" ${sel==k.id?'selected':''}>— ${k.name}</option>`).join('')).join('');
+const brandOpts=sel=>S.brands.map(b=>`<option value="${b.id}" ${sel==b.id?'selected':''}>${b.name}</option>`).join('');
+const newPf=()=>({sku:'',name:'',nameEn:'',type:'جهاز',cat:'',brand:'',model:'',price:'',cost:'',track:true,reorder:5,opening:0,unit:'قطعة',warranty:12,life:6,stage:'',installable:true,models:[],desc:'',specs:[{k:'',v:''}],pub:false,home:false});
+const calc=pf=>{const p=+pf.price||0,c=+pf.cost||0;const after=p*(1+S.set.vat/100);const mg=p>0?Math.round((p-c)/p*100):0;return `بعد الضريبة (${S.set.vat}%): <b>${fmt(Math.round(after*100)/100)} ر.س</b> · هامش الربح: <b>${mg}%</b>${c>p&&p>0?' <span style="color:var(--bad-700)">التكلفة أعلى من السعر</span>':''}`};
+
+NOTES.catalog={t:'المنتجات والكتالوج',r:['المنتج المنشور فقط يظهر في المتجر، والتصنيف المخفي يخفي منتجاته.','التصنيفات بمستويين، ويمكن إضافة تصنيف جديد حتى من داخل نموذج المنتج. لا يُحذف تصنيف فيه منتجات أو تصنيفات فرعية.','الشركة المصنعة تُدار من تبويب الشركات وتُستخدم في التصفية والتقارير.','نموذج المنتج يتغير حسب النوع: الجهاز له ضمان وتركيب، الفلتر له عمر افتراضي وتوافق، الخدمة بلا مخزون.','توافق الفلاتر والعمر الافتراضي منها تُحسب مواعيد الصيانة.'],s:['المنتجات والكتالوج','فلاتر التوافق','سياسات العمر','المخزون']};
+NOTES.prodform={t:'نموذج المنتج',r:['الأقسام تظهر حسب النوع المختار.','الـ SKU فريد لكل منتج. التكلفة تُحسب منها هامش الربح، وهي للإدارة فقط.','المنتج الجديد يُحفظ كمسودة حتى يُنشر.','المنتجات التي تتبع المخزون تحتاج حد إعادة طلب.'],s:['المنتجات والكتالوج','المخزون']};
+
+const _oldCompatBundles=V.catalog;
+V.catalog=()=>{
+ const f=S.pfil,tab=S.prodTab;
+ const tabs=[['products','المنتجات'],['cats','التصنيفات'],['brands','الشركات'],['compat','توافق الفلاتر والعمر'],['bundles','الباقات']];
+ const head=`<div class="ph"><div><h1>المنتجات والكتالوج</h1><p>ما يظهر في المتجر وكيف تُحسب مواعيد الصيانة</p></div>${tab==='products'?`<button class="btn" data-newprod="1">${ic('plus',16)} إضافة منتج</button>`:tab==='cats'?`<button class="btn" data-modal="addcat:0">${ic('plus',16)} تصنيف جديد</button>`:tab==='brands'?`<button class="btn" data-modal="addbrand:0">${ic('plus',16)} شركة جديدة</button>`:''}</div>
+ <div class="tabs">${tabs.map(([k,l])=>`<button data-ptab="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</div>`;
+ if(tab==='products'){
+  const rows=S.products.filter(p=>(!f.q||(p.name+p.sku+(p.nameEn||'')).toLowerCase().includes(f.q.toLowerCase()))&&(!f.cat||inCat(f.cat,p.cat))&&(!f.brand||p.brand==f.brand)&&(!f.type||p.type===f.type)&&(!f.st||(f.st==='pub'?p.pub:!p.pub)));
+  return head+`<div class="row wrapr" style="margin-bottom:12px"><input class="input" id="f_q" placeholder="ابحث بالاسم أو SKU" value="${f.q}" style="max-width:240px"><select class="sel" aria-label="تصفية: التصنيف" id="f_cat" style="max-width:200px"><option value="">كل التصنيفات</option>${catOpts(f.cat)}</select><select class="sel" aria-label="تصفية: الشركة" id="f_brand" style="max-width:160px"><option value="">كل الشركات</option>${brandOpts(f.brand)}</select><select class="sel" aria-label="تصفية: النوع" id="f_type" style="max-width:130px">${opts(PT,f.type,'كل الأنواع')}</select><select class="sel" aria-label="تصفية: الحالة" id="f_st" style="max-width:130px"><option value="">كل الحالات</option><option value="pub" ${f.st==='pub'?'selected':''}>منشور</option><option value="draft" ${f.st==='draft'?'selected':''}>مسودة</option></select><span class="muted">${rows.length} من ${S.products.length}</span></div>
+  <div class="card tw"><table><thead><tr><th>المنتج</th><th>التصنيف</th><th>النوع</th><th>السعر (ر.س)</th><th>الهامش</th><th>المخزون</th><th>الحالة</th><th>نشر</th><th></th></tr></thead><tbody>${rows.map(p=>`<tr><td><b>${p.name}</b><div class="muted"><span dir="ltr">${p.sku}</span> · ${brandName(p.brand)}</div></td><td>${catPath(p.cat)}</td><td>${p.type}</td><td class="num">${fmt(p.price)}</td><td class="num">${p.price>0&&p.cost?Math.round((p.price-p.cost)/p.price*100)+'%':'-'}</td><td>${p.track?'يتتبع':'—'}</td><td>${bd(p.pub?'منشور':'مسودة')}</td><td><label class="sw"><input type="checkbox" data-pub="${p.id}" ${p.pub?'checked':''} aria-label="نشر ${p.name}"><span></span></label></td><td><button class="btn sm ghost" data-editprod="${p.id}">تعديل</button></td></tr>`).join('')||'<tr><td colspan="9" class="muted" style="text-align:center;padding:24px">لا توجد منتجات مطابقة</td></tr>'}</tbody></table></div>`;
+ }
+ if(tab==='cats'){
+  const row=(c,lvl)=>`<tr><td style="padding-inline-start:${12+lvl*26}px">${lvl?'<span class="muted">└ </span>':''}<b>${c.name}</b></td><td class="num">${catCount(c.id)}</td><td><label class="sw"><input type="checkbox" data-cvis="${c.id}" ${c.vis?'checked':''} aria-label="إظهار ${c.name}"><span></span></label></td><td><div class="row">${lvl?'':`<button class="btn sm sec" data-modal="addcat:${c.id}">+ فرعي</button>`}<button class="btn sm ghost" data-modal="editcat:${c.id}">تعديل</button><button class="btn sm ghost" data-delcat="${c.id}" style="color:var(--bad-700)">حذف</button></div></td></tr>`;
+  return head+`<div class="card tw"><table><thead><tr><th>التصنيف</th><th>عدد المنتجات</th><th>ظاهر في المتجر</th><th></th></tr></thead><tbody>${S.cats.filter(c=>!c.parent).map(c=>row(c,0)+kids(c.id).map(k=>row(k,1)).join('')).join('')}</tbody></table></div><p class="muted" style="margin-top:8px">لا يُحذف تصنيف فيه منتجات أو تصنيفات فرعية. انقل المنتجات أولًا.</p>`;
+ }
+ if(tab==='brands'){
+  return head+`<div class="card tw"><table><thead><tr><th>الشركة</th><th>بلد المنشأ</th><th>عدد المنتجات</th><th></th></tr></thead><tbody>${S.brands.map(b=>`<tr><td><b>${b.name}</b></td><td>${b.country||'-'}</td><td class="num">${S.products.filter(p=>p.brand==b.id).length}</td><td><button class="btn sm ghost" data-delbrand="${b.id}" style="color:var(--bad-700)">حذف</button></td></tr>`).join('')}</tbody></table></div>`;
+ }
+ const old=_oldCompatBundles();const i=old.indexOf('<div class="tabs">');const j=old.indexOf('</div>',old.indexOf('data-ptab="bundles"'))+6;
+ return head+old.slice(j);
+};
+
+V.prodform=()=>{
+ const p=S.pf,t=p.type,dev=t==='جهاز',flt=t==='فلتر',part=t==='قطعة',svc=t==='خدمة',bnd=t==='باقة';
+ const tg=(k,label)=>`<label class="row"><span class="sw"><input type="checkbox" data-pft="${k}" ${p[k]?'checked':''}><span></span></span><span>${label}</span></label>`;
+ return `<div class="ph"><div><h1>${S.pfId?'تعديل منتج':'إضافة منتج'}</h1><p>${S.pfId?p.name:'أكمل البيانات، ويُحفظ كمسودة حتى تنشره'}</p></div><button class="btn ghost" data-pfcancel="1">رجوع</button></div>
+ <div class="grid2"><div class="stack">
+ <div class="card stack"><h3 class="h3">1 · المعلومات الأساسية</h3>
+  <div class="field"><label for="pf_type">نوع المنتج</label><select class="sel" id="pf_type">${opts(PT,t)}</select></div>
+  <div class="two"><div class="field"><label for="pf_name">الاسم بالعربية</label><input class="input" id="pf_name" value="${p.name}"></div><div class="field"><label for="pf_nameEn">الاسم بالإنجليزية</label><input class="input" id="pf_nameEn" dir="ltr" style="text-align:start" value="${p.nameEn}"></div></div>
+  <div class="two"><div class="field"><label for="pf_sku">رمز المنتج (SKU)</label><input class="input" id="pf_sku" dir="ltr" style="text-align:start" placeholder="DEV-GH500" value="${p.sku}"></div>${dev?`<div class="field"><label for="pf_model">الموديل</label><input class="input" id="pf_model" dir="ltr" style="text-align:start" placeholder="GH-500" value="${p.model}"></div>`:'<div></div>'}</div>
+  <div class="row wrapr" style="align-items:flex-end"><div class="field" style="flex:1;min-width:180px"><label for="pf_cat">التصنيف</label><select class="sel" id="pf_cat"><option value="">اختر التصنيف</option>${catOpts(p.cat)}</select></div><button class="btn sec sm" data-modal="addcat:0">+ تصنيف جديد</button></div>
+  ${svc?'':`<div class="row wrapr" style="align-items:flex-end"><div class="field" style="flex:1;min-width:180px"><label for="pf_brand">الشركة المصنعة</label><select class="sel" id="pf_brand"><option value="">اختر الشركة</option>${brandOpts(p.brand)}</select></div><button class="btn sec sm" data-modal="addbrand:0">+ شركة جديدة</button></div>`}
+  <div class="field"><label for="pf_desc">الوصف</label><textarea class="input" id="pf_desc" rows="3">${p.desc}</textarea></div></div>
+ <div class="card stack"><h3 class="h3">2 · التسعير</h3><div class="two"><div class="field"><label for="pf_price">سعر البيع قبل الضريبة (ر.س)</label><input class="input" id="pf_price" type="number" min="0" value="${p.price}"></div><div class="field"><label for="pf_cost">التكلفة (ر.س) للإدارة فقط</label><input class="input" id="pf_cost" type="number" min="0" value="${p.cost}"></div></div><div class="muted" id="pfcalc">${calc(p)}</div></div>
+ ${(dev||flt||part)?`<div class="card stack"><h3 class="h3">3 · المخزون</h3>${tg('track','يتتبع بالمخزون')}${p.track?`<div class="two"><div class="field"><label for="pf_reorder">حد إعادة الطلب</label><input class="input" id="pf_reorder" type="number" min="0" value="${p.reorder}"></div><div class="field"><label for="pf_unit">وحدة القياس</label><select class="sel" id="pf_unit">${opts(UNITS,p.unit)}</select></div>${S.pfId?'':`<div class="field"><label for="pf_opening">الكمية الافتتاحية</label><input class="input" id="pf_opening" type="number" min="0" value="${p.opening}"></div>`}</div>`:''}</div>`
+ :`<div class="card"><h3 class="h3">3 · المخزون</h3><div class="muted" style="margin-top:6px">${svc?'الخدمة لا تتبع بالمخزون.':'الباقة لا تُخزَّن بذاتها: تُصرف مكوناتها عند البيع (يُحدد تفكيكها من تبويب الباقات).'}</div></div>`}
+ ${(dev||part||bnd)?`<div class="card stack"><h3 class="h3">4 · الضمان والتركيب</h3><div class="two"><div class="field"><label for="pf_warranty">مدة الضمان (شهر)</label><input class="input" id="pf_warranty" type="number" min="0" value="${p.warranty}"></div></div>${(dev||bnd)?tg('installable','قابل للتركيب داخل مكة'):''}</div>`:''}
+ ${flt?`<div class="card stack"><h3 class="h3">4 · العمر الافتراضي</h3><div class="two"><div class="field"><label for="pf_life">العمر الافتراضي (شهر)</label><input class="input" id="pf_life" type="number" min="1" value="${p.life}"></div><div class="field"><label for="pf_stage">رقم المرحلة</label><input class="input" id="pf_stage" type="number" min="1" max="7" value="${p.stage}"></div></div><div class="muted">من هذا العمر تُحسب مواعيد الصيانة الدورية.</div></div>`:''}
+ ${(flt||part)?`<div class="card stack"><h3 class="h3">5 · الموديلات المتوافقة</h3><div class="chips">${MODELS.map(m=>`<button class="dbtn ${p.models.includes(m)?'on':''}" data-pfm="${m}">${m}</button>`).join('')}</div></div>`:''}
+ <div class="card stack"><h3 class="h3">المواصفات</h3>${p.specs.map((s,i)=>`<div class="row"><input class="input" data-spec="${i}:k" placeholder="الخاصية (مثال: السعة)" value="${s.k}"><input class="input" data-spec="${i}:v" placeholder="القيمة" value="${s.v}"><button class="btn sm ghost" data-specdel="${i}" aria-label="حذف الصف">×</button></div>`).join('')}<button class="btn sm sec" style="align-self:flex-start" data-specadd="1">+ إضافة خاصية</button></div></div>
+ <div class="stack side2"><div class="card stack"><h3 class="h3">النشر</h3><div class="field"><label for="pf_pub">الحالة</label><select class="sel" id="pf_pub"><option value="0" ${!p.pub?'selected':''}>مسودة</option><option value="1" ${p.pub?'selected':''}>منشور في المتجر</option></select></div>${tg('home','مميز في الصفحة الرئيسية')}
+ ${S.pfErr.length?`<div class="alert bad"><div>${S.pfErr.map(e=>`<div>${e}</div>`).join('')}</div></div>`:''}
+ <button class="btn" data-pfsave="1">${S.pfId?'حفظ التعديلات':'حفظ المنتج'}</button></div>
+ <div class="card stack"><h3 class="h3">الصور</h3><div class="muted">${p.imgs?p.imgs+' صور مرفقة':'لا توجد صور'}</div><button class="btn sm ghost" style="align-self:flex-start" data-pfimg="1">+ إضافة صورة</button></div></div></div>`;
+};
+
+/* modals for category / brand */
+const _mh=modalHtml;
+modalHtml=function(){
+ const m=S.modal;if(!m)return '';const [k,id]=m.split(':');let b='';
+ if(k==='addcat'){const par=+id;b=`<h3 class="h3">${par?'تصنيف فرعي جديد':'تصنيف جديد'}</h3><div class="field"><label for="ac_name">اسم التصنيف</label><input class="input" id="ac_name"></div><div class="field"><label for="ac_parent">التصنيف الأب</label><select class="sel" id="ac_parent"><option value="0">بدون (تصنيف رئيسي)</option>${S.cats.filter(c=>!c.parent).map(c=>`<option value="${c.id}" ${par==c.id?'selected':''}>${c.name}</option>`).join('')}</select></div><div class="row"><button class="btn" data-mok="addcat:0">إضافة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`}
+ else if(k==='editcat'){const c=S.cats.find(x=>x.id==id);b=`<h3 class="h3">تعديل التصنيف</h3><div class="field"><label for="ec_name">الاسم</label><input class="input" id="ec_name" value="${c.name}"></div><div class="row"><button class="btn" data-mok="editcat:${id}">حفظ</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`}
+ else if(k==='addbrand'){b=`<h3 class="h3">شركة مصنعة جديدة</h3><div class="field"><label for="ab_name">اسم الشركة</label><input class="input" id="ab_name"></div><div class="field"><label for="ab_country">بلد المنشأ</label><input class="input" id="ab_country"></div><div class="row"><button class="btn" data-mok="addbrand:0">إضافة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`}
+ else return _mh();
+ return `<div class="modal" role="dialog" aria-modal="true"><div>${b}</div></div>`;
+};
+const _mok=mok;
+mok=function(k,id){
+ if(k==='addcat'){const n=document.getElementById('ac_name').value.trim(),par=+document.getElementById('ac_parent').value;if(!n){toast('اكتب اسم التصنيف');return}if(S.cats.some(c=>c.name===n&&c.parent===par)){toast('التصنيف موجود مسبقًا');return}const nid=Date.now();S.cats.push({id:nid,name:n,parent:par,vis:true});if(S.page==='prodform')S.pf.cat=nid;audit('أضاف التصنيف '+n,'منتجات');S.modal=null;toast('أُضيف التصنيف');return}
+ if(k==='editcat'){const n=document.getElementById('ec_name').value.trim();if(!n){toast('اكتب الاسم');return}const c=S.cats.find(x=>x.id==id);audit('أعاد تسمية التصنيف '+c.name+' إلى '+n,'منتجات');c.name=n;S.modal=null;toast('حُفظ الاسم');return}
+ if(k==='addbrand'){const n=document.getElementById('ab_name').value.trim();if(!n){toast('اكتب اسم الشركة');return}if(S.brands.some(b=>b.name===n)){toast('الشركة موجودة مسبقًا');return}const nid=Date.now();S.brands.push({id:nid,name:n,country:document.getElementById('ab_country').value.trim()});if(S.page==='prodform')S.pf.brand=nid;audit('أضاف الشركة '+n,'منتجات');S.modal=null;toast('أُضيفت الشركة');return}
+ return _mok(k,id);
+};
+const _render=render;
+render=function(){_render();if(document.activeElement&&document.activeElement.id==='x')return};
+function renderKeepFocus(id){const e0=document.getElementById(id),pos=e0?e0.selectionStart:0;render();const e=document.getElementById(id);if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(_){}}}
+document.addEventListener('click',e=>{
+ const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+ if(d.newprod){S.pf=newPf();S.pfId=null;S.pfErr=[];go('prodform');return}
+ if(d.editprod){const p=S.products.find(x=>x.id==d.editprod);S.pf=JSON.parse(JSON.stringify(p));if(!S.pf.specs.length)S.pf.specs=[{k:'',v:''}];S.pfId=p.id;S.pfErr=[];go('prodform');return}
+ if(d.pfcancel){S.page='catalog';render();return}
+ if(d.specadd){S.pf.specs.push({k:'',v:''});render();return}
+ if(d.specdel!==undefined){S.pf.specs.splice(+d.specdel,1);if(!S.pf.specs.length)S.pf.specs=[{k:'',v:''}];render();return}
+ if(d.pfm){const a=S.pf.models,i=a.indexOf(d.pfm);i<0?a.push(d.pfm):a.splice(i,1);render();return}
+ if(d.pfimg){S.pf.imgs=(S.pf.imgs||0)+1;render();return}
+ if(d.delcat){const c=S.cats.find(x=>x.id==d.delcat);if(kids(c.id).length){toast('لا يمكن الحذف: فيه تصنيفات فرعية');return}if(catCount(c.id)){toast('لا يمكن الحذف: فيه '+catCount(c.id)+' منتجات');return}S.cats=S.cats.filter(x=>x.id!==c.id);audit('حذف التصنيف '+c.name,'منتجات');toast('حُذف التصنيف');return}
+ if(d.delbrand){const b=S.brands.find(x=>x.id==d.delbrand);const n=S.products.filter(p=>p.brand==b.id).length;if(n){toast('لا يمكن الحذف: مرتبطة بـ '+n+' منتجات');return}S.brands=S.brands.filter(x=>x.id!==b.id);audit('حذف الشركة '+b.name,'منتجات');toast('حُذفت الشركة');return}
+ if(d.pfsave){pfSave();return}
+});
+document.addEventListener('input',e=>{
+ const i=e.target;
+ if(i.id==='f_q'){S.pfil.q=i.value;renderKeepFocus('f_q');return}
+ if(i.id&&i.id.startsWith('pf_')&&S.pf){S.pf[i.id.slice(3)]=i.value;if(i.id==='pf_price'||i.id==='pf_cost'){const el=document.getElementById('pfcalc');if(el)el.innerHTML=calc(S.pf)}}
+ if(i.dataset&&i.dataset.spec&&S.pf){const[ix,k]=i.dataset.spec.split(':');S.pf.specs[+ix][k]=i.value}
+});
+document.addEventListener('change',e=>{
+ const i=e.target;
+ if(i.id&&i.id.startsWith('f_')&&i.id!=='f_q'){S.pfil[i.id.slice(2)]=i.value;render();return}
+ if(i.dataset&&i.dataset.cvis){const c=S.cats.find(x=>x.id==i.dataset.cvis);c.vis=i.checked;audit((c.vis?'أظهر':'أخفى')+' التصنيف '+c.name+' في المتجر','منتجات');render();return}
+ if(i.dataset&&i.dataset.pft&&S.pf){S.pf[i.dataset.pft]=i.checked;render();return}
+ if(i.id==='pf_type'&&S.pf){S.pf.type=i.value;S.pf.track=['جهاز','فلتر','قطعة'].includes(i.value);S.pf.installable=['جهاز','باقة'].includes(i.value);render();return}
+ if(i.id==='pf_pub'&&S.pf){S.pf.pub=i.value==='1'}
+ if((i.id==='pf_cat'||i.id==='pf_brand')&&S.pf){S.pf[i.id.slice(3)]=i.value}
+});
+function pfSave(){
+ const p=S.pf,err=[],t=p.type,need=['جهاز','فلتر','قطعة'].includes(t);
+ if(!p.name.trim())err.push('الاسم بالعربية مطلوب');
+ if(!p.sku.trim())err.push('رمز المنتج (SKU) مطلوب');
+ else if(S.products.some(x=>x.sku.toLowerCase()===p.sku.trim().toLowerCase()&&x.id!==S.pfId))err.push('رمز المنتج مستخدم في منتج آخر');
+ if(!p.cat)err.push('اختر التصنيف');
+ if(t!=='خدمة'&&!p.brand)err.push('اختر الشركة المصنعة');
+ if(!(+p.price>0))err.push('سعر البيع يجب أن يكون أكبر من صفر');
+ if(need&&p.track&&(p.reorder===''||+p.reorder<0))err.push('حد إعادة الطلب مطلوب');
+ if(t==='فلتر'&&!(+p.life>0))err.push('العمر الافتراضي للفلتر مطلوب');
+ if((t==='فلتر'||t==='قطعة')&&!p.models.length)err.push('اختر موديلًا واحدًا على الأقل للتوافق');
+ if(p.pub&&!(S.cats.find(c=>c.id==p.cat)||{}).vis)err.push('التصنيف مخفي في المتجر، أظهره أو اختر غيره قبل النشر');
+ S.pfErr=err;if(err.length){render();return}
+ const out={...p,id:S.pfId||Date.now(),sku:p.sku.trim(),name:p.name.trim(),cat:+p.cat,brand:+p.brand||0,price:+p.price,cost:+p.cost||0,reorder:+p.reorder||0,warranty:+p.warranty||0,life:+p.life||'',stage:+p.stage||'',pub:!!p.pub,specs:p.specs.filter(s=>s.k.trim()||s.v.trim())};
+ if(S.pfId){const i=S.products.findIndex(x=>x.id===S.pfId);const old=S.products[i];S.products[i]=out;audit('عدّل المنتج '+out.name+(old.price!==out.price?' (السعر من '+fmt(old.price)+' إلى '+fmt(out.price)+')':''),'منتجات')}
+ else{S.products.push(out);audit('أضاف المنتج '+out.name+' ('+out.sku+') '+(out.pub?'منشورًا':'كمسودة'),'منتجات')}
+ S.page='catalog';S.prodTab='products';S.pfil={q:'',cat:'',brand:'',type:'',st:''};render();toast(S.pfId?'حُفظت التعديلات':'حُفظ المنتج');
+}
+
+/* ===== v3: rules of approval, payment failure policy, access codes, dashboard ===== */
+Object.assign(BADGE,{'إعادة تلقائية':'b-info','بانتظار العميل':'b-warn','يحتاج تدخل':'b-bad','تلقائي':'b-ok','مفعّلة':'b-ok','متوقفة':'b-gray'});
+S.rules=[
+ {k:'refund',label:'استرداد مبلغ للعميل',desc:'أي استرداد يخرج مالًا من الشركة.',on:true,thr:0,unit:'ر.س',tl:'عند مبلغ أكبر من'},
+ {k:'extrapay',label:'رابط دفع إضافي (قطع زادت عن المتوقع)',desc:'عندما يطلب الفني قطعًا فوق ما دفع عنه العميل.',on:true,thr:200,unit:'ر.س',tl:'عند زيادة أكبر من'},
+ {k:'cashdiff',label:'فرق في النقد المستلم من الفني',desc:'الفرق بين ما سجّله الفني وما سلّمه للشركة.',on:true,thr:20,unit:'ر.س',tl:'عند فرق أكبر من'},
+ {k:'stockadj',label:'تسوية فرق الجرد',desc:'تعديل الكمية في النظام بعد جرد فعلي.',on:true,thr:1,unit:'قطعة',tl:'عند فرق أكبر من'},
+ {k:'discount',label:'خصم أو تعديل سعر يدوي على طلب',desc:'أي تغيير على السعر خارج الأسعار المعتمدة.',on:true,thr:10,unit:'%',tl:'عند خصم أكبر من'},
+ {k:'cancelpaid',label:'إلغاء طلب مدفوع',desc:'إلغاء بعد الدفع يستلزم استردادًا أو إعادة مخزون.',on:true,thr:null},
+ {k:'woclose',label:'مراجعة أمر عمل طارئ قبل الإغلاق',desc:'يراجع المدير التقرير والمرفقات ثم يُغلق الأمر.',on:false,thr:null}];
+S.apTab='queue';
+S.pol={retryN:3,retryMin:10,awaitH:24};
+S.ilog=[
+ {id:'L-914',sys:'ميسر',ev:'دفع طلب ST-10492',t:'13:02',st:'إعادة تلقائية',why:'انتهت مهلة البوابة',cls:'مؤقت',note:'المحاولة 1 من 3 · التالية بعد 10 دقائق'},
+ {id:'L-913',sys:'ميسر',ev:'دفع طلب ST-10491',t:'12:20',st:'بانتظار العميل',why:'رصيد البطاقة غير كافٍ',cls:'من العميل',note:'أُرسل للعميل رابط جديد على واتساب ويمكنه اختيار وسيلة أخرى · ينتهي بعد 24 ساعة'},
+ {id:'L-911',sys:'شركة الشحن',ev:'إنشاء شحنة ST-10490',t:'12:30',st:'يحتاج تدخل',why:'رقم الجوال غير صالح لدى المزود',cls:'بيانات',note:'لا يمكن إعادتها تلقائيًا: يلزم تصحيح رقم العميل في الطلب'},
+ {id:'L-910',sys:'الأستاذ',ev:'مزامنة فاتورة INV-2210',t:'11:58',st:'إعادة تلقائية',why:'خدمة الفوترة غير متاحة مؤقتًا',cls:'مؤقت',note:'المحاولة 2 من 3 · التالية بعد 10 دقائق'},
+ {id:'L-912',sys:'ميسر',ev:'تأكيد دفع PR-773',t:'12:41',st:'ناجح'},
+ {id:'L-909',sys:'ميسر',ev:'رابط سداد ST-10489',t:'11:10',st:'ناجح'}];
+S.users.forEach((u,i)=>u.code=['482915','730164','915208'][i]||'000000');
+const rnd6=()=>String(Math.floor(100000+Math.random()*900000));
+const needAct=()=>S.ilog.filter(l=>l.st==='يحتاج تدخل');
+
+V.appr=()=>{const q=S.appr,p=pend();return `<div class="ph"><div><h1>الموافقات</h1><p>ما يحتاج قرار المدير، وما يُنفَّذ مباشرة</p></div></div>
+ <div class="tabs"><button data-aptab="queue" class="${S.apTab==='queue'?'on':''}">الطلبات${p?` (${p})`:''}</button><button data-aptab="rules" class="${S.apTab==='rules'?'on':''}">قواعد الموافقة</button></div>
+ ${S.apTab==='queue'?`<div class="stack">${q.map(a=>`<div class="card"><div class="row between wrapr"><div><span class="badge b-info xs">${a.kind}</span> <b>${a.title}</b><div class="muted">${a.why} · قدّمه ${a.by}</div></div>
+ <div class="row">${a.st==='بانتظار القرار'?`<button class="btn sm" data-ap="ok:${a.id}">اعتماد</button><button class="btn sm danger" data-modal="reject:${a.id}">رفض</button>`:bd(a.st)}</div></div></div>`).join('')||'<div class="card muted">لا توجد طلبات.</div>'}</div>`
+ :`<div class="alert info" style="margin-bottom:12px">${ic('check',18)}<div><b>كيف تعمل؟</b> كل إجراء في القائمة يوقفه النظام عند الحد الذي تحدده حتى تعتمده. ما دون الحد أو ما أطفأت قاعدته ينفّذه الموظف مباشرة ويُسجَّل في سجل التدقيق. لا يعتمد أحد طلبًا قدّمه بنفسه.</div></div>
+ <div class="stack">${S.rules.map((r,i)=>`<div class="card"><div class="row between wrapr"><div style="flex:1;min-width:220px"><b>${r.label}</b><div class="muted">${r.desc}</div></div>
+ <div class="row wrapr">${r.thr!==null?`<label class="row" style="gap:6px"><span class="muted">${r.tl}</span><input class="input" type="number" min="0" value="${r.thr}" data-rthr="${i}" style="width:90px" aria-label="${r.label}" ${r.on?'':'disabled'}><span class="muted">${r.unit}</span></label>`:''}
+ <label class="row"><span class="sw"><input type="checkbox" data-ron="${i}" ${r.on?'checked':''} aria-label="يحتاج موافقة: ${r.label}"><span></span></span><span>${r.on?'يحتاج موافقة':'مباشر'}</span></label></div></div></div>`).join('')}</div>`}`};
+
+V.integ=()=>{const i=S.integ,P=S.pol;const card=(k,name,desc)=>`<div class="card stack"><div class="row between"><b>${name}</b>${bd(i[k].on?'متصل':'غير مفعل')}</div><div class="muted">${desc}</div><div class="field"><label>مفتاح الربط</label><input class="input" dir="ltr" style="text-align:start" value="sk_test_••••••••••3f9a" readonly aria-label="مفتاح ${name}"></div><div class="row wrapr"><label class="row"><span class="sw"><input type="checkbox" data-itog="${k}" ${i[k].on?'checked':''}><span></span></span><span>مفعّل</span></label><span class="badge b-gray xs">${i[k].env}</span><span class="sp"></span><button class="btn sm sec" data-itest="${k}">اختبار الاتصال</button></div></div>`;
+ return `<div class="ph"><div><h1>التكاملات</h1><p>الخدمات الخارجية وما يحدث تلقائيًا عند تعثّرها</p></div></div>
+ <div class="cards3">${card('moy','ميسر (الدفع)','روابط السداد والتحقق من نتيجة الدفع.')}${card('ship','شركة الشحن','إنشاء الشحنة ورقم التتبع.')}${card('ledger','الأستاذ المحاسبي','مزامنة الفواتير والمدفوعات (الزكاة والدخل).')}</div>
+ <div class="card stack" style="margin-top:16px"><h3 class="h3">عند تعثر عملية، النظام يتصرف تلقائيًا</h3>
+  <div class="list"><div>${bd('إعادة تلقائية')}<span style="flex:1"><b>سبب مؤقت</b> (انقطاع أو مهلة): يعيد العملية وحده بدون تدخل أحد.</span></div>
+  <div>${bd('بانتظار العميل')}<span style="flex:1"><b>سبب من العميل</b> (رصيد، بطاقة مرفوضة): يرسل له رابطًا جديدًا ليدفع بوسيلة أخرى، ويذكّره قبل انتهاء الرابط.</span></div>
+  <div>${bd('يحتاج تدخل')}<span style="flex:1"><b>سبب لا يُحل آليًا</b> (بيانات خاطئة): تظهر للموظف مع سببها ليصححها، ثم تُنفَّذ.</span></div></div>
+  <div class="two"><div class="field"><label for="p_retryN">عدد الإعادات التلقائية</label><input class="input" id="p_retryN" type="number" min="1" max="10" value="${P.retryN}"></div><div class="field"><label for="p_retryMin">الفاصل بين الإعادات (دقيقة)</label><input class="input" id="p_retryMin" type="number" min="1" value="${P.retryMin}"></div><div class="field"><label for="p_awaitH">صلاحية رابط الدفع الجديد (ساعة)</label><input class="input" id="p_awaitH" type="number" min="1" value="${P.awaitH}"></div></div>
+  <div class="muted">إذا استُنفدت الإعادات أو انتهى الرابط دون دفع، تتحول العملية إلى «يحتاج تدخل» ويتواصل معها الموظف.</div><div><button class="btn sm" data-savepol="1">حفظ السياسة</button></div></div>
+ <h3 class="h3" style="margin:20px 0 8px">سجل التكاملات</h3><div class="card tw"><table><thead><tr><th>الرقم</th><th>النظام</th><th>الحدث</th><th>الوقت</th><th>الحالة</th><th></th></tr></thead><tbody>${S.ilog.map(l=>`<tr><td class="num">${l.id}</td><td>${l.sys}</td><td>${l.ev}${l.why?`<div class="muted"><b>السبب:</b> ${l.why} · <b>النوع:</b> ${l.cls}</div><div class="muted">${l.note}</div>`:''}</td><td>${l.t}</td><td>${bd(l.st)}</td><td>${l.st==='يحتاج تدخل'?`<button class="btn sm" data-ires="${l.id}">تم التصحيح</button>`:''}</td></tr>`).join('')}</tbody></table></div>`};
+
+V.users=()=>`<div class="ph"><div><h1>المستخدمون</h1><p>حسابات الموظفين. الفنيون بدون حسابات.</p></div><button class="btn" data-modal="adduser">${ic('plus',16)} إضافة مستخدم</button></div>
+ <div class="alert info" style="margin-bottom:12px">${ic('key',18)}<div>يدخل الموظف برقم جواله ورمزه الخاص (6 أرقام). المدير يحدد الرمز عند الإضافة ويغيّره متى شاء، وتغييره ينهي جلسات المستخدم الحالية.</div></div>
+ <div class="card tw"><table><thead><tr><th>الاسم</th><th>الجوال</th><th>الدور</th><th>رمز الدخول</th><th>آخر دخول</th><th>الحالة</th><th></th></tr></thead><tbody>${S.users.map(u=>`<tr><td><b>${u.name}</b></td><td class="num" dir="ltr" style="text-align:start">${u.phone}</td><td><select class="sel" aria-label="دور ${u.name}" data-urole="${u.id}" style="min-width:130px" ${u.id===1?'disabled':''}>${opts(Object.keys(ROLES),u.role)}</select></td><td class="num" dir="ltr" style="text-align:start">${S.showCode===u.id?u.code:'••••••'} <button class="btn sm ghost" data-showcode="${u.id}">${S.showCode===u.id?'إخفاء':'إظهار'}</button></td><td>${u.last}</td><td>${bd(u.active?'نشط':'معطل')}</td>
+ <td><div class="row">${u.id===1?'':`<button class="btn sm ghost" data-utog="${u.id}">${u.active?'تعطيل':'تفعيل'}</button>`}<button class="btn sm ghost" data-modal="ucode:${u.id}">تغيير الرمز</button></div></td></tr>`).join('')}</tbody></table></div>`;
+
+V.dash=()=>{const na=needAct().length;const pipe=[['جديد',9],['مدفوع',7],['قيد التجهيز',5],['شُحن / للتركيب',4],['مكتمل',31]];
+ return `<div class="ph"><div><h1>لوحة المدير</h1><p>صباح الخير يا ريان · الخميس 10 أكتوبر · أرقام تجريبية</p></div></div>
+ <div class="kpis">
+  <div class="kpi"><b>6,100</b><span>مبيعات اليوم (ر.س)</span></div>
+  <div class="kpi"><b>9</b><span>طلبات جديدة اليوم</span></div>
+  <div class="kpi bad"><b>2</b><span>بلاغات طارئة مفتوحة</span></div>
+  <div class="kpi"><b>14</b><span>صيانة دورية مستحقة هذا الشهر</span></div>
+  <button class="kpi warn" data-go="appr"><b>${pend()}</b><span>موافقات تنتظرك</span></button>
+  <button class="kpi ${na?'bad':''}" data-go="integ"><b>${na}</b><span>عمليات تحتاج تدخلًا</span></button></div>
+ <div class="grid2"><div class="stack">
+  <div class="card"><h3 class="h3" style="margin-bottom:8px">مسار الطلبات الآن</h3>${bars(pipe.map(x=>x[1]),pipe.map(x=>x[0]),35,'عدد الطلبات')}</div>
+  <div class="card"><div class="row between"><h3 class="h3">المبيعات آخر 7 أيام</h3><button class="btn sm sec" data-go="reports">كل التقارير</button></div>${bars([4200,5100,3800,6900,5600,7400,6100],['الجمعة','السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'],8000,'ريال سعودي')}</div></div>
+ <div class="stack"><div class="card"><h3 class="h3" style="margin-bottom:6px">يحتاج انتباهك</h3><div class="list">
+  ${pend()?`<div>${bd('بانتظار القرار')}<span style="flex:1">${pend()} طلبات اعتماد</span><button class="btn sm sec" data-go="appr">مراجعة</button></div>`:''}
+  ${needAct().map(l=>`<div>${bd('يحتاج تدخل')}<span style="flex:1">${l.sys}: ${l.ev}</span><button class="btn sm sec" data-go="integ">معالجة</button></div>`).join('')}
+  <div>${bd('تحت الحد')}<span style="flex:1">3 أصناف تحت حد إعادة الطلب</span></div>
+  <div>${bd('معلّق','عهدة')}<span style="flex:1">عهدة OH-118 بانتظار التسليم</span></div></div></div>
+  <div class="card"><h3 class="h3" style="margin-bottom:6px">اليوم في الميدان</h3><div class="list">
+  <div><b>10:00</b><span style="flex:1">AP-3007 · العزيزية · صيانة دورية</span>${bd('معلّق','بانتظار الفني')}</div>
+  <div><b>13:00</b><span style="flex:1">WO-2041 · الشوقية · بلاغ طارئ</span>${bd('إعادة تلقائية','في الطريق')}</div>
+  <div><b>16:00</b><span style="flex:1">AP-3010 · النسيم · تركيب جهاز</span>${bd('تلقائي','مؤكد')}</div></div></div>
+  <div class="card"><h3 class="h3" style="margin-bottom:6px">أداء الفريق هذا الأسبوع</h3><div class="list"><div><span style="flex:1">متوسط زمن الاستجابة للبلاغ</span><b>5.2 ساعة</b></div><div><span style="flex:1">قبول العميل لتقرير الفحص</span><b>78%</b></div><div><span style="flex:1">مواعيد تأجلت أو أُلغيت</span><b>6</b></div></div></div></div></div>`};
+
+/* modals */
+const _mh2=modalHtml;
+modalHtml=function(){
+ const m=S.modal;if(!m)return '';const [k,id]=m.split(':');
+ if(k==='adduser')return `<div class="modal" role="dialog" aria-modal="true"><div><h3 class="h3">إضافة مستخدم</h3><div class="field"><label for="au_name">الاسم</label><input class="input" id="au_name"></div><div class="field"><label for="au_phone">رقم الجوال</label><input class="input" id="au_phone" dir="ltr" style="text-align:start"></div><div class="field"><label for="au_role">الدور</label><select class="sel" id="au_role">${opts(Object.keys(ROLES).filter(r=>r!=='مدير النظام'),'')}</select></div><div class="field"><label for="au_code">رمز الدخول (6 أرقام)</label><div class="row"><input class="input" id="au_code" dir="ltr" style="text-align:start" value="${S.newCode||(S.newCode=rnd6())}" inputmode="numeric"><button class="btn sm sec" data-gencode="au_code">توليد</button></div></div><div class="row"><button class="btn" data-mok="adduser:0">إضافة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div></div></div>`;
+ if(k==='ucode'){const u=S.users.find(x=>x.id==id);return `<div class="modal" role="dialog" aria-modal="true"><div><h3 class="h3">تغيير رمز ${u.name}</h3><div class="field"><label for="uc_code">الرمز الجديد (6 أرقام)</label><div class="row"><input class="input" id="uc_code" dir="ltr" style="text-align:start" value="${rnd6()}" inputmode="numeric"><button class="btn sm sec" data-gencode="uc_code">توليد</button></div></div><div class="muted">سيُنهى دخول المستخدم الحالي ويُبلَّغ بالرمز الجديد.</div><div class="row" style="margin-top:12px"><button class="btn" data-mok="ucode:${id}">حفظ</button><button class="btn ghost" data-mclose="1">إلغاء</button></div></div></div>`}
+ return _mh2();
+};
+const _mok2=mok;
+mok=function(k,id){
+ const codeOk=c=>/^\d{6}$/.test(c);
+ if(k==='adduser'){const n=document.getElementById('au_name').value.trim(),p=document.getElementById('au_phone').value.trim(),c=document.getElementById('au_code').value.trim();
+  if(!n||!/^05\d{8}$/.test(p)){toast('الاسم وجوال صحيح (05xxxxxxxx) مطلوبان');return}
+  if(S.users.some(u=>u.phone===p)){toast('هذا الجوال مسجل لمستخدم آخر');return}
+  if(!codeOk(c)){toast('الرمز 6 أرقام');return}
+  if(S.users.some(u=>u.code===c)){toast('الرمز مستخدم، اختر رمزًا آخر');return}
+  S.users.push({id:Date.now(),name:n,phone:p,role:document.getElementById('au_role').value,active:true,last:'لم يدخل بعد',code:c});S.newCode=null;audit('أضاف المستخدم '+n,'مستخدمون');S.modal=null;toast('أُضيف المستخدم');return}
+ if(k==='ucode'){const c=document.getElementById('uc_code').value.trim();if(!codeOk(c)){toast('الرمز 6 أرقام');return}if(S.users.some(u=>u.code===c&&u.id!=id)){toast('الرمز مستخدم، اختر رمزًا آخر');return}const u=S.users.find(x=>x.id==id);u.code=c;audit('غيّر رمز دخول '+u.name,'مستخدمون');S.modal=null;toast('تم تغيير الرمز');return}
+ return _mok2(k,id);
+};
+document.addEventListener('click',e=>{
+ const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+ if(d.aptab){S.apTab=d.aptab;render();return}
+ if(d.showcode){S.showCode=S.showCode==d.showcode?null:+d.showcode;render();return}
+ if(d.gencode){document.getElementById(d.gencode).value=rnd6();return}
+ if(d.ires){const l=S.ilog.find(x=>x.id===d.ires);l.st='ناجح';delete l.why;audit('صحّح بيانات '+l.id+' فأُعيدت العملية ('+l.sys+')','تكاملات');toast('صُحّحت البيانات وأُعيدت العملية تلقائيًا');render();return}
+ if(d.savepol){['retryN','retryMin','awaitH'].forEach(k=>{S.pol[k]=Math.max(1,+document.getElementById('p_'+k).value||S.pol[k])});audit('عدّل سياسة إعادة المحاولة','تكاملات');toast('حُفظت السياسة');return}
+});
+document.addEventListener('change',e=>{
+ const i=e.target,d=i.dataset;
+ if(d.ron!==undefined){const r=S.rules[+d.ron];r.on=i.checked;audit((r.on?'أوجب الموافقة على: ':'جعل مباشرًا: ')+r.label,'موافقات');render();return}
+ if(d.rthr!==undefined){const r=S.rules[+d.rthr];r.thr=Math.max(0,+i.value||0);audit('عدّل حد الموافقة على «'+r.label+'» إلى '+r.thr+' '+r.unit,'موافقات');toast('حُفظ الحد');return}
+});
+
+render();
+</script>
+</html>

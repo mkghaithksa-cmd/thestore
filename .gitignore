@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# env files (secrets) — only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# supabase local state
+supabase/.temp/
+supabase/.branches/
+
+# logs & OS/editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

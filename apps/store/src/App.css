@@ -1,0 +1,4 @@
+.hero{background:linear-gradient(135deg,var(--hero-a),var(--hero-b));color:#fff;padding:96px 20px;text-align:center}
+.hero h1{font-size:clamp(28px,6vw,48px);margin:0 0 12px;font-weight:700}
+.hero p{margin:0 auto;max-width:560px;opacity:.9}
+.badge{display:inline-block;margin-top:20px;font-size:13px;background:rgba(255,255,255,.18);border-radius:99px;padding:4px 14px}

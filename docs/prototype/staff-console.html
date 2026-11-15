@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة عمليات غيث</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: admin console. Right sidebar (RTL) + top bar + work area; tables and a step-by-step work-order panel. Review bar and drawer carry reviewer notes. Tokens from Design System Foundations. */
+:root{
+  --primary-50:#f0f9ff;--primary-100:#e0f2fe;--primary-500:#38bdf8;--primary-600:#0ea5e9;--primary-700:#0369a1;
+  --n50:#f8fafc;--n100:#f1f5f9;--n200:#e2e8f0;--n300:#cbd5e1;--n400:#94a3b8;--n500:#566377;--n700:#334155;--n900:#0f172a;
+  --surface:#ffffff;
+  --ok-50:#f0fdf4;--ok-500:#22c55e;--ok-700:#15803d;
+  --warn-50:#fffbeb;--warn-500:#f59e0b;--warn-700:#b45309;
+  --bad-50:#fef2f2;--bad-500:#ef4444;--bad-700:#b91c1c;
+  --pur-50:#faf5ff;--pur-700:#7e22ce;--org-50:#fff7ed;--org-700:#c2410c;
+  --btn-text:#ffffff;
+  --font:"IBM Plex Sans Arabic","Tajawal",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
+  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
+  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --pur-50:#241437;--pur-700:#d8b4fe;--org-50:#2e1a0a;--org-700:#fdba74;--btn-text:#06202f;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
+  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
+  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --pur-50:#241437;--pur-700:#d8b4fe;--org-50:#2e1a0a;--org-700:#fdba74;--btn-text:#06202f;color-scheme:dark}
+*{box-sizing:border-box}
+.grid2>*,.kpis>*{min-width:0}
+[hidden]{display:none!important}
+body{background:var(--n50);color:var(--n900);font-family:var(--font);direction:rtl;font-size:14px;line-height:1.65;padding:0}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--primary-600);outline-offset:2px}
+.review{background:var(--n900);color:var(--n50);font-size:13px;position:sticky;top:env(safe-area-inset-top,0px);z-index:30}
+:root[data-theme="dark"] .review{background:#020617;color:#e2e8f0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .review{background:#020617;color:#e2e8f0}}
+.review .in{display:flex;align-items:center;gap:12px;min-height:42px;flex-wrap:wrap;padding:6px 16px}
+.review button{background:rgba(148,163,184,.22);border:0;color:inherit;border-radius:8px;padding:5px 12px;font-size:12px}
+.pill{background:var(--primary-600);color:#06202f;border-radius:99px;padding:1px 10px;font-size:11px;font-weight:600}
+.sp{flex:1}
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 42px)}
+.side{background:var(--surface);border-inline-end:1px solid var(--n200);padding:16px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:42px;align-self:start;height:calc(100vh - 42px);overflow-y:auto}
+.brand{display:flex;gap:8px;align-items:center;font-weight:700;font-size:20px;color:var(--primary-700);padding:4px 10px 14px}
+.brand svg{width:26px;height:26px}
+.side button.nv{display:flex;align-items:center;gap:10px;padding:10px 12px;border:0;background:none;border-radius:8px;color:var(--n700);text-align:start;font-weight:500;width:100%}
+.side button.nv:hover{background:var(--n100)}
+.side button.nv.on{background:var(--primary-50);color:var(--primary-700);font-weight:600}
+.side button.nv svg{width:18px;height:18px;flex:none}
+.side button.nv .cnt{margin-inline-start:auto;background:var(--bad-500);color:#fff;border-radius:99px;font-size:11px;min-width:20px;text-align:center;padding:0 6px}
+.side .who{margin-top:auto;border-top:1px solid var(--n200);padding:12px 8px 0;font-size:13px}
+.side .who span{color:var(--n500);display:block;font-size:12px}
+.work{padding:24px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.ph h1{font-size:22px;margin:0;font-weight:700}
+.ph p{margin:2px 0 0;color:var(--n500)}
+.card{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:16px}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.wrapr{flex-wrap:wrap}
+.muted{color:var(--n500);font-size:12.5px}
+.h3{font-size:15px;font-weight:600;margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:14px;text-align:start;display:flex;flex-direction:column;gap:2px}
+.kpi:hover{border-color:var(--primary-600)}
+.kpi b{font-size:26px;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{color:var(--n500);font-size:13px}
+.kpi.warn b{color:var(--warn-700)}.kpi.bad b{color:var(--bad-700)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:start;color:var(--n500);font-weight:500;font-size:12px;padding:10px 12px;border-bottom:1px solid var(--n200);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--n100);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr.clk{cursor:pointer}
+tbody tr.clk:hover{background:var(--n100)}
+td b{font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:2px 10px;border-radius:99px;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-ok{background:var(--ok-50);color:var(--ok-700)}.b-warn{background:var(--warn-50);color:var(--warn-700)}
+.b-info{background:var(--primary-50);color:var(--primary-700)}.b-bad{background:var(--bad-50);color:var(--bad-700)}.b-gray{background:var(--n100);color:var(--n700)}
+.b-pur{background:var(--pur-50);color:var(--pur-700)}.b-org{background:var(--org-50);color:var(--org-700)}
+.btn{height:38px;border-radius:8px;border:0;background:var(--primary-700);color:var(--btn-text);font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 16px;white-space:nowrap}
+.btn:hover{filter:brightness(1.07)}
+.btn.sec{background:var(--primary-50);color:var(--primary-700)}
+.btn.ghost{background:none;border:1px solid var(--n300);color:var(--n700)}
+.btn.danger{background:var(--bad-50);color:var(--bad-700)}
+.btn.sm{height:32px;padding:0 12px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.input,.sel{height:38px;border:1px solid var(--n300);border-radius:8px;background:var(--surface);padding:0 12px;width:100%}
+textarea.input{height:auto;padding:10px 12px}
+.input:focus,.sel:focus{border-color:var(--primary-600);outline:2px solid var(--primary-100)}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:13px;font-weight:500}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--n200);margin-bottom:14px;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 14px;color:var(--n500);font-weight:500;white-space:nowrap}
+.tabs button.on{color:var(--primary-700);border-color:var(--primary-600);font-weight:600}
+.alert{border-radius:10px;padding:10px 12px;font-size:13.5px;display:flex;gap:8px;align-items:flex-start}
+.alert.info{background:var(--primary-50);color:var(--primary-700)}.alert.warn{background:var(--warn-50);color:var(--warn-700)}.alert.ok{background:var(--ok-50);color:var(--ok-700)}.alert.bad{background:var(--bad-50);color:var(--bad-700)}
+.list{display:flex;flex-direction:column}
+.list>div{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--n100)}
+.list>div:last-child{border-bottom:0}
+.stepper{display:flex;flex-direction:column}
+.sp1{display:flex;gap:12px;position:relative;padding-bottom:14px}
+.sp1:last-child{padding-bottom:0}
+.sp1::before{content:"";position:absolute;inset-inline-start:11px;top:26px;bottom:0;width:2px;background:var(--n200)}
+.sp1:last-child::before{display:none}
+.sp1 .c{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--n100);color:var(--n400);border:2px solid var(--n200);font-size:12px}
+.sp1.done .c{background:var(--ok-500);border-color:var(--ok-500);color:#fff}
+.sp1.done::before{background:var(--ok-500)}
+.sp1.now .c{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
+.sp1.skip{opacity:.5}
+.sp1 b{font-weight:600}
+.opt{display:flex;gap:10px;align-items:center;border:1px solid var(--n300);border-radius:8px;padding:10px 12px;background:var(--surface);width:100%;text-align:start}
+.opt.on{border-color:var(--primary-600);background:var(--primary-50)}
+.opt .r{width:16px;height:16px;border-radius:50%;border:2px solid var(--n300);flex:none}
+.opt.on .r{border:5px solid var(--primary-600)}
+.opt[disabled]{opacity:.5;cursor:not-allowed}
+.msg{background:var(--n100);border-radius:10px;padding:12px;font-size:13.5px;white-space:pre-line;border:1px dashed var(--n300)}
+.sum div{display:flex;justify-content:space-between;padding:4px 0;font-variant-numeric:tabular-nums;gap:10px}
+.sum .tot{border-top:1px dashed var(--n300);margin-top:6px;padding-top:8px;font-weight:700;font-size:15px}
+.toast{position:fixed;bottom:22px;inset-inline:0;margin-inline:auto;width:max-content;max-width:90vw;background:var(--n900);color:var(--n50);padding:10px 16px;border-radius:10px;z-index:60}
+:root[data-theme="dark"] .toast{background:#e2e8f0;color:#0f172a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toast{background:#e2e8f0;color:#0f172a}}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.modal>div{background:var(--surface);width:100%;max-width:440px;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.drawer{position:fixed;top:0;bottom:0;inset-inline-end:0;width:360px;max-width:92vw;background:var(--surface);border-inline-start:1px solid var(--n200);z-index:40;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:-8px 0 30px rgba(15,23,42,.15)}
+.drawer h2{font-size:15px;margin:0 0 8px;font-weight:600}
+.drawer ul{margin:0;padding-inline-start:18px;color:var(--n700)}
+.drawer li{margin-bottom:6px}
+.tag{font-size:12px;color:var(--primary-700);background:var(--primary-50);padding:2px 10px;border-radius:99px;display:inline-block;margin-bottom:8px}
+.sys{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sys span{font-size:12px;border:1px dashed var(--n300);color:var(--n500);padding:2px 9px;border-radius:6px}
+.steps{display:flex;flex-direction:column;gap:2px}
+.steps button{text-align:start;background:none;border:0;padding:7px 10px;border-radius:8px;color:var(--n700);display:flex;gap:8px;align-items:center}
+.steps button:hover{background:var(--n100)}
+.steps button.on{background:var(--primary-50);color:var(--primary-700);font-weight:600}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px;border-inline-end:0;border-bottom:1px solid var(--n200)}
+  .side .brand,.side .who{display:none}
+  .side button.nv{width:auto;white-space:nowrap}
+  .grid2{grid-template-columns:1fr}
+  .work{padding:16px}
+}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--n100);border-radius:10px;padding:3px;gap:3px}.seg button{border:0;background:none;border-radius:8px;height:36px;color:var(--n500);font-weight:500}.seg button.on{background:var(--surface);color:var(--primary-700);box-shadow:0 1px 2px rgba(15,23,42,.12);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.two>*{min-width:0}
+.badge.xs{font-size:11px;padding:1px 8px}
+.items{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.it{display:flex;gap:8px;align-items:center;border:1px solid var(--n300);border-radius:8px;padding:6px 8px;background:var(--surface)}
+.it.on{border-color:var(--primary-600);background:var(--primary-50)}
+.it .tg{flex:1;min-width:0;display:flex;gap:8px;align-items:center;background:none;border:0;text-align:start;padding:4px 2px;flex-wrap:wrap}
+.it .ck{width:18px;height:18px;border-radius:5px;border:2px solid var(--n300);display:grid;place-items:center;flex:none;color:#fff}
+.it.on .ck{background:var(--primary-600);border-color:var(--primary-600)}
+.it .nm{font-weight:600}
+.it .pr{margin-inline-start:auto;font-weight:600}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--n300);border-radius:8px;overflow:hidden;flex:none}
+.qty button{width:30px;height:30px;border:0;background:var(--n100);font-size:16px}
+.qty span{min-width:30px;text-align:center;font-variant-numeric:tabular-nums}
+.mx>div{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--n100)}
+.mx>div:last-child{border-bottom:0}
+.tmodal{max-width:400px!important;max-height:92vh;overflow-y:auto;background:var(--n100)!important}
+.tphone{display:flex;flex-direction:column;gap:12px;background:var(--n50);border-radius:14px;padding:12px}
+.tp-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tp-c,.tp-s{background:var(--surface);border:1px solid var(--n200);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+</style>
+
+<div class="review" id="review"></div>
+<div class="shell"><nav class="side" id="side"></nav><main class="work" id="work"></main></div>
+<aside class="drawer" id="drawer" hidden></aside>
+<div id="overlay"></div>
+
+<script>
+const ICON={
+ dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 9h8V3h-8z"/>',
+ bell:'<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/>',
+ cal:'<path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/>',
+ wrench:'<path d="M14.5 6.5a4 4 0 0 0 5 5L21 13l-8 8-5-5 8-8zM3 21l4-4"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5M17 4.5a3.5 3.5 0 0 1 0 7M19 15c2 .7 3 2.2 3 5"/>',
+ cash:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/>',
+ box:'<path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"/>',
+ drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+ wa:'<path d="M3 21l1.6-5A8.5 8.5 0 1 1 8 19.4z"/>',
+ link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ check:'<path d="M5 12l5 5 9-10"/>'
+};
+const ic=(n,s)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ${s?`style="width:${s}px;height:${s}px"`:''}>${ICON[n]}</svg>`;
+const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+const BADGE={'جديد':'b-info','مؤكد':'b-info','عاجل':'b-bad','يحتاج متابعة':'b-org','بانتظار الساعة':'b-warn','مكتمل':'b-ok','تمت الزيارة':'b-ok','ملغي':'b-gray','مفتوحة':'b-warn','مسلّمة':'b-ok','فرق':'b-bad','بانتظار الدفع':'b-warn','مدفوع':'b-ok','قيد التنفيذ':'b-pur'};
+const bd=(t,label)=>`<span class="badge ${BADGE[t]||'b-gray'}"><i></i>${label||t}</span>`;
+
+const TECHS=['خالد الغامدي','ماجد الحربي','سعود العتيبي'];
+const DAYL=['الأحد 12 أكتوبر','الاثنين 13 أكتوبر','الثلاثاء 14 أكتوبر','الأربعاء 15 أكتوبر','الخميس 16 أكتوبر','الأحد 19 أكتوبر','الاثنين 20 أكتوبر','الثلاثاء 21 أكتوبر'];
+const HOURS=['9:00 ص','11:00 ص','2:00 م','4:00 م','6:00 م'];
+const opts=(arr,sel,blank)=>(blank?`<option value="">${blank}</option>`:'')+arr.map(x=>`<option ${x===sel?'selected':''}>${x}</option>`).join('');
+const DUE=[
+ {id:1,cust:'عبدالله الحربي',phone:'0551234567',addr:'العزيزية',dev:'GH-500 · العزيزية',filter:'كربون (مرحلة 2)',last:'10 أبريل',due:'10 أكتوبر',left:0,reliable:true},
+ {id:2,cust:'نورة القحطاني',phone:'0567788990',addr:'الشرائع',dev:'GH-300 · الشرائع',filter:'طقم 5 مراحل',last:'25 أبريل',due:'25 أكتوبر',left:15,reliable:true},
+ {id:3,cust:'محمد السلمي',phone:'0540011223',addr:'النسيم',dev:'GH-500 · النسيم',filter:'غشاء RO',last:'غير مسجل',due:'-',left:null,reliable:false},
+ {id:4,cust:'مؤسسة النخبة',phone:'0123456789',addr:'العوالي',dev:'GH-300 · العوالي',filter:'رواسب (مرحلة 1)',last:'1 مايو',due:'1 نوفمبر',left:22,reliable:true}
+];
+const APPTS=[
+ {id:'AP-3011',cust:'عبدالله الحربي',type:'طارئ · تسريب',addr:'العزيزية',day:'اليوم',hour:'',st:'عاجل'},
+ {id:'AP-3009',cust:'هند الزهراني',type:'تركيب جهاز',addr:'الشوقية',day:'الاثنين 13 أكتوبر',hour:'',st:'بانتظار الساعة'},
+ {id:'AP-3007',cust:'نورة القحطاني',type:'صيانة دورية',addr:'الشرائع',day:'الثلاثاء 14 أكتوبر',hour:'10:00 ص',st:'مؤكد'},
+ {id:'AP-3004',cust:'فيصل المالكي',type:'صيانة دورية',addr:'النسيم',day:'الأحد 12 أكتوبر',hour:'',st:'يحتاج متابعة'},
+ {id:'AP-2998',cust:'ريم الدوسري',type:'طارئ · لا يوجد ماء',addr:'الكعكية',day:'أمس',hour:'4:30 م',st:'تمت الزيارة'}
+];
+const WOS=[
+ {id:'WO-2041',cust:'عبدالله الحربي',kind:'طارئ · تسريب مياه',addr:'العزيزية، مكة',tech:'-',st:'قيد التنفيذ'},
+ {id:'WO-2038',cust:'نورة القحطاني',kind:'صيانة دورية',addr:'الشرائع، مكة',tech:'خالد الغامدي',st:'قيد التنفيذ'},
+ {id:'WO-2030',cust:'ريم الدوسري',kind:'طارئ · لا يوجد ماء',addr:'الكعكية، مكة',tech:'ماجد الحربي',st:'مكتمل'}
+];
+const STOCK=[
+ {n:'فلتر كربون',c:'فلاتر',q:14,min:10,p:65},{n:'فلتر رواسب',c:'فلاتر',q:6,min:10,p:40},{n:'غشاء RO',c:'فلاتر',q:3,min:5,p:220},
+ {n:'خرطوم وقطع توصيل',c:'قطع',q:40,min:15,p:45},{n:'خزان 12 لتر',c:'قطع',q:5,min:3,p:180},{n:'مضخة ضغط',c:'قطع',q:4,min:3,p:260},
+ {n:'جهاز GH-500',c:'أجهزة',q:9,min:4,p:1450},{n:'جهاز GH-300',c:'أجهزة',q:2,min:4,p:890}
+];
+const EXPECTED=['فلتر كربون','خرطوم وقطع توصيل'];
+const initSel=()=>{const o={};STOCK.forEach((x,i)=>{if(EXPECTED.includes(x.n))o[i]=1});return o};
+const newWo=open=>({open:!!open,step:0,hour:'',tech:'',linked:false,mode:'link',arrived:false,repair:null,sel:initSel(),q:'',notes:'تسريب من وصلة الخزان',photos:0,reportBy:null,accept:null,method:null,paid:false,cashRecv:false,follow:null});
+const newNr=()=>({phone:'',name:'',city:'makkah',district:'',street:'',map:'',svc:'بلاغ طارئ',src:'اتصال هاتفي',device:'',fault:'',prio:'عاجل',day:'',hour:'',notes:'',files:0,found:null,err:[]});
+const S={page:'dash',tabPay:'req',drawer:false,toast:'',modal:null,
+ dueSt:{},duePost:{},apptSt:{},wo:newWo(false),nr:newNr(),
+ custody:[{id:'OH-118',tech:'ماجد الحربي',order:'WO-2030',amt:172.5,st:'مفتوحة',recv:null}],
+ stock:STOCK.map(x=>({...x})),crm:'0551234567',reqs:[
+  {id:'PR-771',order:'ST-10482 · طلب متجر',amt:1667.5,method:'رابط',st:'مدفوع'},
+  {id:'PR-772',order:'WO-2030 · طارئ',amt:172.5,method:'نقد للفني',st:'مدفوع'}]};
+const nextAp=()=>'AP-'+(3012+APPTS.filter(a=>+a.id.slice(3)>=3012).length);
+
+const NOTES={
+ dash:{t:'لوحة الإدارة',r:['ملخص ما يحتاج تدخل الموظف الآن: بلاغات عاجلة، مواعيد تنتظر الساعة، صيانات مستحقة، عهد مفتوحة.','كل بطاقة تفتح الصفحة المعنية.'],s:['التقارير','المواعيد','أوامر العمل']},
+ due:{t:'الصيانات المستحقة',r:['القائمة تُحدَّث من العمر الافتراضي وتاريخ آخر تغيير.','تاريخ غير موثوق: يظهر للمراجعة اليدوية ولا يُرسل له تذكير.','رد العميل: وافق (يُنشأ موعد)، أجّل (يُسجل تاريخ المتابعة ويظهر في المواعيد)، لا يرغب (تنتهي الدورة).'],s:['العملاء والأجهزة والفلاتر','المواعيد']},
+ appts:{t:'المواعيد والبلاغات',r:['البلاغ الطارئ يظهر أولًا.','تحديد الساعة بعد الاتصال بالعميل ثم إنشاء أمر العمل.','إعادة الجدولة: يختار الموظف اليوم والساعة الجديدين ويُحفظ السبب والموعد السابق.','خارج مكة لا يُنشأ موعد ميداني.'],s:['المواعيد والبلاغات','أوامر العمل']},
+ newreq:{t:'تسجيل طلب جديد',r:['البحث برقم الجوال يجلب بيانات العميل وأجهزته، وإلا يُنشأ عميل جديد.','العنوان خارج مكة يمنع إنشاء الطلب.','الحقول تتغير حسب نوع الخدمة: البلاغ الطارئ يطلب نوع العطل والأولوية.','مصدر الطلب (هاتف، واتساب، زيارة) للتقارير.'],s:['العملاء','المواعيد والبلاغات']},
+ wo:{t:'أمر العمل',r:['رابط الفني: رابط فريد لكل أمر عمل بدون حساب ولا كلمة مرور، صالح 24 ساعة، يفتح صفحة الفني فقط.','الفني يعبئ حقول الميدان: الوصول، نتيجة الفحص، القطع المطلوبة، الصور والملاحظات، وتأكيد استلام النقد. ولا يرى الأسعار ولا بيانات الدفع.','الموظف يعبئ ويؤكد: الموعد، الإسناد، موافقة العميل، طلب الدفع وتأكيده، صرف المخزون، الإغلاق.','إذا لم يصل الفني الرابط يسجل الموظف الحقول نيابة عنه ويُحفظ ذلك في السجل.','بعد إرسال الفني للتقرير يُقفل عليه، والموظف وحده يعيد فتحه.'],s:['أوامر العمل','المخزون','المدفوعات والفواتير','العهد المالية','سجل التدقيق']},
+ pay:{t:'المدفوعات والعهد',r:['طلبات الدفع الموحدة مرتبطة بطلب بيع أو أمر عمل.','العهدة النقدية تُفتح عند تحصيل الفني ثم يسلّم المبلغ وتُطابق.','عند وجود فرق يُسجَّل ويُتابع إداريًا ثم تُسوى العهدة.'],s:['المدفوعات والفواتير','العهد المالية','الأستاذ المحاسبي']},
+ stock:{t:'المخزون',r:['أرصدة الأصناف وحد إعادة الطلب مع تنبيه النقص.','استلام المخزون يزيد الرصيد مع المرجع.','القطع المطلوبة في أمر العمل تُختار من كل أصناف المخزون.'],s:['المخزون المبسط','دليل الأصناف']},
+ crm:{t:'العملاء والأجهزة',r:['البحث برقم الجوال يفتح الملف الموجود.','ملف العميل: العناوين والأجهزة والفلاتر وسجل الطلبات.'],s:['العملاء والأجهزة','سجل التدقيق']}
+};
+const PAGES=[['dash','لوحة الإدارة','dash'],['due','الصيانات المستحقة','bell'],['appts','المواعيد والبلاغات','cal'],['wo','أوامر العمل','wrench'],['pay','المدفوعات والعهد','cash'],['stock','المخزون','box'],['crm','العملاء والأجهزة','users']];
+
+const wSel=()=>Object.entries(S.wo.sel).filter(([i,q])=>q>0).map(([i,q])=>({i:+i,n:S.stock[i].n,q,p:S.stock[i].p}));
+const woTotals=()=>{const w=S.wo,insp=60;const parts=(w.repair&&w.accept!==false)?wSel().reduce((a,x)=>a+x.p*x.q,0):0;const base=insp+parts;const vat=Math.round(base*.15*100)/100;return {insp,parts,base,vat,total:base+vat}};
+function toast(m){S.toast=m;render();setTimeout(()=>{S.toast='';render()},2000)}
+function go(p){S.page=p;S.modal=null;render();window.scrollTo(0,0)}
+const urgent=()=>APPTS.filter(a=>a.st==='عاجل'&&!S.apptSt[a.id]).length;
+const waitHour=()=>APPTS.filter(a=>a.st==='بانتظار الساعة'&&!S.apptSt[a.id]).length;
+const dueOpen=()=>DUE.filter(d=>!S.dueSt[d.id]).length;
+
+function picker(showPrice,qid){
+ const w=S.wo,q=w.q.trim();
+ const rows=S.stock.map((x,i)=>({x,i})).filter(({x})=>!q||x.n.includes(q));
+ return `<div class="field"><label for="${qid}">القطع المطلوبة (كل أصناف المخزون)</label><input class="input" id="${qid}" placeholder="ابحث عن صنف" value="${w.q}"></div>
+ <div class="items">${rows.map(({x,i})=>{const on=w.sel[i]>0,exp=EXPECTED.includes(x.n);return `<div class="it ${on?'on':''}"><button class="tg" data-wo="pt:${i}"><span class="ck">${on?ic('check',12):''}</span><span class="nm">${x.n}</span>${exp?'<span class="badge b-info xs">متوقعة حسب نوع البلاغ</span>':''}<span class="muted">${x.c} · المتوفر ${x.q}</span>${showPrice?`<span class="num pr">${fmt(x.p)}</span>`:''}</button>${on?`<div class="qty"><button data-wo="qt:${i}:1" aria-label="زيادة">+</button><span>${w.sel[i]}</span><button data-wo="qt:${i}:-1" aria-label="نقص">−</button></div>`:''}</div>`}).join('')||'<div class="muted">لا توجد نتائج</div>'}</div>`;
+}
+function waMsg(){const w=S.wo;return `مرحبًا ${w.tech}،\nمهمة طارئة: تسريب مياه\nالعميل: عبدالله الحربي · 0551234567\nالعنوان: العزيزية، مكة\nالموعد: اليوم ${w.hour||'-'}\n${w.linked?'افتح رابط المهمة وعبّئ التقرير عند العميل:\nghaith.example/t/9fK3-WO2041':'بعد الفحص أفدني بالنتيجة والقطع المطلوبة.'}`}
+const MATRIX=[['تحديد الموعد والساعة','موظف'],['إسناد الفني وإرسال الرابط','موظف'],['تأكيد الوصول للموقع','فني'],['نتيجة الفحص والقطع المطلوبة','فني*'],['الصور والملاحظات الميدانية','فني*'],['موافقة العميل على التكلفة','موظف'],['طلب الدفع وتأكيد السداد','موظف'],['استلام المبلغ النقدي','فني*'],['صرف القطع من المخزون','موظف'],['مراجعة الإدارة والإغلاق','موظف']];
+
+const V={
+dash:()=>`<div class="ph"><div><h1>لوحة الإدارة</h1><p>الخميس 10 أكتوبر · ما يحتاج تدخلك الآن</p></div></div>
+ <div class="kpis">
+  <button class="kpi bad" data-go="appts"><b>${urgent()}</b><span>بلاغ عاجل</span></button>
+  <button class="kpi warn" data-go="appts"><b>${waitHour()}</b><span>تنتظر تحديد الساعة</span></button>
+  <button class="kpi warn" data-go="due"><b>${dueOpen()}</b><span>صيانة مستحقة</span></button>
+  <button class="kpi" data-go="wo"><b>2</b><span>أوامر عمل قيد التنفيذ</span></button>
+  <button class="kpi warn" data-go="pay"><b>${S.custody.filter(c=>c.st!=='مسلّمة').length}</b><span>عهدة مفتوحة</span></button>
+  <button class="kpi bad" data-go="stock"><b>${S.stock.filter(x=>x.q<x.min).length}</b><span>صنف تحت حد الطلب</span></button></div>
+ <div class="grid2"><div class="card"><div class="row between" style="margin-bottom:6px"><h3 class="h3">أجندة الأيام القادمة</h3><button class="btn sm sec" data-go="appts">كل المواعيد</button></div>
+  <div class="tw"><table><thead><tr><th>الرقم</th><th>العميل</th><th>النوع</th><th>اليوم</th><th>الحالة</th></tr></thead><tbody>${APPTS.slice(0,4).map(a=>`<tr><td class="num">${a.id}</td><td>${a.cust}</td><td>${a.type}</td><td>${a.day}</td><td>${bd(S.apptSt[a.id]||a.st)}</td></tr>`).join('')}</tbody></table></div></div>
+ <div class="card"><h3 class="h3" style="margin-bottom:6px">تنبيهات</h3><div class="list">
+  <div>${bd('عاجل')}<span>بلاغ تسريب من عبدالله الحربي يحتاج اتصالًا</span></div>
+  <div>${bd('بانتظار الدفع')}<span>طلب متجر ST-10490 بانتظار سداد الرابط</span></div>
+  <div>${bd('فرق')}<span>عهدة OH-118 بانتظار التسليم والمطابقة</span></div>
+  <div>${bd('يحتاج متابعة')}<span>موعد فيصل المالكي بلا رد من العميل</span></div></div></div></div>`,
+due:()=>`<div class="ph"><div><h1>الصيانات المستحقة</h1><p>الفلاتر المستحقة أو القريبة من الاستحقاق (فترة التنبيه 30 يومًا)</p></div></div>
+ <div class="card tw"><table><thead><tr><th>العميل</th><th>الجهاز</th><th>الفلتر</th><th>آخر تغيير</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead><tbody>
+ ${DUE.map(d=>{const s=S.dueSt[d.id];return `<tr><td><b>${d.cust}</b><div class="muted num" dir="ltr" style="text-align:start">${d.phone}</div></td><td>${d.dev}</td><td>${d.filter}</td><td>${d.last}</td><td>${d.due}</td>
+ <td>${!d.reliable?bd('يحتاج متابعة','تاريخ غير موثوق'):s==='agreed'?bd('مؤكد','وافق وأُنشئ موعد'):s==='post'?bd('بانتظار الساعة','مؤجل إلى '+S.duePost[d.id]):s==='no'?bd('ملغي','لا يرغب'):d.left===0?bd('عاجل','مستحقة اليوم'):`<span class="badge b-warn"><i></i>بعد ${d.left} يوم</span>`}</td>
+ <td>${!d.reliable?`<button class="btn sm ghost" data-toast="يُستكمل التاريخ عند التواصل مع العميل">مراجعة يدوية</button>`:s?'':`<button class="btn sm" data-modal="contact:${d.id}">تواصل مع العميل</button>`}</td></tr>`}).join('')}</tbody></table></div>`,
+appts:()=>`<div class="ph"><div><h1>المواعيد والبلاغات</h1><p>حدد الساعة بعد الاتصال بالعميل ثم أنشئ أمر العمل</p></div><button class="btn" data-newreq="1">${ic('plus',16)} تسجيل طلب جديد</button></div>
+ <div class="card tw"><table><thead><tr><th>الرقم</th><th>العميل</th><th>النوع</th><th>الحي</th><th>اليوم</th><th>الساعة</th><th>الحالة</th><th></th></tr></thead><tbody>
+ ${[...APPTS].sort((a,b)=>(b.st==='عاجل')-(a.st==='عاجل')).map(a=>{const st=S.apptSt[a.id]||a.st;const h=S.apptSt[a.id+'h']||a.hour;return `<tr><td class="num">${a.id}</td><td><b>${a.cust}</b>${a.src?`<div class="muted">${a.src}</div>`:''}</td><td>${a.type}</td><td>${a.addr}</td><td>${a.day}${a.prev?`<div class="muted">كان: ${a.prev}</div>`:''}</td><td>${h||'-'}</td><td>${bd(st)}</td>
+ <td><div class="row">${a.st==='تمت الزيارة'||st==='ملغي'?'':(st==='مؤكد'?`<button class="btn sm" data-go="wo">إنشاء أمر عمل</button>`:`<button class="btn sm" data-modal="hour:${a.id}">تحديد الساعة</button>`)}${a.st==='تمت الزيارة'||st==='ملغي'?'':`<button class="btn sm ghost" data-modal="resched:${a.id}">إعادة جدولة</button>`}</div></td></tr>`}).join('')}</tbody></table></div>`,
+newreq:()=>{const n=S.nr,em=n.svc==='بلاغ طارئ',mk=n.city==='makkah';
+ return `<div class="ph"><div><h1>تسجيل طلب جديد</h1><p>بلاغ أو موعد أو طلب تركيب يصل من الهاتف أو واتساب</p></div><button class="btn ghost" data-go="appts">رجوع</button></div>
+ <div class="grid2"><div class="stack">
+ <div class="card stack"><h3 class="h3">1 · العميل</h3>
+  <div class="row wrapr" style="align-items:flex-end"><div class="field" style="flex:1;min-width:200px"><label for="nr_phone">رقم الجوال</label><input class="input" id="nr_phone" dir="ltr" style="text-align:start" placeholder="05XXXXXXXX" value="${n.phone}"></div><button class="btn sec" data-nr="lookup">بحث عن العميل</button></div>
+  ${n.found==='lite'?`<div class="alert warn">${ic('users',18)}<div><b>حساب مختصر</b> سجّله العميل من الموقع برقم الجوال فقط. اسأله عن الاسم والعنوان أثناء الاتصال وأكمل الحقول أدناه، ويُسجَّل ذلك في سجل التدقيق.</div></div>`:n.found===true?`<div class="alert ok">${ic('check',18)}<div>عميل مسجل. جُلبت بيانات الملف وأجهزته.</div></div>`:n.found===false?`<div class="alert info">${ic('users',18)}<div>لا يوجد ملف بهذا الرقم. سيُنشأ عميل جديد عند الحفظ.</div></div>`:''}
+  <div class="field"><label for="nr_name">اسم العميل</label><input class="input" id="nr_name" value="${n.name}"></div>
+  <div class="field"><label for="nr_src">مصدر الطلب</label><select class="sel" id="nr_src">${opts(['اتصال هاتفي','واتساب','زيارة مباشرة','المتجر'],n.src)}</select></div></div>
+ <div class="card stack"><h3 class="h3">2 · الموقع</h3>
+  <div class="seg"><button data-nr="city:makkah" class="${mk?'on':''}">مكة المكرمة</button><button data-nr="city:other" class="${!mk?'on':''}">مدينة أخرى</button></div>
+  ${!mk?`<div class="alert bad">${ic('cal',18)}<div>لا تتوفر خدمة ميدانية خارج مكة المكرمة، ولا يمكن إنشاء الطلب.</div></div>`:''}
+  <div class="two"><div class="field"><label for="nr_district">الحي</label><input class="input" id="nr_district" value="${n.district}"></div><div class="field"><label for="nr_street">الشارع ووصف الموقع</label><input class="input" id="nr_street" value="${n.street}"></div></div>
+  <div class="field"><label for="nr_map">رابط الموقع على الخريطة (اختياري)</label><input class="input" id="nr_map" dir="ltr" style="text-align:start" placeholder="https://maps..." value="${n.map}"></div></div>
+ <div class="card stack"><h3 class="h3">3 · الخدمة</h3>
+  <div class="two"><div class="field"><label for="nr_svc">نوع الخدمة</label><select class="sel" id="nr_svc">${opts(['بلاغ طارئ','صيانة دورية','تركيب جهاز','فحص'],n.svc)}</select></div>
+  <div class="field"><label for="nr_prio">الأولوية</label><select class="sel" id="nr_prio">${opts(['عاجل','عادي'],em?'عاجل':n.prio)}</select></div></div>
+  <div class="field"><label for="nr_device">الجهاز</label><select class="sel" id="nr_device">${opts(n.found?['GH-500 · العزيزية (مسجل)','جهاز آخر غير مسجل']:['جهاز غير مسجل'],n.device)}</select></div>
+  ${em?`<div class="field"><label for="nr_fault">نوع العطل</label><select class="sel" id="nr_fault">${opts(['تسريب مياه','لا يوجد ماء خارج من الجهاز','طعم أو رائحة غير طبيعية','صوت مرتفع أو توقف الجهاز','أخرى'],n.fault,'اختر')}</select></div>`:''}
+  <div class="two"><div class="field"><label for="nr_day">اليوم المفضل</label><select class="sel" id="nr_day">${opts(['اليوم',...DAYL],n.day,'غير محدد')}</select></div><div class="field"><label for="nr_hour">الساعة (إن اتفقتم)</label><select class="sel" id="nr_hour">${opts(HOURS,n.hour,'تُحدد لاحقًا')}</select></div></div>
+  <div class="field"><label for="nr_notes">ملاحظات الموظف</label><textarea class="input" id="nr_notes" rows="2" placeholder="مثال: العميل متواجد بعد العصر فقط">${n.notes}</textarea></div>
+  <div class="row wrapr"><button class="btn ghost sm" data-nr="photo">${ic('plus',14)} إضافة صورة أو مرفق</button><span class="muted">${n.files?n.files+' مرفق':'لا توجد مرفقات'}</span></div></div></div>
+ <div class="card stack side2"><h3 class="h3">ملخص الطلب</h3><div class="sum"><div><span>العميل</span><span>${n.name||'-'}</span></div><div><span>الخدمة</span><span>${n.svc}</span></div><div><span>الموقع</span><span>${mk?(n.district||'-'):'خارج مكة'}</span></div><div><span>الموعد</span><span>${n.day||'غير محدد'}${n.hour?' · '+n.hour:''}</span></div></div>
+  ${n.err.length?`<div class="alert bad"><div>${n.err.map(e=>`<div>${e}</div>`).join('')}</div></div>`:''}
+  <button class="btn" data-nr="save" ${!mk?'disabled':''}>تسجيل الطلب</button></div></div>`},
+wo:()=>{
+ if(!S.wo.open)return `<div class="ph"><div><h1>أوامر العمل</h1><p>المهام الميدانية وحالتها</p></div></div><div class="card tw"><table><thead><tr><th>الرقم</th><th>العميل</th><th>النوع</th><th>العنوان</th><th>الفني</th><th>الحالة</th></tr></thead><tbody>
+ ${WOS.map(w=>`<tr class="clk" ${w.id==='WO-2041'?'data-woopen="1"':'data-toast="هذا الأمر للعرض فقط في النموذج"'}><td class="num"><b>${w.id}</b></td><td>${w.cust}</td><td>${w.kind}</td><td>${w.addr}</td><td>${w.id==='WO-2041'?(S.wo.tech||'-'):w.tech}</td><td>${bd(w.st==='مكتمل'?'مكتمل':'قيد التنفيذ')}</td></tr>`).join('')}</tbody></table></div><p class="muted" style="margin-top:10px">اضغط على WO-2041 لتجربة دورة العمل كاملة.</p>`;
+ const w=S.wo,T=woTotals(),st=w.step;
+ const names=['إنشاء أمر العمل وتحديد الساعة','تجهيز المهمة والقطع المتوقعة','إسناد الفني وإرسال رابط المهمة','تنفيذ الزيارة وتقرير الفني','موافقة العميل على الإصلاح والتكلفة','الدفع (فحص وقطع)','الإصلاح وصرف القطع','مراجعة الإدارة والإغلاق'];
+ const skip=i=>(w.repair===false&&(i===4||i===6))||(w.accept===false&&i===6);
+ const sub=i=>{if(skip(i))return i===4?'يُتخطى لأن الجهاز لا يحتاج إصلاحًا':'لا إصلاح';if(i===3&&w.reportBy)return w.reportBy==='tech'?'سجله الفني عبر الرابط':'سجله الموظف نيابة عن الفني';if(i===2&&w.linked)return 'الرابط: ghaith.example/t/9fK3-WO2041';return ''};
+ const partLines=()=>wSel().map(x=>`<div><span>${x.n}${x.q>1?' × '+x.q:''}</span><span>${fmt(x.p*x.q)}</span></div>`).join('');
+ const acts={
+ 0:`<div class="field"><label for="hr">الساعة المتفق عليها مع العميل بعد الاتصال</label><select class="sel" id="hr"><option value="">اختر</option>${HOURS.map(h=>`<option>${h}</option>`).join('')}</select></div><button class="btn" data-wo="hour">تأكيد الموعد</button>`,
+ 1:`<div class="muted">القطع المتوقعة حسب نوع البلاغ (تسريب). ستكون محددة مسبقًا للفني ويستطيع إضافة غيرها من كل المخزون.</div><div class="list">${STOCK.filter(x=>EXPECTED.includes(x.n)).map(x=>`<div><span style="flex:1">${x.n}</span><span class="muted">المتوفر ${x.q}</span>${bd('مكتمل','متوفر')}</div>`).join('')}</div><button class="btn" data-wo="next">اعتماد التجهيز</button>`,
+ 2:`<div class="field"><label for="tc">الفني</label><select class="sel" id="tc">${opts(TECHS,w.tech,'اختر الفني')}</select></div>
+  ${w.tech?`<div class="alert info">${ic('link',18)}<div>الفني لا يملك حسابًا. يصله رابط فريد لهذا الأمر فقط، صالح 24 ساعة، يعبئ منه حقوله بدون كلمة مرور.</div></div>
+  ${w.linked?`<div class="msg" id="wamsg">${waMsg()}</div><div class="row wrapr"><button class="btn sec" data-copy="1">${ic('wa',16)} نسخ رسالة واتساب</button><button class="btn" data-wo="notify">تم إرسال الرسالة للفني</button></div>`:`<div class="row wrapr"><button class="btn" data-wo="gen">${ic('link',16)} إنشاء رابط الفني</button><button class="btn ghost" data-wo="nolink">بدون رابط (أسجل نيابة عنه)</button></div>`}`:'<div class="muted">اختر الفني لإنشاء الرابط والرسالة.</div>'}`,
+ 3:`<div class="seg"><button data-wo="mode_link" class="${w.mode==='link'?'on':''}">الفني يعبئ عبر الرابط</button><button data-wo="mode_self" class="${w.mode==='self'?'on':''}">أسجل نيابة عن الفني</button></div>
+  ${w.mode==='link'?`<div class="alert warn">${ic('link',18)}<div>بانتظار تقرير الفني ${w.tech} عبر الرابط. يعبئ الوصول ونتيجة الفحص والقطع والصور وهو عند العميل.</div></div><button class="btn sec" data-modal="tech">${ic('link',16)} معاينة صفحة الفني (محاكاة)</button><div class="muted">إذا لم يتمكن الفني من استخدام الرابط، انتقل إلى «أسجل نيابة عن الفني».</div>`
+  :`<div class="muted">سجّل ما أفاد به الفني بالاتصال أو واتساب. يُحفظ في السجل أنك سجلته نيابة عنه.</div><div class="field"><label>نتيجة الفحص</label>
+  <button class="opt ${w.repair===true?'on':''}" data-wo="repair1"><span class="r"></span><b>يحتاج إصلاحًا</b></button><button class="opt ${w.repair===false?'on':''}" data-wo="repair0"><span class="r"></span><b>لا يحتاج إصلاحًا</b></button></div>
+  ${w.repair?picker(true,'pq'):''}
+  <div class="field"><label for="rn">ملاحظات</label><textarea class="input" id="rn" rows="2">${w.notes}</textarea></div>
+  <button class="btn" data-wo="report" ${w.repair===null?'disabled':''}>حفظ تقرير الفني</button>`}`,
+ 4:`<div class="muted">أرسل للعميل التقرير والتكلفة ووثّق قراره.</div><div class="sum card"><div><span>رسوم الفحص</span><span>${fmt(T.insp)}</span></div>${partLines()}<div><span>ضريبة 15%</span><span>${fmt(T.vat)}</span></div><div class="tot"><span>الإجمالي</span><span>${fmt(T.total)} ر.س</span></div></div>
+  <div class="row wrapr"><button class="btn" data-wo="accept1">العميل وافق</button><button class="btn danger" data-wo="accept0">العميل رفض الإصلاح</button></div>`,
+ 5:`<div class="sum card"><div><span>رسوم الفحص</span><span>${fmt(T.insp)}</span></div>${w.repair&&w.accept!==false?partLines():''}<div><span>ضريبة 15%</span><span>${fmt(T.vat)}</span></div><div class="tot"><span>الإجمالي</span><span>${fmt(T.total)} ر.س</span></div></div>
+  <div class="field"><label>طريقة التحصيل</label><button class="opt ${w.method==='link'?'on':''}" data-wo="m_link"><span class="r"></span><b>رابط سداد إلكتروني (ميسر)</b></button><button class="opt ${w.method==='cash'?'on':''}" data-wo="m_cash"><span class="r"></span><b>نقدًا للفني (عهدة)</b></button></div>
+  ${w.method==='link'?`<button class="btn" data-wo="pay_link">إرسال الرابط وتأكيد السداد (محاكاة)</button>`:w.method==='cash'?`<div class="alert info">${ic('cash',18)}<div>يظهر المبلغ في صفحة الفني ويؤكد استلامه. ${w.cashRecv?'<b>أكد الفني الاستلام.</b>':'بانتظار تأكيد الفني.'}</div></div><div class="row wrapr"><button class="btn sec" data-modal="tech">معاينة صفحة الفني</button><button class="btn" data-wo="pay_cash">${w.cashRecv?'تأكيد الاستلام وفتح العهدة':'تسجيل التحصيل نيابة عن الفني وفتح العهدة'}</button></div>`:''}`,
+ 6:`<div class="list">${wSel().map(x=>`<div><span style="flex:1">${x.n}${x.q>1?' × '+x.q:''}</span><span class="muted">تُصرف من المخزون الرئيسي</span></div>`).join('')||'<div class="muted">لا قطع لصرفها.</div>'}</div><button class="btn" data-wo="dispatch">تأكيد الإصلاح وصرف القطع المستخدمة فعليًا</button>`,
+ 7:`<div class="muted">راجع التقرير والمرفقات والنتيجة، ثم قرر هل يلزم متابعة.</div><div class="row wrapr"><button class="btn" data-wo="close0">إغلاق أمر العمل</button><button class="btn ghost" data-modal="followup">إغلاق مع إنشاء زيارة متابعة</button></div>`
+ };
+ const cur=st>7?`<div class="alert ok">${ic('check',18)}<div>أُغلق أمر العمل. حُدّث سجل العميل والجهاز.${w.follow?` وأُنشئت زيارة متابعة يوم ${w.follow}.`:''}</div></div><div class="row wrapr"><button class="btn" data-woreset="1">إعادة التجربة</button>${w.method==='cash'?'<button class="btn sec" data-go="pay">عرض العهدة</button>':''}</div>`:acts[st];
+ return `<div class="ph"><div><h1>أمر العمل <span dir="ltr">WO-2041</span></h1><p>عبدالله الحربي · طارئ، تسريب مياه · العزيزية، مكة</p></div><button class="btn ghost" data-woclose="1">رجوع للقائمة</button></div>
+ <div class="grid2"><div class="stack"><div class="card"><div class="stepper">${names.map((n,i)=>`<div class="sp1 ${skip(i)?'skip':i<st?'done':i===st?'now':''}"><div class="c">${i<st?ic('check',12):i+1}</div><div><b>${n}</b>${sub(i)?`<div class="muted">${sub(i)}</div>`:''}</div></div>`).join('')}</div></div>
+ <div class="card"><h3 class="h3" style="margin-bottom:8px">من يعبئ ماذا؟</h3><div class="mx">${MATRIX.map(([a,b])=>`<div><span>${a}</span>${b==='موظف'?'<span class="badge b-info xs">موظف العمليات</span>':'<span class="badge b-pur xs">الفني عبر الرابط</span>'}</div>`).join('')}</div><div class="muted" style="margin-top:8px">* إذا لم يتوفر الرابط للفني يسجلها الموظف نيابة عنه، ويُحفظ ذلك في سجل التدقيق.</div></div></div>
+ <div class="card stack"><h3 class="h3">${st>7?'مكتمل':names[st]}</h3>${cur}</div></div>`},
+pay:()=>`<div class="ph"><div><h1>المدفوعات والعهد</h1><p>طلبات الدفع والعهد النقدية والمطابقة</p></div></div>
+ <div class="tabs"><button data-tabpay="req" class="${S.tabPay==='req'?'on':''}">طلبات الدفع</button><button data-tabpay="cus" class="${S.tabPay==='cus'?'on':''}">العهد النقدية</button></div>
+ ${S.tabPay==='req'?`<div class="card tw"><table><thead><tr><th>الرقم</th><th>المصدر</th><th>المبلغ</th><th>الطريقة</th><th>الحالة</th></tr></thead><tbody>${S.reqs.map(r=>`<tr><td class="num">${r.id}</td><td>${r.order}</td><td class="num">${fmt(r.amt)} ر.س</td><td>${r.method}</td><td>${bd(r.st)}</td></tr>`).join('')}</tbody></table></div>`
+ :`<div class="card tw"><table><thead><tr><th>العهدة</th><th>الفني</th><th>أمر العمل</th><th>المبلغ المستحق</th><th>المستلم من الفني</th><th>الحالة</th><th></th></tr></thead><tbody>${S.custody.map(c=>`<tr><td class="num">${c.id}</td><td>${c.tech}</td><td>${c.order}</td><td class="num">${fmt(c.amt)}</td><td class="num">${c.recv===null?'-':fmt(c.recv)}</td><td>${bd(c.st)}</td><td>${c.st==='مفتوحة'?`<button class="btn sm" data-modal="recv:${c.id}">استلام من الفني</button>`:c.st==='فرق'?`<button class="btn sm" data-settle="${c.id}">تسوية وإغلاق</button>`:''}</td></tr>`).join('')}</tbody></table></div>`}`,
+stock:()=>`<div class="ph"><div><h1>المخزون</h1><p>أرصدة الأصناف وحد إعادة الطلب</p></div><button class="btn" data-modal="receive">استلام مخزون</button></div>
+ ${S.stock.some(x=>x.q<x.min)?`<div class="alert warn" style="margin-bottom:14px">${ic('bell',18)}<div>أصناف تحت حد إعادة الطلب: ${S.stock.filter(x=>x.q<x.min).map(x=>x.n).join('، ')}</div></div>`:''}
+ <div class="card tw"><table><thead><tr><th>الصنف</th><th>الفئة</th><th>الرصيد</th><th>حد الطلب</th><th>الحالة</th></tr></thead><tbody>${S.stock.map(x=>`<tr><td><b>${x.n}</b></td><td>${x.c}</td><td class="num">${x.q}</td><td class="num">${x.min}</td><td>${x.q<x.min?bd('عاجل','تحت الحد'):bd('مكتمل','كافٍ')}</td></tr>`).join('')}</tbody></table></div>`,
+crm:()=>{const q0=S.crm.replace(/\s/g,''),lite=q0==='0561112233',found=q0==='0551234567';return `<div class="ph"><div><h1>العملاء والأجهزة</h1><p>ابحث برقم الجوال لفتح الملف الموجود</p></div></div>
+ <div class="row wrapr" style="margin-bottom:14px"><input class="input" id="crmq" dir="ltr" style="max-width:280px;text-align:start" value="${S.crm}" placeholder="05XXXXXXXX"><button class="btn" data-crm="1">بحث</button></div>
+ ${lite?`<div class="card stack"><div class="row between"><div><b style="font-size:16px">بدون اسم</b><div class="muted num" dir="ltr" style="text-align:start">0561112233</div></div><span class="badge b-warn"><i></i>حساب مختصر</span></div><div class="muted">سجّله العميل من الموقع برقم الجوال فقط عند بلاغ أو حجز. لا يوجد اسم ولا عنوان ولا جهاز.</div><button class="btn" style="align-self:flex-start" data-newreq="1">إكمال البيانات وتسجيل طلب</button></div>`:found?`<div class="grid2"><div class="stack"><div class="card"><div class="row between"><div><b style="font-size:16px">عبدالله الحربي</b><div class="muted num" dir="ltr" style="text-align:start">0551234567</div></div><span class="badge b-ok"><i></i>عميل نشط</span></div><div class="muted" style="margin-top:8px">العنوان الافتراضي: مكة، العزيزية</div></div>
+ <div class="card"><h3 class="h3" style="margin-bottom:6px">الأجهزة والفلاتر</h3><div class="list"><div><span style="flex:1"><b>GH-500</b> · ضمان حتى 2028</span>${bd('عاجل','فلتر يستحق')}</div><div class="muted">كربون: آخر تغيير 10 أبريل · الاستحقاق 10 أكتوبر</div><div class="muted">غشاء RO: آخر تغيير 10 أبريل · الاستحقاق 10 أبريل 2027</div></div></div></div>
+ <div class="card"><h3 class="h3" style="margin-bottom:6px">سجل الطلبات والخدمات</h3><div class="list"><div><span style="flex:1">WO-2041 · طارئ، تسريب</span>${bd('قيد التنفيذ')}</div><div><span style="flex:1">ST-10482 · شراء جهاز</span>${bd('مكتمل')}</div><div><span style="flex:1">WO-1877 · تركيب</span>${bd('مكتمل')}</div></div></div></div>`
+ :`<div class="card stack"><div class="alert warn">${ic('users',18)}<div>لا يوجد عميل بهذا الرقم.</div></div><button class="btn" style="align-self:flex-start" data-newreq="1">إضافة عميل وتسجيل طلب</button></div>`}`}
+};
+
+function techPage(){
+ const w=S.wo,st=w.step;
+ const head=`<div class="tp-h"><b>مهمة WO-2041</b><span class="muted">رابط الفني · صالح 24 ساعة</span></div>
+ <div class="tp-c"><b>عبدالله الحربي</b><div class="muted num" dir="ltr" style="text-align:start">0551234567</div><div class="muted">العزيزية، مكة · اليوم ${w.hour||''}</div><div class="badge b-bad xs" style="margin-top:6px"><i></i>بلاغ طارئ: تسريب مياه</div></div>`;
+ let body='';
+ if(st===3){
+  body=`<div class="tp-s"><b>1 · الوصول</b>${w.arrived?`<div class="alert ok">${ic('check',16)}<div>تم تأكيد الوصول</div></div>`:`<button class="btn" data-wo="t_arrive">وصلت إلى موقع العميل</button>`}</div>
+  <div class="tp-s"><b>2 · نتيجة الفحص</b><button class="opt ${w.repair===true?'on':''}" data-wo="repair1"><span class="r"></span><b>يحتاج إصلاحًا</b></button><button class="opt ${w.repair===false?'on':''}" data-wo="repair0"><span class="r"></span><b>لا يحتاج إصلاحًا</b></button></div>
+  ${w.repair?`<div class="tp-s"><b>3 · القطع المطلوبة</b>${picker(false,'tq')}</div>`:''}
+  <div class="tp-s"><b>4 · ملاحظات وصور</b><textarea class="input" id="tn" rows="2">${w.notes}</textarea><button class="btn ghost sm" data-wo="t_photo">${ic('plus',14)} إضافة صورة (${w.photos})</button></div>
+  <button class="btn" data-wo="t_send" ${(!w.arrived||w.repair===null)?'disabled':''}>إرسال التقرير</button><div class="muted">بعد الإرسال يُقفل التقرير ولا يعدله إلا موظف العمليات.</div>`;
+ } else if(st===5&&w.method==='cash'&&!w.paid){
+  body=`<div class="tp-s"><b>تحصيل نقدي</b><div class="alert warn">${ic('cash',18)}<div>المبلغ المطلوب تحصيله من العميل: <b>${fmt(woTotals().total)} ر.س</b></div></div>${w.cashRecv?`<div class="alert ok">${ic('check',16)}<div>أكدت استلام المبلغ. سيسجله الموظف.</div></div>`:`<button class="btn" data-wo="t_cash">استلمت المبلغ كاملًا</button>`}</div>`;
+ } else if(st<3){
+  body=`<div class="alert info"><div>لم تبدأ المهمة بعد. ستظهر لك حقول الزيارة بعد إسنادها.</div></div>`;
+ } else {
+  body=`<div class="alert ok">${ic('check',18)}<div>تم إرسال تقرير الزيارة. شكرًا لك. لا يوجد إجراء مطلوب منك الآن.</div></div>`;
+ }
+ return `<div class="tphone">${head}${body}</div>`;
+}
+
+function modalHtml(){
+ const m=S.modal;if(!m)return '';
+ const [k,id]=m.split(':');
+ let body='';
+ if(k==='hour')body=`<h3 class="h3">تحديد الساعة بعد الاتصال بالعميل</h3><div class="field"><label for="mh">الساعة</label><select class="sel" id="mh">${opts(HOURS)}</select></div><div class="row"><button class="btn" data-mok="hour:${id}">تأكيد الموعد</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='resched'){const a=APPTS.find(x=>x.id===id);body=`<h3 class="h3">إعادة جدولة أو إلغاء</h3><div class="muted">الموعد الحالي: ${a.day}${(S.apptSt[id+'h']||a.hour)?' · '+(S.apptSt[id+'h']||a.hour):''}</div><div class="two"><div class="field"><label for="mr_day">اليوم الجديد</label><select class="sel" id="mr_day">${opts(DAYL,'','اختر اليوم')}</select></div><div class="field"><label for="mr_hour">الساعة الجديدة</label><select class="sel" id="mr_hour">${opts(HOURS,'','تُحدد لاحقًا')}</select></div></div><div class="field"><label for="mr">السبب (إلزامي)</label><input class="input" id="mr" placeholder="مثال: العميل غير متواجد"></div><div class="muted">يُحفظ السبب والموعد السابق في السجل.</div><div class="row wrapr"><button class="btn" data-mok="resched:${id}">إعادة الجدولة</button><button class="btn danger" data-mok="cancel:${id}">إلغاء الموعد</button><button class="btn ghost" data-mclose="1">رجوع</button></div>`}
+ if(k==='contact'){const d=DUE.find(x=>x.id==id);body=`<h3 class="h3">التواصل مع ${d.cust}</h3><div class="msg">مرحبًا ${d.cust}، حان موعد تغيير ${d.filter} لجهازك. للحجز رد علينا بيومك المفضل، أو سجّل الصيانة من حسابك في الموقع.</div><div class="row wrapr"><button class="btn sec" data-toast="يُفتح واتساب بالرسالة الجاهزة">${ic('wa',16)} فتح واتساب</button><button class="btn sec" data-toast="اتصال هاتفي">اتصال</button></div><h3 class="h3">رد العميل</h3><div class="row wrapr"><button class="btn" data-modal="agree:${id}">وافق</button><button class="btn ghost" data-modal="postdate:${id}">أجّل</button><button class="btn danger" data-mok="due_no:${id}">لا يرغب</button></div><button class="btn ghost" data-mclose="1">إغلاق</button>`}
+ if(k==='agree')body=`<h3 class="h3">تسجيل موافقة العميل</h3><div class="field"><label for="ag_day">اليوم المفضل للعميل</label><select class="sel" id="ag_day">${opts(DAYL,'','اختر اليوم')}</select></div><div class="muted">يُنشأ طلب صيانة دورية ثم تتصل بالعميل لتحديد الساعة.</div><div class="row"><button class="btn" data-mok="due_agreed:${id}">إنشاء طلب الصيانة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='postdate')body=`<h3 class="h3">تأجيل الصيانة</h3><div class="field"><label for="pd_day">موعد المتابعة الجديد</label><select class="sel" id="pd_day">${opts(DAYL,'','اختر التاريخ')}</select></div><div class="field"><label for="pd_why">سبب التأجيل</label><input class="input" id="pd_why" placeholder="مثال: العميل مسافر"></div><div class="muted">يُسجل موعد متابعة جديد يظهر في المواعيد والبلاغات.</div><div class="row"><button class="btn" data-mok="due_post:${id}">تسجيل التأجيل</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='followup')body=`<h3 class="h3">إنشاء زيارة متابعة</h3><div class="two"><div class="field"><label for="fu_day">اليوم</label><select class="sel" id="fu_day">${opts(DAYL,'','اختر اليوم')}</select></div><div class="field"><label for="fu_hour">الساعة</label><select class="sel" id="fu_hour">${opts(HOURS,'','تُحدد لاحقًا')}</select></div></div><div class="field"><label for="fu_why">سبب المتابعة</label><input class="input" id="fu_why" placeholder="مثال: التأكد من إيقاف التسريب"></div><div class="row"><button class="btn" data-mok="followup:0">إغلاق وإنشاء الزيارة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='recv'){const c=S.custody.find(x=>x.id===id);body=`<h3 class="h3">استلام العهدة من الفني</h3><div class="muted">المستحق ${fmt(c.amt)} ر.س على ${c.tech}</div><div class="field"><label for="ma">المبلغ المستلم فعليًا</label><input class="input" id="ma" type="number" value="${c.amt}"></div><div class="row"><button class="btn" data-mok="recv:${id}">تسجيل المطابقة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`}
+ if(k==='receive')body=`<h3 class="h3">استلام مخزون</h3><div class="field"><label for="rs">الصنف</label><select class="sel" id="rs">${S.stock.map((x,i)=>`<option value="${i}">${x.n}</option>`).join('')}</select></div><div class="field"><label for="rq">الكمية الواردة</label><input class="input" id="rq" type="number" value="10"></div><div class="field"><label for="rf">مرجع الاستلام</label><input class="input" id="rf" value="PO-5521"></div><div class="row"><button class="btn" data-mok="receive:0">حفظ الحركة</button><button class="btn ghost" data-mclose="1">إلغاء</button></div>`;
+ if(k==='tech')return `<div class="modal" role="dialog" aria-modal="true"><div class="tmodal"><div class="row between"><span class="badge b-pur xs">معاينة: صفحة الفني بالجوال</span><button class="btn sm ghost" data-mclose="1">إغلاق</button></div>${techPage()}</div></div>`;
+ return `<div class="modal" role="dialog" aria-modal="true"><div>${body}</div></div>`;
+}
+
+function render(){
+ const n=NOTES[S.page]||NOTES.dash;
+ const act=document.activeElement&&document.activeElement.id;
+ document.getElementById('review').innerHTML=`<div class="in"><span class="pill">وضع المراجعة</span><b>لوحة موظف العمليات · ${n.t}</b><span class="sp"></span><button data-drawer="1">${S.drawer?'إخفاء الملاحظات':'الملاحظات'}</button></div>`;
+ const badge={appts:urgent()+waitHour(),due:dueOpen()};
+ const cur=S.page==='newreq'?'appts':S.page;
+ document.getElementById('side').innerHTML=`<div class="brand">${ic('drop')} غيث</div>`+PAGES.map(([k,l,i])=>`<button class="nv ${cur===k?'on':''}" data-go="${k}">${ic(i)}${l}${badge[k]?`<span class="cnt">${badge[k]}</span>`:''}</button>`).join('')+`<div class="who"><b>سارة العمري</b><span>موظف عمليات وخدمة عملاء</span></div>`;
+ document.getElementById('work').innerHTML=V[S.page]();
+ document.getElementById('overlay').innerHTML=modalHtml()+(S.toast?`<div class="toast">${S.toast}</div>`:'');
+ const d=document.getElementById('drawer');d.hidden=!S.drawer;
+ d.innerHTML=`<div><span class="tag">ملاحظات المراجعة</span><h2>${n.t}</h2><ul>${n.r.map(x=>`<li>${x}</li>`).join('')}</ul><div class="sys">${n.s.map(x=>`<span>${x}</span>`).join('')}</div></div>
+ <div><h2>الصفحات</h2><div class="steps">${PAGES.map(([k,l])=>`<button data-go="${k}" class="${cur===k?'on':''}">${l}</button>`).join('')}</div></div>`;
+ if(act&&['pq','tq'].includes(act)){const e=document.getElementById(act);if(e){e.focus();const l=e.value.length;e.setSelectionRange(l,l)}}
+}
+
+document.addEventListener('click',e=>{
+ const t=e.target.closest('button,tr[data-woopen],tr[data-toast]');if(!t)return;
+ const d=t.dataset;
+ if(d.drawer){S.drawer=!S.drawer;render();return}
+ if(d.go){go(d.go);return}
+ if(d.newreq){S.nr=newNr();go('newreq');return}
+ if(d.nr){nrAct(d.nr);return}
+ if(d.toast){toast(d.toast);return}
+ if(d.tabpay){S.tabPay=d.tabpay;render();return}
+ if(d.modal){S.modal=d.modal;render();return}
+ if(d.mclose){S.modal=null;render();return}
+ if(d.settle){const c=S.custody.find(x=>x.id===d.settle);c.st='مسلّمة';toast('سُجلت التسوية وأُغلقت العهدة');return}
+ if(d.crm){S.crm=document.getElementById('crmq').value;render();return}
+ if(d.woopen){S.wo.open=true;render();return}
+ if(d.woclose){S.wo.open=false;render();return}
+ if(d.woreset){S.wo=newWo(true);render();return}
+ if(d.copy){const txt=document.getElementById('wamsg').innerText;try{navigator.clipboard.writeText(txt).then(()=>toast('نُسخت الرسالة'),()=>toast('حدد النص وانسخه يدويًا'))}catch(_){toast('حدد النص وانسخه يدويًا')}return}
+ if(d.wo){woAct(d.wo);return}
+ if(d.mok){const[k,id]=d.mok.split(':');mok(k,id);return}
+});
+document.addEventListener('change',e=>{
+ const i=e.target;
+ if(i.id==='tc'){S.wo.tech=i.value;render();return}
+ if(i.id&&i.id.startsWith('nr_')){S.nr[i.id.slice(3)]=i.value;if(['svc','device','day','hour'].includes(i.id.slice(3)))render()}
+});
+document.addEventListener('input',e=>{
+ const i=e.target;
+ if(i.id==='pq'||i.id==='tq'){S.wo.q=i.value;render();return}
+ if(i.id==='rn'||i.id==='tn')S.wo.notes=i.value;
+ if(i.id&&i.id.startsWith('nr_'))S.nr[i.id.slice(3)]=i.value;
+});
+function nrAct(a){const n=S.nr;
+ if(a==='lookup'){const p=n.phone.replace(/\s/g,'');if(p.length<9){toast('أدخل رقم جوال صحيح');return}
+  if(p==='0561112233'){n.found='lite';n.device='جهاز غير مسجل'}else if(p==='0551234567'){n.found=true;n.name='عبدالله الحربي';n.district='العزيزية';n.device='GH-500 · العزيزية (مسجل)'}else{n.found=false;n.device='جهاز غير مسجل'}render();return}
+ if(a.startsWith('city:')){n.city=a.slice(5);render();return}
+ if(a==='photo'){n.files++;render();return}
+ if(a==='save'){const err=[];if(n.phone.replace(/\s/g,'').length<9)err.push('رقم الجوال مطلوب');if(!n.name.trim())err.push('اسم العميل مطلوب');if(!n.district.trim())err.push('الحي مطلوب لتأكيد النطاق');if(n.svc==='بلاغ طارئ'&&!n.fault)err.push('نوع العطل مطلوب للبلاغ الطارئ');
+  n.err=err;if(err.length){render();return}
+  const em=n.svc==='بلاغ طارئ'||n.prio==='عاجل';
+  APPTS.unshift({id:nextAp(),cust:n.name,type:n.svc+(n.fault?' · '+n.fault:''),addr:n.district,day:n.day||(em?'اليوم':'غير محدد'),hour:n.hour,st:em?'عاجل':(n.hour?'مؤكد':'بانتظار الساعة'),src:n.src});
+  S.nr=newNr();S.page='appts';S.toast='سُجل الطلب في المواعيد والبلاغات';render();setTimeout(()=>{S.toast='';render()},2000)}
+}
+function afterReport(w){w.step=w.repair?4:5;if(!w.repair)w.accept=false}
+function woAct(a){const w=S.wo;
+ if(a==='hour'){const v=document.getElementById('hr').value;if(!v){toast('اختر الساعة');return}w.hour=v;w.step=1}
+ else if(a==='next')w.step=2;
+ else if(a==='gen')w.linked=true;
+ else if(a==='nolink'){w.linked=false;w.mode='self';w.step=3}
+ else if(a==='notify')w.step=3;
+ else if(a==='mode_link')w.mode='link';
+ else if(a==='mode_self')w.mode='self';
+ else if(a==='repair1')w.repair=true;
+ else if(a==='repair0')w.repair=false;
+ else if(a.startsWith('pt:')){const i=+a.slice(3);if(w.sel[i])delete w.sel[i];else w.sel[i]=1}
+ else if(a.startsWith('qt:')){const[,i,dl]=a.split(':');w.sel[i]=Math.max(1,(w.sel[i]||1)+(+dl))}
+ else if(a==='report'){w.reportBy='employee';afterReport(w)}
+ else if(a==='t_arrive')w.arrived=true;
+ else if(a==='t_photo')w.photos++;
+ else if(a==='t_send'){w.reportBy='tech';afterReport(w);S.modal=null;toast('استلمنا تقرير الفني عبر الرابط')}
+ else if(a==='t_cash'){w.cashRecv=true}
+ else if(a==='accept1'){w.accept=true;w.step=5}
+ else if(a==='accept0'){w.accept=false;w.step=5}
+ else if(a==='m_link')w.method='link';
+ else if(a==='m_cash')w.method='cash';
+ else if(a==='pay_link'){w.paid=true;S.reqs.unshift({id:'PR-773',order:'WO-2041 · طارئ',amt:woTotals().total,method:'رابط',st:'مدفوع'});w.step=w.repair&&w.accept!==false?6:7;toast('تأكد السداد من ميسر وسُجل في الفواتير')}
+ else if(a==='pay_cash'){w.paid=true;S.reqs.unshift({id:'PR-773',order:'WO-2041 · طارئ',amt:woTotals().total,method:'نقد للفني',st:'مدفوع'});S.custody.unshift({id:'OH-119',tech:w.tech,order:'WO-2041',amt:woTotals().total,st:'مفتوحة',recv:null});w.step=w.repair&&w.accept!==false?6:7;S.modal=null;toast('سُجل التحصيل وفُتحت العهدة OH-119')}
+ else if(a==='dispatch'){w.step=7;if(w.repair&&w.accept!==false){wSel().forEach(x=>{S.stock[x.i].q=Math.max(0,S.stock[x.i].q-x.q)})}}
+ else if(a==='close0')w.step=8;
+ render();
+}
+function mok(k,id){
+ if(k==='hour'){S.apptSt[id]='مؤكد';S.apptSt[id+'h']=document.getElementById('mh').value;S.modal=null;toast('تم تأكيد الموعد')}
+ else if(k==='resched'){const day=document.getElementById('mr_day').value,r=document.getElementById('mr').value.trim();if(!day){toast('اختر اليوم الجديد');return}if(!r){toast('اكتب السبب');return}
+  const a=APPTS.find(x=>x.id===id),h=document.getElementById('mr_hour').value;a.prev=a.day+((S.apptSt[id+'h']||a.hour)?' · '+(S.apptSt[id+'h']||a.hour):'');a.day=day;S.apptSt[id]=h?'مؤكد':'بانتظار الساعة';S.apptSt[id+'h']=h;S.modal=null;toast('أعيدت الجدولة إلى '+day+' وحُفظ السبب والموعد السابق')}
+ else if(k==='cancel'){const r=document.getElementById('mr').value.trim();if(!r){toast('اكتب السبب');return}S.apptSt[id]='ملغي';S.modal=null;toast('أُلغي الموعد وحُفظ السبب')}
+ else if(k==='due_agreed'){const day=document.getElementById('ag_day').value;if(!day){toast('اختر اليوم المفضل');return}const d=DUE.find(x=>x.id==id);S.dueSt[id]='agreed';APPTS.unshift({id:nextAp(),cust:d.cust,type:'صيانة دورية · '+d.filter,addr:d.addr,day,hour:'',st:'بانتظار الساعة',src:'تذكير الصيانة'});S.modal=null;toast('أُنشئ طلب صيانة دورية وسُجل اليوم المفضل')}
+ else if(k==='due_post'){const day=document.getElementById('pd_day').value;if(!day){toast('اختر موعد المتابعة');return}const d=DUE.find(x=>x.id==id);S.dueSt[id]='post';S.duePost[id]=day;APPTS.unshift({id:nextAp(),cust:d.cust,type:'متابعة تأجيل · صيانة دورية',addr:d.addr,day,hour:'',st:'يحتاج متابعة',src:'تأجيل العميل'});S.modal=null;toast('سُجل التأجيل وأُضيف موعد متابعة يوم '+day)}
+ else if(k==='due_no'){S.dueSt[id]='no';S.modal=null;toast('سُجل عدم الرغبة وأُنهيت الدورة الحالية')}
+ else if(k==='followup'){const day=document.getElementById('fu_day').value;if(!day){toast('اختر يوم الزيارة');return}const h=document.getElementById('fu_hour').value;APPTS.unshift({id:nextAp(),cust:'عبدالله الحربي',type:'زيارة متابعة · WO-2041',addr:'العزيزية',day,hour:h,st:h?'مؤكد':'بانتظار الساعة',src:'أمر العمل'});S.wo.follow=day+(h?' · '+h:'');S.wo.step=8;S.modal=null;toast('أُغلق أمر العمل وأُنشئت زيارة متابعة')}
+ else if(k==='recv'){const c=S.custody.find(x=>x.id===id);const v=+document.getElementById('ma').value;c.recv=v;c.st=v===c.amt?'مسلّمة':'فرق';S.modal=null;toast(c.st==='مسلّمة'?'المبلغ مطابق وأُغلقت العهدة':'سُجل فرق العهدة ويُتابع إداريًا')}
+ else if(k==='receive'){const i=+document.getElementById('rs').value,q=+document.getElementById('rq').value||0;S.stock[i].q+=q;S.modal=null;toast('سُجلت حركة الاستلام وزاد الرصيد')}
+ render();
+}
+render();
+</script>
+</html>

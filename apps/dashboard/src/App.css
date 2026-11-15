@@ -1,0 +1,5 @@
+.shell{max-width:960px;margin:0 auto;padding:48px 20px}
+.card{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:24px}
+.card h1{margin:0 0 6px;font-size:24px;color:var(--primary-700)}
+.card p{margin:0;color:var(--n500)}
+.muted{margin-top:12px!important;font-size:13px}

@@ -1,0 +1,17 @@
+{
+  "name": "ghaith-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:store": "npm run dev -w @ghaith/store",
+    "dev:dashboard": "npm run dev -w @ghaith/dashboard",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

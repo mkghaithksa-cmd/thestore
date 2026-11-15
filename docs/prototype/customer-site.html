@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>موقع غيث - رحلة العميل</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: desktop-first customer website (top nav, wide grids, two-column checkout) that collapses to one column on phones. A thin review bar + drawer carries the reviewer notes. Tokens from Design System Foundations. */
+:root{
+  --primary-50:#f0f9ff;--primary-100:#e0f2fe;--primary-500:#38bdf8;--primary-600:#0ea5e9;--primary-700:#0369a1;
+  --n50:#f8fafc;--n100:#f1f5f9;--n200:#e2e8f0;--n300:#cbd5e1;--n400:#94a3b8;--n500:#566377;--n700:#334155;--n900:#0f172a;
+  --surface:#ffffff;
+  --ok-50:#f0fdf4;--ok-500:#22c55e;--ok-700:#15803d;
+  --warn-50:#fffbeb;--warn-500:#f59e0b;--warn-700:#b45309;
+  --bad-50:#fef2f2;--bad-500:#ef4444;--bad-700:#b91c1c;
+  --btn-text:#ffffff;--hero-a:#0369a1;--hero-b:#0ea5e9;
+  --font:"IBM Plex Sans Arabic","Tajawal",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
+  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
+  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --btn-text:#06202f;--hero-a:#0c4a6e;--hero-b:#0369a1;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
+  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
+  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --btn-text:#06202f;--hero-a:#0c4a6e;--hero-b:#0369a1;color-scheme:dark}
+*{box-sizing:border-box}
+.cols>*,.two>*{min-width:0}
+[hidden]{display:none!important}
+body{background:var(--n50);color:var(--n900);font-family:var(--font);direction:rtl;font-size:15px;line-height:1.7;padding-inline:0;padding-block:0}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--primary-600);outline-offset:2px}
+.wrap{max-width:1160px;margin-inline:auto;padding-inline:20px}
+/* review bar */
+.review{background:var(--n900);color:var(--n50);font-size:13px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+:root[data-theme="dark"] .review{background:#020617;color:#e2e8f0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .review{background:#020617;color:#e2e8f0}}
+.review .wrap{display:flex;align-items:center;gap:12px;min-height:42px;flex-wrap:wrap;padding-block:6px}
+.review b{font-weight:600}
+.review .sp{flex:1}
+.review button{background:rgba(148,163,184,.22);border:0;color:inherit;border-radius:8px;padding:5px 12px;font-size:12px}
+.review .pill{background:var(--primary-600);color:#06202f;border-radius:99px;padding:1px 10px;font-size:11px;font-weight:600}
+/* header */
+.hdr{background:var(--surface);border-bottom:1px solid var(--n200)}
+.hdr .wrap{display:flex;align-items:center;gap:22px;min-height:68px;flex-wrap:wrap;padding-block:8px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--primary-700);font-size:22px;background:none;border:0;padding:0}
+.logo svg{width:28px;height:28px}
+.nav{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+.nav button{background:none;border:0;padding:8px 14px;border-radius:8px;color:var(--n700);font-weight:500}
+.nav button:hover{background:var(--n100)}
+.nav button.on{color:var(--primary-700);background:var(--primary-50);font-weight:600}
+.hact{display:flex;gap:8px;align-items:center}
+.iconbtn{background:var(--n100);border:0;width:42px;height:42px;border-radius:10px;display:grid;place-items:center;position:relative;color:var(--n700)}
+.iconbtn svg{width:20px;height:20px}
+.dot{position:absolute;top:-4px;inset-inline-start:-4px;background:var(--bad-500);color:#fff;font-size:11px;min-width:18px;height:18px;border-radius:99px;display:grid;place-items:center;font-weight:600}
+main{padding-block:28px 56px;min-height:60vh}
+.crumbs{font-size:13px;color:var(--n500);margin-bottom:16px;display:flex;gap:6px;flex-wrap:wrap}
+.crumbs button{background:none;border:0;color:var(--primary-700);padding:0}
+.page-h{font-size:26px;font-weight:700;margin:0 0 6px}
+.sub{color:var(--n500);margin:0 0 20px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;align-items:start}
+.side{position:sticky;top:64px}
+.card{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.muted{color:var(--n500);font-size:13px}
+.h2{font-size:19px;font-weight:700;margin:0}
+.h3{font-size:16px;font-weight:600;margin:0}
+.btn{height:48px;border-radius:10px;border:0;background:var(--primary-700);color:var(--btn-text);font-weight:600;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 20px}
+.btn:hover{filter:brightness(1.07)}
+.btn.sec{background:var(--primary-50);color:var(--primary-700)}
+.btn.ghost{background:none;border:1px solid var(--n300);color:var(--n700)}
+.btn.sm{height:38px;width:auto;padding:0 16px;font-size:14px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:14px;font-weight:500}
+.input{height:48px;border:1px solid var(--n300);border-radius:8px;background:var(--surface);padding:0 14px;width:100%}
+.input:focus{border-color:var(--primary-600);outline:2px solid var(--primary-100)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--n100);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:none;border-radius:8px;height:40px;color:var(--n500);font-weight:500}
+.seg button.on{background:var(--surface);color:var(--primary-700);box-shadow:0 1px 2px rgba(15,23,42,.12);font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 11px;border-radius:99px}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-ok{background:var(--ok-50);color:var(--ok-700)}.b-warn{background:var(--warn-50);color:var(--warn-700)}
+.b-info{background:var(--primary-50);color:var(--primary-700)}.b-bad{background:var(--bad-50);color:var(--bad-700)}.b-gray{background:var(--n100);color:var(--n700)}
+.hero{background:linear-gradient(120deg,var(--hero-a),var(--hero-b));color:#fff;border-radius:16px;padding:44px 40px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;margin-bottom:32px}
+.hero h1{margin:0 0 10px;font-size:34px;line-height:1.35}
+.hero p{margin:0 0 20px;opacity:.93;max-width:46ch}
+.hero .btn{background:#fff;color:#0369a1;width:auto;display:inline-flex}
+.hero .art{display:grid;place-items:center;opacity:.95}
+.hero .art svg{width:170px;height:170px}
+.sec-h{display:flex;justify-content:space-between;align-items:center;margin:28px 0 14px}
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.cat{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:600;color:var(--n900)}
+.cat:hover{border-color:var(--primary-600)}
+.cat span{color:var(--primary-700)}
+.cat svg{width:30px;height:30px}
+.info3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:32px}
+.info3 .card{display:flex;gap:12px;align-items:flex-start}
+.info3 svg{width:28px;height:28px;color:var(--primary-700);flex:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.prod{display:flex;flex-direction:column;gap:10px;text-align:start;background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:12px}
+.prod:hover{border-color:var(--primary-600)}
+.prod .img,.big{border-radius:8px;background:var(--primary-50);display:grid;place-items:center;color:var(--primary-700)}
+.prod .img{height:140px}.prod .img svg{width:60px;height:60px}
+.big{height:360px}.big svg{width:140px;height:140px}
+.prod b{font-weight:600;line-height:1.5}
+.price{font-weight:700;font-variant-numeric:tabular-nums}
+.price small{font-weight:400;color:var(--n500);font-size:12px}
+.tools{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.tools .input{max-width:340px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:1px solid var(--n300);background:var(--surface);border-radius:99px;padding:6px 16px;font-size:14px;color:var(--n700)}
+.chips button.on{background:var(--primary-700);border-color:var(--primary-700);color:var(--btn-text)}
+.qty{display:inline-flex;align-items:center;border:1px solid var(--n300);border-radius:8px;overflow:hidden}
+.qty button{width:34px;height:34px;border:0;background:var(--n100);font-size:18px}
+.qty span{min-width:36px;text-align:center;font-variant-numeric:tabular-nums}
+.line{flex-wrap:wrap;display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--n200)}
+.line:last-child{border-bottom:0}
+.thumb{width:72px;height:72px;border-radius:8px;background:var(--primary-50);display:grid;place-items:center;color:var(--primary-700);flex:none}
+.thumb svg{width:34px;height:34px}
+.sum div{display:flex;justify-content:space-between;padding:6px 0;font-variant-numeric:tabular-nums;gap:10px}
+.sum .tot{border-top:1px dashed var(--n300);margin-top:8px;padding-top:12px;font-weight:700;font-size:18px}
+.alert{border-radius:10px;padding:12px 14px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.alert svg{flex:none;width:20px;height:20px}
+.alert.info{background:var(--primary-50);color:var(--primary-700)}.alert.warn{background:var(--warn-50);color:var(--warn-700)}.alert.ok{background:var(--ok-50);color:var(--ok-700)}
+.timeline{display:flex;flex-direction:column}
+.tl{display:flex;gap:14px;position:relative;padding-bottom:22px}
+.tl:last-child{padding-bottom:0}
+.tl::before{content:"";position:absolute;inset-inline-start:13px;top:28px;bottom:0;width:2px;background:var(--n200)}
+.tl:last-child::before{display:none}
+.tl .c{width:28px;height:28px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--n100);color:var(--n400);border:2px solid var(--n200);font-size:13px}
+.tl.done .c{background:var(--ok-500);border-color:var(--ok-500);color:#fff}
+.tl.done::before{background:var(--ok-500)}
+.tl.now .c{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
+.days{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.days button{border:1px solid var(--n300);background:var(--surface);border-radius:10px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.days button.on{border-color:var(--primary-600);background:var(--primary-50);color:var(--primary-700);font-weight:600}
+.days button[disabled]{opacity:.4;cursor:not-allowed}
+.days small{color:var(--n500);font-size:12px}
+.opt{display:flex;gap:12px;align-items:center;border:1px solid var(--n300);border-radius:10px;padding:14px;background:var(--surface);width:100%;text-align:start}
+.opt.on{border-color:var(--primary-600);background:var(--primary-50)}
+.opt .r{width:20px;height:20px;border-radius:50%;border:2px solid var(--n300);flex:none}
+.opt.on .r{border:6px solid var(--primary-600)}
+.opt[disabled]{opacity:.5;cursor:not-allowed}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:grid;place-items:center;z-index:40;padding:16px}
+.modal>div{background:var(--surface);width:100%;max-width:420px;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.otp{display:flex;gap:10px;direction:ltr;justify-content:center}
+.otp input{width:56px;height:60px;text-align:center;font-size:24px;border:1px solid var(--n300);border-radius:10px;background:var(--surface)}
+.check{width:72px;height:72px;border-radius:50%;background:var(--ok-50);color:var(--ok-700);display:grid;place-items:center;margin:0 auto}
+.check svg{width:36px;height:36px}
+.center{text-align:center}
+.narrow{max-width:680px;margin-inline:auto}
+.empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 10px;color:var(--n500);text-align:center}
+.toast{position:fixed;bottom:24px;inset-inline:0;margin-inline:auto;width:max-content;max-width:90vw;background:var(--n900);color:var(--n50);padding:12px 18px;border-radius:10px;z-index:60}
+:root[data-theme="dark"] .toast{background:#e2e8f0;color:#0f172a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .toast{background:#e2e8f0;color:#0f172a}}
+footer{border-top:1px solid var(--n200);background:var(--surface);padding-block:24px;color:var(--n500);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+/* drawer */
+.drawer{position:fixed;top:0;bottom:0;inset-inline-end:0;width:360px;max-width:92vw;background:var(--surface);border-inline-start:1px solid var(--n200);z-index:30;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:-8px 0 30px rgba(15,23,42,.15)}
+.drawer h2{font-size:15px;margin:0 0 8px;font-weight:600}
+.drawer ul{margin:0;padding-inline-start:18px;color:var(--n700);font-size:14px}
+.drawer li{margin-bottom:6px}
+.tag{font-size:12px;color:var(--primary-700);background:var(--primary-50);padding:2px 10px;border-radius:99px;display:inline-block;margin-bottom:8px}
+.sys{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sys span{font-size:12px;border:1px dashed var(--n300);color:var(--n500);padding:2px 9px;border-radius:6px}
+.steps{display:flex;flex-direction:column;gap:2px}
+.steps button{text-align:start;background:none;border:0;padding:8px 10px;border-radius:8px;color:var(--n700);font-size:14px;display:flex;gap:8px;align-items:center}
+.steps button:hover{background:var(--n100)}
+.steps button.on{background:var(--primary-50);color:var(--primary-700);font-weight:600}
+.steps i{width:6px;height:6px;border-radius:50%;background:var(--n300);flex:none}
+.steps button.on i{background:var(--primary-600)}
+@media (max-width:900px){
+  .cols{grid-template-columns:1fr}.side{position:static}
+  .hero{grid-template-columns:1fr;padding:28px 22px}.hero .art{display:none}.hero h1{font-size:26px}
+  .big{height:240px}.two{grid-template-columns:1fr}
+  .nav{order:3;flex-basis:100%}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+.citysw{max-width:340px;margin-bottom:14px;background:rgba(255,255,255,.18)}.citysw button{color:#fff!important;display:inline-flex;align-items:center;justify-content:center;gap:6px}.citysw button.on{background:#fff!important;color:#0369a1!important}
+.hero .btn.ghostw{background:transparent;border:1.5px solid #fff;color:#fff}
+.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:16px}.trust div{display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:12px 14px;font-weight:600;font-size:14px}.trust svg{width:22px;height:22px;color:var(--primary-700);flex:none}
+.bundle{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;align-items:center;margin-top:28px;background:var(--primary-50);border:1px solid var(--primary-100);border-radius:16px;padding:28px}.bundle .art{display:grid;place-items:center;color:var(--primary-700)}.bundle .art svg{width:110px;height:110px}
+.steps4{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.steps4 .card{display:flex;flex-direction:column;gap:4px}.steps4 .num{width:30px;height:30px;border-radius:50%;background:var(--primary-600);color:var(--btn-text);display:grid;place-items:center;font-weight:700;margin-bottom:6px}
+.svc2{gap:14px}.svc2 svg{width:28px;height:28px;color:var(--primary-700)}.urgent{border-color:var(--bad-700)}
+.stars{color:#b45309;letter-spacing:2px}
+.faq{padding:0}.fq{border-bottom:1px solid var(--n200)}.fq:last-child{border-bottom:0}.fq button{width:100%;display:flex;justify-content:space-between;gap:12px;padding:16px 18px;border:0;background:none;font:inherit;font-weight:600;color:var(--n900);text-align:start}.fq p{margin:0;padding:0 18px 16px;color:var(--n500)}
+.cta{margin-top:32px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:linear-gradient(120deg,var(--hero-a),var(--hero-b));color:#fff;border-radius:16px;padding:26px 28px}.cta .btn{background:#fff;color:#0369a1;width:auto}
+.ft{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:24px;padding-bottom:18px}.ft h4{margin:0 0 8px;font-size:14px;color:var(--n900)}.ft button{display:block;border:0;background:none;padding:4px 0;color:var(--n500);font:inherit;text-align:start}.ft button:hover{color:var(--primary-700)}.ft .bot{grid-column:1/-1;border-top:1px solid var(--n200);padding-top:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:760px){.bundle{grid-template-columns:1fr;padding:20px}.bundle .art{display:none}.ft{grid-template-columns:1fr 1fr}}
+</style>
+
+<div class="review" id="review"></div>
+<div id="app"></div>
+<aside class="drawer" id="drawer" hidden></aside>
+
+<script>
+const ICON={
+ store:'<path d="M4 7h16l-1 5H5zM5 12v8h14v-8M9 20v-5h6v5"/>',
+ cart:'<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11L21 7H6"/>',
+ wrench:'<path d="M14.5 6.5a4 4 0 0 0 5 5L21 13l-8 8-5-5 8-8zM3 21l4-4"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+ drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+ check:'<path d="M5 12l5 5 9-10"/>',
+ pin:'<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+ box:'<path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"/>',
+ bell:'<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/>',
+ truck:'<path d="M2 6h12v10H2zM14 10h4l4 3v3h-8zM6 19a2 2 0 1 0 0-.01M18 19a2 2 0 1 0 0-.01"/>'
+};
+const ic=(n,s)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ${s?`style="width:${s}px;height:${s}px"`:''}>${ICON[n]}</svg>`;
+const fmt=n=>n.toLocaleString('en-US',{maximumFractionDigits:2});
+const PRODUCTS=[
+ {id:1,name:'جهاز تنقية منزلي 5 مراحل',cat:'devices',price:1450,inst:true,desc:'جهاز تناضح عكسي بخمس مراحل وخزان 12 لتر.',spec:['5 مراحل ترشيح','خزان 12 لتر','ضمان سنتين'],life:'تغيير الفلاتر كل 6 أشهر',icon:'drop'},
+ {id:2,name:'جهاز تنقية مكتبي',cat:'devices',price:890,inst:true,desc:'جهاز مدمج للمكاتب بدون تمديد سباكة.',spec:['3 مراحل','سعة 6 لتر','ضمان سنة'],life:'تغيير الفلاتر كل 4 أشهر',icon:'drop'},
+ {id:3,name:'طقم فلاتر 5 مراحل',cat:'filters',price:180,inst:false,desc:'طقم كامل متوافق مع الجهاز المنزلي.',spec:['5 فلاتر','متوافق مع موديل GH-500'],life:'عمر افتراضي 6 أشهر',icon:'box'},
+ {id:4,name:'فلتر كربون',cat:'filters',price:65,inst:false,desc:'فلتر كربون منشط للمرحلة الأخيرة.',spec:['مرحلة 5','متوافق مع GH-500 وGH-300'],life:'عمر افتراضي 6 أشهر',icon:'box'},
+ {id:5,name:'باقة جهاز وفلاتر وتركيب',cat:'bundles',price:1690,inst:true,desc:'جهاز منزلي مع طقم فلاتر إضافي وخدمة التركيب.',spec:['جهاز GH-500','طقم فلاتر إضافي','تركيب ضمن مكة'],life:'سعر موحد للباقة',icon:'store'},
+ {id:6,name:'خرطوم وقطع توصيل',cat:'parts',price:45,inst:false,desc:'قطع غيار توصيل للجهاز المنزلي.',spec:['مقاس 1/4 بوصة','طول 3 متر'],life:'',icon:'wrench'}
+];
+const CATS=[['all','الكل'],['devices','أجهزة'],['filters','فلاتر'],['bundles','باقات'],['parts','قطع غيار']];
+const CATICON={devices:'drop',filters:'box',bundles:'store',parts:'wrench'};
+const FEES={install:150,ship:35,inspect:60,vat:.15};
+const DAYS=[['الأحد','12 أكتوبر'],['الاثنين','13 أكتوبر'],['الثلاثاء','14 أكتوبر'],['الأربعاء','15 أكتوبر'],['الخميس','16 أكتوبر'],['السبت','18 أكتوبر']];
+const S={screen:'home',cat:'all',q:'',pid:1,cart:[{id:1,qty:1}],user:null,sheet:null,phone:'',
+ addr:{city:'makkah',district:'العزيزية',street:''},install:true,day:null,pay:'mada',order:null,orderStep:0,
+ svcTab:'periodic',fault:null,svcDay:null,svcDone:null,toast:'',drawer:false,emg:{step:0,accept:null,pay:null}};
+const EMG_PARTS=[['فلتر كربون',65],['خرطوم وقطع توصيل',45]];
+function emgTotals(){const parts=S.emg.accept?EMG_PARTS.reduce((a,x)=>a+x[1],0):0;const base=FEES.inspect+parts;const vat=Math.round(base*FEES.vat*100)/100;return {parts,base,vat,total:base+vat}}
+
+const NOTES={
+ home:{t:'واجهة المتجر',r:['تعرض الأقسام والعروض والباقات.','التصفح مفتوح بدون تسجيل. الدخول يُطلب عند إتمام الطلب أو طلب الصيانة.'],s:['نظام المتجر والكتالوج']},
+ products:{t:'المنتجات',r:['بحث وفرز وتصفية حسب القسم.','تظهر فقط المنتجات المنشورة والمفعّلة من المدير.'],s:['نظام المنتجات والكتالوج']},
+ detail:{t:'تفاصيل المنتج',r:['المواصفات والسعر والتوافق.','تظهر «التركيب متاح داخل مكة» للأجهزة والباقات فقط.','العمر الافتراضي للفلتر مأخوذ من سياسة العمر المسجلة للمنتج.'],s:['نظام المنتجات والكتالوج','فلاتر التوافق']},
+ cart:{t:'السلة',r:['إضافة وحذف وتعديل الكميات.','الأسعار تُحسب من الكتالوج وتُعاد مراجعتها عند تأكيد الطلب.'],s:['السلة والنطاق الجغرافي']},
+ address:{t:'العنوان',r:['العنوان داخل مكة: يظهر خيار التركيب برسومه.','العنوان خارج مكة: شحن فقط، ويختفي التركيب والموعد الميداني.','الحي إلزامي داخل مكة ليتأكد النطاق.'],s:['نطاق الخدمة (مكة)','العملاء والعناوين']},
+ review:{t:'مراجعة الطلب',r:['تُعاد حساب الأسعار والضريبة والرسوم.','التركيب يضيف رسومًا ويفتح اختيار اليوم المفضل بعد الدفع.','الشحن خارج مكة يضيف رسوم الشحن.'],s:['السلة والنطاق الجغرافي','نظام الفواتير']},
+ login:{t:'تسجيل الدخول والتسجيل',r:['رقم الجوال ورمز التحقق (OTP) فقط، بدون كلمة مرور.','دخول سريع (رقم الجوال فقط): البلاغ الطارئ، حجز الصيانة، طلباتي، أجهزتي، تتبع الطلب. ينشئ حسابًا مختصرًا إن كان الرقم جديدًا، والموظف يكمل بياناته بالاتصال.','تسجيل كامل (الاسم، البريد اختياري، العنوان، الموافقة على الخصوصية): من زر «دخول / تسجيل» لرقم جديد، وعند أول عملية شراء. يُطلب مرة واحدة فقط.','لا يوجد شراء كضيف، لأن التتبع والفاتورة والصيانة تحتاج حسابًا.','أرقام التجربة مكتوبة في النافذة نفسها.'],s:['المستخدمون والصلاحيات','العملاء']},
+ pay:{t:'الدفع الإلكتروني',r:['إنشاء طلب بيع بحالة «بانتظار الدفع» وربطه برابط سداد ميسر.','إذا فشل الدفع أو انتهى الرابط يبقى الطلب بانتظار الدفع ويمكن إعادة المحاولة.','لا يُصرف شيء من المخزون قبل تأكيد الدفع.'],s:['ميسر','نظام الفواتير والمدفوعات']},
+ done:{t:'تأكيد الطلب',r:['الطلب أصبح «مدفوع» وبانتظار التجهيز.','داخل مكة مع تركيب: يختار العميل اليوم المفضل، ثم يتصل الموظف لتحديد الساعة.','خارج مكة: يُنشأ رقم تتبع بعد التجهيز.'],s:['المخزون','الشحن','المواعيد']},
+ track:{t:'تتبع الطلب',r:['حالة الطلب تتحدث تلقائيًا من العمليات.','زر «تقدم الحالة» للتجربة فقط وغير موجود في المنتج الفعلي.'],s:['الطلبات','شركة الشحن','أوامر العمل']},
+ emergency:{t:'متابعة البلاغ الطارئ',r:['لا يُدفع شيء عند إرسال البلاغ.','الفني يفحص الجهاز ويرسل النتيجة للموظف، ثم يستلم العميل تقرير الفحص والتكلفة ويوافق أو يرفض.','إذا احتاج الجهاز قطعًا يدفع العميل رسوم الفحص والقطع معًا في طلب واحد. وإذا رفض الإصلاح يدفع رسوم الفحص فقط.','الدفع إلكتروني عبر رابط من الموظف، أو نقدًا للفني ويسجله الموظف في العهدة.','الإصلاح يبدأ بعد تأكيد الدفع.'],s:['المواعيد والبلاغات','أوامر العمل','ميسر','العهد المالية','المخزون']},
+ service:{t:'طلب صيانة',r:['الخدمة تظهر فقط للعناوين داخل مكة. خارج مكة تختفي الصيانة من القائمة.','صيانة دورية: يتواصل الفريق مع العميل (واتساب أو اتصال) أو يسجلها بنفسه من الموقع، ويختار اليوم المفضل أو يؤجل أو يرفض، ثم ينتظر اتصال الموظف لتحديد الساعة.','صيانة طارئة: يختار العطل ويرسل البلاغ بدون دفع. الدفع بعد فحص الفني.','الفني لا يظهر للعميل كحساب، والتنسيق يتم عبر الموظف.'],s:['المواعيد والبلاغات','أوامر العمل']},
+ devices:{t:'أجهزتي وفلاتري',r:['كل جهاز يعرض فلاتره وآخر تغيير والموعد القادم.','التنبيه يُحسب من العمر الافتراضي وتاريخ آخر تغيير.','يظهر الجهاز بعد تفعيله من تركيب أو تسليم مكتمل.'],s:['العملاء والأجهزة','الصيانة الدورية']},
+ account:{t:'حسابي',r:['الطلبات السابقة والعناوين وبيانات الجوال.'],s:['العملاء']}
+};
+const STEPS=[['home','الصفحة الرئيسية'],['products','المنتجات'],['detail','تفاصيل المنتج'],['cart','السلة'],['address','العنوان'],['review','مراجعة الطلب'],['pay','الدفع'],['done','تأكيد الطلب'],['track','تتبع الطلب'],['service','طلب صيانة'],['emergency','متابعة البلاغ الطارئ'],['devices','أجهزتي']];
+
+const cartItems=()=>S.cart.map(c=>({...PRODUCTS.find(p=>p.id===c.id),qty:c.qty}));
+const inMk=()=>S.addr.city==='makkah';
+const hasInstallable=()=>cartItems().some(i=>i.inst);
+const withInstall=()=>inMk()&&S.install&&hasInstallable();
+function totals(){
+ const sub=cartItems().reduce((a,i)=>a+i.price*i.qty,0);
+ const inst=withInstall()?FEES.install:0;
+ const ship=inMk()?0:FEES.ship;
+ const base=sub+inst+ship, vat=Math.round(base*FEES.vat*100)/100;
+ return {sub,inst,ship,vat,total:base+vat};
+}
+function go(s,extra){Object.assign(S,extra||{});if(['address','review','pay'].includes(s)&&!S.cart.length)s='cart';if(s==='service'&&!extra)S.svcDone=null;S.screen=s;S.sheet=null;render();window.scrollTo(0,0)}
+function toast(m){S.toast=m;render();setTimeout(()=>{S.toast='';render()},1900)}
+function addCart(id){const c=S.cart.find(x=>x.id===id);c?c.qty++:S.cart.push({id,qty:1});toast('أضيف إلى السلة')}
+function finishSvc(k){if(k==='emergency'){S.emg={step:0,accept:null,pay:null};go('emergency')}else{S.svcDone=k;render();window.scrollTo(0,0)}}
+function needLogin(next){if(S.user){next.startsWith('svc:')?finishSvc(next.slice(4)):go(next)}else{S.sheet={step:1,next};render()}}
+
+const crumbs=a=>`<div class="crumbs"><button data-go="home">الرئيسية</button>${a.map(x=>x[1]?`<span>/</span><button data-go="${x[1]}">${x[0]}</button>`:`<span>/</span><span>${x[0]}</span>`).join('')}</div>`;
+const prodCard=p=>`<button class="prod" data-pid="${p.id}"><div class="img">${ic(p.icon)}</div><b>${p.name}</b><div class="muted">${p.inst?'تركيب متاح داخل مكة':'شحن لجميع المدن'}</div><div class="price">${fmt(p.price)} <small>ر.س</small></div></button>`;
+function summary(btn){
+ const t=totals();
+ return `<div class="card sum side"><h3 class="h3" style="margin-bottom:8px">ملخص الطلب</h3>
+ <div><span>المنتجات</span><span>${fmt(t.sub)}</span></div>
+ ${t.inst?`<div><span>رسوم التركيب</span><span>${fmt(t.inst)}</span></div>`:''}
+ ${t.ship?`<div><span>رسوم الشحن</span><span>${fmt(t.ship)}</span></div>`:''}
+ <div><span>ضريبة القيمة المضافة 15%</span><span>${fmt(t.vat)}</span></div>
+ <div class="tot"><span>الإجمالي</span><span>${fmt(t.total)} ر.س</span></div>${btn||''}</div>`;
+}
+
+const VIEWS={
+home:()=>`<div class="hero"><div><h1>ماء نقي لبيتك، وصيانة تصلك في موعدها</h1><p>أجهزة وفلاتر وباقات، مع تركيب داخل مكة المكرمة وشحن لباقي المدن، وتذكير تلقائي بموعد تغيير الفلاتر.</p><button class="btn" data-go="products">تصفح المنتجات</button></div><div class="art">${ic('drop')}</div></div>
+ <div class="sec-h"><h2 class="h2">الأقسام</h2></div>
+ <div class="cats">${CATS.slice(1).map(c=>`<button class="cat" data-cat="${c[0]}"><span>${ic(CATICON[c[0]])}</span>${c[1]}</button>`).join('')}</div>
+ <div class="sec-h"><h2 class="h2">منتجات مميزة</h2><button class="btn sm sec" data-go="products">عرض الكل</button></div>
+ <div class="grid">${PRODUCTS.slice(0,4).map(prodCard).join('')}</div>
+ <div class="info3">
+  <div class="card">${ic('wrench')}<div><b>تركيب داخل مكة</b><div class="muted">فني معتمد يصلك في اليوم الذي تختاره.</div></div></div>
+  <div class="card">${ic('truck')}<div><b>شحن لباقي المدن</b><div class="muted">شحن المنتجات مع رقم تتبع.</div></div></div>
+  <div class="card">${ic('bell')}<div><b>تذكير الصيانة</b><div class="muted">نتواصل معك عبر واتساب أو اتصال عند اقتراب موعد الفلاتر، أو تسجّل الصيانة بنفسك من الموقع.</div></div></div>
+ </div>`,
+products:()=>`${crumbs([['المنتجات']])}<h1 class="page-h">المنتجات</h1><p class="sub">أجهزة تنقية وفلاتر وباقات وقطع غيار.</p>
+ <div class="tools"><input class="input" id="q" placeholder="ابحث عن جهاز أو فلتر" value="${S.q}"><div class="chips">${CATS.map(c=>`<button data-cat="${c[0]}" class="${S.cat===c[0]?'on':''}">${c[1]}</button>`).join('')}</div></div>
+ <div class="grid">${PRODUCTS.filter(p=>(S.cat==='all'||p.cat===S.cat)&&(!S.q||p.name.includes(S.q))).map(prodCard).join('')||'<div class="empty">لا توجد نتائج مطابقة</div>'}</div>`,
+detail:()=>{const p=PRODUCTS.find(x=>x.id===S.pid);return `${crumbs([['المنتجات','products'],[p.name]])}
+ <div class="two" style="gap:28px;align-items:start"><div class="big">${ic(p.icon)}</div>
+ <div class="stack"><div><h1 class="page-h">${p.name}</h1><span class="badge b-ok"><i></i>متوفر</span></div>
+ <div class="price" style="font-size:28px">${fmt(p.price)} <small>ر.س</small></div>
+ <p style="margin:0;color:var(--n700)">${p.desc}</p>
+ <div class="card"><h3 class="h3" style="margin-bottom:8px">المواصفات</h3>${p.spec.map(s=>`<div class="row" style="padding:3px 0"><span style="color:var(--ok-700)">${ic('check',18)}</span>${s}</div>`).join('')}${p.life?`<div class="muted" style="margin-top:8px">${p.life}</div>`:''}</div>
+ ${p.inst?`<div class="alert info">${ic('wrench')}<div>التركيب متاح داخل مكة المكرمة برسوم ${fmt(FEES.install)} ر.س. خارج مكة يتم الشحن فقط.</div></div>`:''}
+ <div class="row"><button class="btn" data-add="${p.id}">أضف إلى السلة</button><button class="btn ghost" data-go="cart" style="width:auto;white-space:nowrap">عرض السلة</button></div></div></div>`},
+cart:()=>{const it=cartItems();return `${crumbs([['السلة']])}<h1 class="page-h">سلة المشتريات</h1>`+(it.length?`<div class="cols"><div class="card">
+ ${it.map(i=>`<div class="line"><div class="thumb">${ic(i.icon)}</div><div style="flex:1;min-width:0"><b>${i.name}</b><div class="muted">${fmt(i.price)} ر.س للوحدة</div></div>
+ <div class="qty"><button data-qty="${i.id}:1" aria-label="زيادة">+</button><span>${i.qty}</span><button data-qty="${i.id}:-1" aria-label="نقص">−</button></div>
+ <div class="price" style="min-width:90px;text-align:end">${fmt(i.price*i.qty)}</div><button class="btn sm ghost" data-rm="${i.id}" style="color:var(--bad-700)">حذف</button></div>`).join('')}</div>
+ <div class="card sum side"><h3 class="h3" style="margin-bottom:8px">ملخص السلة</h3><div><span>المجموع الفرعي</span><span>${fmt(totals().sub)} ر.س</span></div><div class="muted">الرسوم والضريبة تُحسب بعد اختيار العنوان.</div><div style="margin-top:14px"><button class="btn" data-go="address">متابعة إلى العنوان</button></div></div></div>`
+ :`<div class="empty">${ic('cart',56)}<b>السلة فارغة</b><button class="btn sm" data-go="products">تصفح المنتجات</button></div>`)},
+address:()=>`${crumbs([['السلة','cart'],['العنوان']])}<h1 class="page-h">العنوان وخيارات التسليم</h1><p class="sub">اختيارك للمدينة يحدد هل يتوفر التركيب أم الشحن فقط.</p>
+ <div class="cols"><div class="card stack">
+ <div class="field"><label>المدينة</label><div class="seg"><button data-city="makkah" class="${inMk()?'on':''}">مكة المكرمة</button><button data-city="other" class="${!inMk()?'on':''}">مدينة أخرى</button></div></div>
+ ${!inMk()?`<div class="field"><label for="city2">اسم المدينة</label><select id="city2" class="input"><option>جدة</option><option>الرياض</option><option>الدمام</option><option>المدينة المنورة</option></select></div>`:''}
+ <div class="two"><div class="field"><label for="dist">الحي</label><input id="dist" class="input" value="${S.addr.district}"></div><div class="field"><label for="street">الشارع ووصف الموقع</label><input id="street" class="input" placeholder="مثال: بجوار مسجد..." value="${S.addr.street}"></div></div>
+ ${inMk()?`<div class="field"><label>خيار التركيب</label>
+  <button class="opt ${S.install&&hasInstallable()?'on':''}" data-inst="1" ${!hasInstallable()?'disabled':''}><span class="r"></span><div style="flex:1"><b>تركيب بواسطة فني</b><div class="muted">${hasInstallable()?`رسوم ${fmt(FEES.install)} ر.س، ويُحدد الموعد بعد الدفع`:'لا يوجد في سلتك ما يحتاج تركيبًا'}</div></div></button>
+  <button class="opt ${!(S.install&&hasInstallable())?'on':''}" data-inst="0"><span class="r"></span><div style="flex:1"><b>بدون تركيب</b><div class="muted">استلام وتركيب ذاتي</div></div></button></div>`
+ :`<div class="alert warn">${ic('truck')}<div>خارج مكة المكرمة يتوفر الشحن للمنتجات فقط، ولا يتوفر تركيب ولا موعد ميداني.</div></div>`}
+ </div>${summary('<div style="margin-top:14px"><button class="btn" data-go="review">مراجعة الطلب</button></div>')}</div>`,
+review:()=>`${crumbs([['السلة','cart'],['العنوان','address'],['المراجعة']])}<h1 class="page-h">مراجعة الطلب</h1>
+ <div class="cols"><div class="stack">
+ <div class="card"><h3 class="h3" style="margin-bottom:8px">المنتجات</h3>${cartItems().map(i=>`<div class="row between" style="padding:4px 0"><span>${i.name} × ${i.qty}</span><span class="price">${fmt(i.price*i.qty)} ر.س</span></div>`).join('')}</div>
+ <div class="card"><div class="row between"><h3 class="h3">التسليم</h3><button class="btn sm sec" data-go="address">تعديل</button></div><div class="row" style="margin-top:8px;color:var(--n700)">${ic('pin',20)}<span>${inMk()?'مكة المكرمة':'خارج مكة'}، ${S.addr.district||'-'}</span></div><div style="margin-top:8px"><span class="badge ${withInstall()?'b-info':'b-gray'}"><i></i>${inMk()?(withInstall()?'مع تركيب':'بدون تركيب'):'شحن'}</span></div></div></div>
+ ${summary('<div style="margin-top:14px"><button class="btn" data-checkout="1">تأكيد والانتقال للدفع</button></div>')}</div>`,
+pay:()=>`${crumbs([['المراجعة','review'],['الدفع']])}<h1 class="page-h">الدفع</h1><p class="sub">الدفع آمن عبر بوابة ميسر.</p>
+ <div class="cols"><div class="card stack">
+ <div class="field"><label>طريقة الدفع</label>${[['mada','مدى'],['card','بطاقة ائتمانية'],['apple','Apple Pay']].map(([k,l])=>`<button class="opt ${S.pay===k?'on':''}" data-pay="${k}"><span class="r"></span><b>${l}</b></button>`).join('')}</div>
+ ${S.pay!=='apple'?`<div class="field"><label for="cn">رقم البطاقة</label><input id="cn" class="input" dir="ltr" value="4111 1111 1111 1111"></div><div class="two"><div class="field"><label for="ex">تاريخ الانتهاء</label><input id="ex" class="input" dir="ltr" value="12/28"></div><div class="field"><label for="cv">CVC</label><input id="cv" class="input" dir="ltr" value="123"></div></div>`:''}
+ <div class="muted">بيانات تجريبية. لن يتم أي خصم فعلي.</div></div>
+ ${summary(`<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px"><button class="btn" data-paynow="ok">ادفع ${fmt(totals().total)} ر.س</button><button class="btn ghost" data-paynow="fail">محاكاة فشل الدفع</button></div>`)}</div>`,
+done:()=>{const inst=withInstall();return `<div class="narrow stack">
+ <div class="card center stack" style="align-items:center"><div class="check">${ic('check')}</div><h1 class="page-h" style="margin:0">تم الدفع بنجاح</h1><div class="muted">رقم الطلب <b dir="ltr">${S.order}</b></div><span class="badge b-ok"><i></i>مدفوع</span></div>
+ ${inst?`<div class="card stack"><h3 class="h3">اختر اليوم المفضل للتركيب</h3><div class="days">${DAYS.map((d,i)=>`<button data-day="${i}" class="${S.day===i?'on':''}" ${i===5?'disabled':''}><b>${d[0]}</b><small>${d[1]}</small></button>`).join('')}</div><div class="muted">السبت خارج أيام العمل. سيتصل بك فريق العمليات لتحديد الساعة بدقة.</div><button class="btn" data-confirmday="1" ${S.day===null?'disabled':''}>تأكيد اليوم المفضل</button></div>`
+ :`<div class="alert info">${ic('box')}<div>${inMk()?'سيتم تجهيز طلبك وتسليمه.':'سيتم تجهيز طلبك وشحنه، وسيصلك رقم التتبع فور خروج الشحنة.'}</div></div><button class="btn" data-go="track">تتبع الطلب</button>`}</div>`},
+track:()=>{const inst=withInstall();
+ const steps=inst?[['تم الدفع',''],['تجهيز الطلب وصرف المنتجات',''],['تحديد موعد التركيب',S.day!==null?`${DAYS[S.day][0]} ${DAYS[S.day][1]} · الساعة تُحدد باتصال الموظف`:'بانتظار اختيارك لليوم المفضل'],['زيارة الفني',''],['اكتمال الطلب','']]
+ :[['تم الدفع',''],['تجهيز الطلب وصرف المنتجات',''],['تم الشحن','رقم التتبع: SMX 4821 7730'],['تم التسليم',''],['اكتمال الطلب','']];
+ return `${crumbs([['حسابي','account'],['تتبع الطلب']])}<h1 class="page-h">تتبع الطلب</h1>
+ <div class="cols"><div class="card timeline">${steps.map((s,i)=>`<div class="tl ${i<S.orderStep?'done':i===S.orderStep?'now':''}"><div class="c">${i<S.orderStep?ic('check',14):i+1}</div><div><b>${s[0]}</b>${s[1]?`<div class="muted">${s[1]}</div>`:''}</div></div>`).join('')}</div>
+ <div class="card stack side"><div class="row between"><b>الطلب <span dir="ltr">${S.order||'GH-10482'}</span></b><span class="badge ${S.orderStep>=5?'b-ok':'b-info'}"><i></i>${S.orderStep>=5?'مكتمل':'قيد التنفيذ'}</span></div><div class="muted">${inst?'طلب مع تركيب':inMk()?'طلب بدون تركيب':'شحن خارج مكة'}</div>
+ <button class="btn sec" data-step="1" ${S.orderStep>=5?'disabled':''}>تقدم الحالة (للتجربة فقط)</button></div></div>`},
+service:()=>{
+ if(!inMk())return `<div class="narrow stack"><div class="card empty">${ic('pin',48)}<b>الصيانة غير متاحة في مدينتك</b><div class="muted">خدمات الصيانة الميدانية تتوفر داخل مكة المكرمة فقط. يمكنك شراء الفلاتر وتركيبها ذاتيًا.</div><button class="btn sm" data-go="products">تصفح الفلاتر</button></div></div>`;
+ if(S.svcDone){const m={periodic:['تم تسجيل اليوم المفضل',`${S.svcDay!==null?DAYS[S.svcDay][0]+' '+DAYS[S.svcDay][1]+'. ':''}بانتظار اتصال الموظف لتحديد الساعة.`,'بانتظار اتصال الموظف','b-warn'],postponed:['تم تأجيل الصيانة','سنذكّرك مرة أخرى لاحقًا، ويمكنك فتح تذكيرنا متى شئت.','مؤجلة','b-gray'],declined:['تم تسجيل عدم رغبتك','لن نرسل تذكيرًا الآن. سيتابع معك الموظف يدويًا في موعد لاحق.','بلا زيارة','b-gray']}[S.svcDone];
+ return `<div class="narrow stack"><div class="card center stack" style="align-items:center"><div class="check">${ic('check')}</div><h1 class="page-h" style="margin:0">${m[0]}</h1><div class="muted">${m[1]}</div><span class="badge ${m[3]}"><i></i>${m[2]}</span></div>${S.svcDone==='periodic'?`<div class="alert info">${ic('bell')}<div>بعد الزيارة: إذا تغيّر فلتر يصلك طلب دفع بسعر الفلتر. وإذا لم يتغيّر شيء يُغلق الطلب.</div></div>`:''}<button class="btn" data-go="devices">العودة إلى أجهزتي</button></div>`}
+ return `${crumbs([['طلب صيانة']])}<h1 class="page-h">طلب صيانة</h1><p class="sub">اختر نوع الخدمة المناسب لحالتك.</p>
+ <div class="narrow stack"><div class="seg"><button data-svc="periodic" class="${S.svcTab==='periodic'?'on':''}">صيانة دورية</button><button data-svc="emergency" class="${S.svcTab==='emergency'?'on':''}">بلاغ طارئ</button></div>
+ ${S.svcTab==='periodic'?`<div class="alert info">${ic('bell')}<div>اقترب موعد تغيير فلاتر جهازك. اختر يومك المفضل أو أجّل الموعد.</div></div>
+ <div class="card"><b>جهاز تنقية منزلي 5 مراحل</b><div class="muted">آخر تغيير: 10 أبريل · الاستحقاق: 10 أكتوبر</div></div>
+ <div class="card stack"><h3 class="h3">اختر اليوم المفضل للزيارة</h3><div class="days">${DAYS.map((d,i)=>`<button data-sday="${i}" class="${S.svcDay===i?'on':''}" ${i===5?'disabled':''}><b>${d[0]}</b><small>${d[1]}</small></button>`).join('')}</div><div class="muted">سيتصل بك الموظف لتحديد الساعة الدقيقة.</div><button class="btn" data-svcgo="periodic" ${S.svcDay===null?'disabled':''}>تأكيد الطلب</button>
+ <div class="row"><button class="btn ghost" data-svcgo="postponed">تأجيل</button><button class="btn ghost" data-svcgo="declined">لا أرغب بالصيانة الآن</button></div></div>`
+ :`<div class="card stack"><h3 class="h3">ما هو العطل؟</h3>${['تسريب مياه','لا يوجد ماء خارج من الجهاز','طعم أو رائحة غير طبيعية','صوت مرتفع أو توقف الجهاز'].map(f=>`<button class="opt ${S.fault===f?'on':''}" data-fault="${f}"><span class="r"></span><b>${f}</b></button>`).join('')}</div>
+ <div class="alert info">${ic('bell')}<div>لا يُدفع أي مبلغ عند إرسال البلاغ. يفحص الفني الجهاز أولًا، ثم تصلك التكلفة وتدفع بعد موافقتك. رسوم الفحص ${fmt(FEES.inspect)} ر.س.</div></div>
+ <button class="btn" data-svcgo="emergency" ${!S.fault?'disabled':''}>إرسال البلاغ</button>`}</div>`},
+emergency:()=>{const E=S.emg,T=emgTotals(),step=E.step;
+ const st=[['تم تسجيل البلاغ','بانتظار اتصال الموظف لتأكيد الوقت'],['تأكيد وقت الزيارة','اتصل بك الموظف وحدد الموعد'],['زيارة الفني وفحص الجهاز','الفني يشخص العطل ويفيد الموظف بالنتيجة'],['تقرير الفحص والتكلفة','بانتظار موافقتك'],['الدفع',E.pay?(E.pay==='online'?'دفع إلكتروني عبر رابط من الموظف':'نقدًا للفني، وسجله الموظف في العهدة'):'رسوم الفحص'+(E.accept?' والقطع':'')],['الإصلاح',E.accept===false?'لم يُجرَ، لأنك رفضت الإصلاح':'الفني ينفذ الإصلاح بالقطع المعتمدة'],['اكتمال البلاغ','أُغلق الطلب وسُجلت القطع المستخدمة']];
+ const act=step===3?`<div class="card stack"><h3 class="h3">تقرير الفحص</h3><div class="muted">التشخيص: ${S.fault||'تسريب مياه'}، ويحتاج الجهاز إلى استبدال القطع التالية.</div>
+  <div class="sum"><div><span>رسوم الفحص</span><span>${fmt(FEES.inspect)}</span></div>${EMG_PARTS.map(x=>`<div><span>${x[0]}</span><span>${fmt(x[1])}</span></div>`).join('')}<div><span>ضريبة 15%</span><span>${fmt(Math.round((FEES.inspect+EMG_PARTS.reduce((a,x)=>a+x[1],0))*FEES.vat*100)/100)}</span></div></div>
+  <button class="btn" data-emgaccept="1">أوافق على الإصلاح والتكلفة</button><button class="btn ghost" data-emgaccept="0">أرفض الإصلاح وأدفع رسوم الفحص فقط</button></div>`
+ :step===4?`<div class="card stack"><h3 class="h3">الدفع</h3><div class="sum"><div><span>رسوم الفحص</span><span>${fmt(FEES.inspect)}</span></div>${E.accept?EMG_PARTS.map(x=>`<div><span>${x[0]}</span><span>${fmt(x[1])}</span></div>`).join(''):''}<div><span>ضريبة 15%</span><span>${fmt(T.vat)}</span></div><div class="tot"><span>الإجمالي</span><span>${fmt(T.total)} ر.س</span></div></div>
+  <button class="btn" data-emgpay="online">ادفع إلكترونيًا (رابط ميسر)</button><button class="btn ghost" data-emgpay="cash">أدفع نقدًا للفني</button><div class="muted">عند الدفع النقدي يسجل الموظف التحصيل ويفتح عهدة على الفني.</div></div>`
+ :`<div class="card"><button class="btn sec" data-emgstep="1" ${step>=7?'disabled':''}>تقدم الحالة (للتجربة فقط)</button></div>`;
+ return `${crumbs([['طلب صيانة','service'],['متابعة البلاغ']])}<h1 class="page-h">متابعة البلاغ الطارئ</h1><p class="sub">الفني لا يملك حسابًا في النظام، ويتواصل معك الموظف في كل خطوة.</p>
+ <div class="cols"><div class="card timeline">${st.map((x,i)=>`<div class="tl ${i<step?'done':i===step?'now':''}"><div class="c">${i<step?ic('check',14):i+1}</div><div><b>${x[0]}</b><div class="muted">${x[1]}</div></div></div>`).join('')}</div>
+ <div class="stack side"><div class="card row between"><b>بلاغ طارئ</b><span class="badge ${step>=7?'b-ok':'b-warn'}"><i></i>${step>=7?'مكتمل':'عاجل'}</span></div>${act}</div></div>`},
+devices:()=>`${crumbs([['أجهزتي']])}<h1 class="page-h">أجهزتي وفلاتري</h1><p class="sub">تابع موعد تغيير كل فلتر.</p>
+ <div class="card row between" style="margin-bottom:16px;flex-wrap:wrap"><div><b>جهاز تنقية منزلي 5 مراحل</b><div class="muted">GH-500 · مكة، العزيزية · ضمان حتى 2028</div></div><div class="row"><span class="badge b-warn"><i></i>يستحق قريبًا</span>${inMk()?'<button class="btn sm" data-go="service">اطلب صيانة دورية</button>':''}</div></div>
+ <div class="grid">${[['المرحلة 1 · رواسب','10 يونيو','10 ديسمبر',70],['المرحلة 2 · كربون','10 أبريل','10 أكتوبر',96],['المرحلة 3 · غشاء RO','10 أبريل','10 أبريل 2027',50]].map(f=>`<div class="card"><div class="row between"><b>${f[0]}</b><span class="muted">${f[2]}</span></div><div style="height:8px;background:var(--n100);border-radius:9px;margin:10px 0"><div style="height:100%;width:${f[3]}%;border-radius:9px;background:${f[3]>90?'var(--warn-500)':'var(--primary-600)'}"></div></div><div class="muted">آخر تغيير ${f[1]} · استُهلك ${f[3]}% من العمر</div></div>`).join('')}</div>`,
+account:()=>`${crumbs([['حسابي']])}<h1 class="page-h">حسابي</h1>
+ <div class="narrow stack">${S.user?`<div class="card row between wrapr"><div class="row">${ic('user',38)}<div><b>${acct().name||'عميل جديد'}</b> <span class="badge ${acct().level==='full'?'b-ok':'b-warn'}"><i></i>${acct().level==='full'?'حساب كامل':'حساب مختصر'}</span><div class="muted">رقم الجوال <span dir="ltr">${acct().phone||S.phone}</span>${acct().email?` · <span dir="ltr">${acct().email}</span>`:''}</div></div></div><button class="btn sm ghost" data-logout="1">تسجيل الخروج</button></div>${acct().level!=='full'?`<div class="alert warn">${ic('bell')}<div>حسابك مختصر برقم الجوال فقط. أكمل بياناتك مرة واحدة لتسريع طلباتك القادمة. <button class="btn sm sec" data-complete="1">أكمل بياناتك</button></div></div>`:''}`:`<div class="card empty">${ic('user',48)}<b>لم تسجل الدخول بعد</b><button class="btn sm" data-login="1">تسجيل الدخول برقم الجوال</button></div>`}
+ ${true?`<div class="row between"><h3 class="h3">طلباتي</h3><button class="btn sm ghost" data-go="orders">عرض كل الطلبات</button></div>`:''}${S.order?`<button class="card row between" data-go="track" style="width:100%;text-align:start"><div><b dir="ltr">${S.order}</b><div class="muted">طلب حالي</div></div><span class="badge b-info"><i></i>قيد التنفيذ</span></button>`:''}
+ <div class="card"><h3 class="h3">العنوان</h3><div class="muted">${inMk()?'مكة المكرمة':'خارج مكة'}، ${S.addr.district}</div></div></div>`
+};
+
+const ACCTS={'0551234567':{phone:'0551234567',name:'عبدالله الحربي',email:'',level:'full'},'0561112233':{phone:'0561112233',name:'',email:'',level:'lite'}};
+const acct=()=>S.acct||(S.acct={phone:S.phone||'0551234567',name:S.user||'عميل تجريبي',email:'',level:'full'});
+const needLevel=n=>n==='pay'||n==='register'?'full':n==='account'?'newfull':'lite';
+function afterAuth(nx){S.sheet=null;if(nx&&nx.startsWith('svc:')){finishSvc(nx.slice(4));return}go(nx==='register'||!nx?'account':nx)}
+function sheetHtml(){
+ if(!S.sheet)return '';
+ const st=S.sheet.step,nx=S.sheet.next||'',nl=needLevel(nx);
+ const hint=nl==='lite'?'رقم جوالك يكفي، بدون تعبئة بيانات.':nl==='full'?'بعد التحقق نطلب اسمك لإتمام أول طلب، ولا نكرر السؤال بعدها.':'حساب جديد؟ نطلب بياناتك بعد التحقق. لديك حساب؟ تدخل مباشرة.';
+ const title=st===1?(nl==='newfull'?'تسجيل الدخول أو إنشاء حساب':'تسجيل الدخول برقم الجوال'):st===2?'أدخل رمز التحقق':'أكمل بياناتك';
+ const fromAddr=nx==='pay';
+ let body='';
+ if(st===1)body=`<div class="muted">${hint}</div><div class="field"><label for="ph">رقم الجوال</label><input id="ph" class="input" dir="ltr" placeholder="05XXXXXXXX" value="0551234567" inputmode="numeric"></div><button class="btn" data-sendotp="1">إرسال رمز التحقق</button><div class="alert info" style="font-size:13px">${ic('bell')}<div><b>للتجربة فقط:</b> 0551234567 حساب كامل، 0561112233 حساب مختصر، وأي رقم آخر يُعامل كعميل جديد.</div></div>`;
+ else if(st===2)body=`<div class="muted">أرسلنا رمزًا إلى <span dir="ltr">${S.phone}</span>. جرب أي 4 أرقام.</div><div class="otp">${[0,1,2,3].map(i=>`<input maxlength="1" inputmode="numeric" data-otp="${i}" aria-label="رقم ${i+1}">`).join('')}</div><button class="btn" data-verify="1">تأكيد</button><button class="btn ghost" data-resend="1">تغيير الرقم</button>`;
+ else body=`<div class="muted">${fromAddr?'هذه آخر خطوة قبل الدفع، وتُحفظ لطلباتك القادمة.':'نحتاجها مرة واحدة لتسريع طلباتك وصيانتك لاحقًا.'}</div>
+  <div class="field"><label for="rg_name">الاسم الكامل</label><input id="rg_name" class="input" value="${S.sheet.name||''}"></div>
+  <div class="field"><label for="rg_email">البريد الإلكتروني (اختياري)</label><input id="rg_email" class="input" dir="ltr" style="text-align:start" value="${S.sheet.email||''}"></div>
+  ${fromAddr?`<div class="alert info">${ic('pin')}<div>العنوان: ${inMk()?'مكة المكرمة':'خارج مكة'}، ${S.addr.district} (من خطوة العنوان)</div></div>`
+  :`<div class="two"><div class="field"><label for="rg_dist">الحي</label><input id="rg_dist" class="input" value="${S.addr.district}"></div><div class="field"><label for="rg_street">الشارع ووصف الموقع</label><input id="rg_street" class="input" value="${S.addr.street}"></div></div>`}
+  <label class="row" style="gap:8px;align-items:flex-start"><input type="checkbox" id="rg_ok" style="margin-top:4px"><span>أوافق على <b>الشروط</b> و<b>سياسة الخصوصية</b> وأسمح بالتواصل معي بخصوص طلباتي وصيانتي.</span></label>
+  <button class="btn" data-regsave="1">حفظ ومتابعة</button>`;
+ return `<div class="modal" role="dialog" aria-modal="true"><div>
+  <div class="row between"><h2 class="h2">${title}</h2><button class="iconbtn" data-closesheet="1" aria-label="إغلاق">✕</button></div>${body}
+ </div></div>`;
+}
+
+function render(){
+ const navKey={home:'home',products:'products',detail:'products',service:'service',emergency:'service',devices:'devices',account:'account',track:'account',orders:'orders'}[S.screen];
+ const n=NOTES[S.sheet?'login':S.screen]||NOTES.home;
+ document.getElementById('review').innerHTML=`<div class="wrap"><span class="pill">وضع المراجعة</span><b>${n.t}</b><span class="sp"></span><button data-drawer="1">${S.drawer?'إخفاء الملاحظات':'الملاحظات والشاشات'}</button></div>`;
+ const cnt=S.cart.reduce((a,c)=>a+c.qty,0);
+ document.getElementById('app').innerHTML=`<header class="hdr"><div class="wrap"><button class="logo" data-go="home">${ic('drop')} غيث</button>
+  <nav class="nav">${[['home','الرئيسية'],['products','المنتجات'],...(inMk()?[['service','طلب صيانة'],['devices','أجهزتي']]:[]),['orders','طلباتي'],['account','حسابي']].map(([k,l])=>`<button data-go="${k}" class="${navKey===k?'on':''}">${l}</button>`).join('')}</nav>
+  <div class="hact">${S.user?`<button class="btn sm sec" data-go="account">${ic('user',16)} ${acct().name||'حسابي'}</button>`:`<button class="btn sm" data-login="1">دخول / تسجيل</button>`}<button class="iconbtn" data-go="cart" aria-label="السلة">${ic('cart')}${cnt?`<span class="dot">${cnt}</span>`:''}</button></div></div></header>
+  <main><div class="wrap">${(VIEWS[S.screen]||VIEWS.home)()}</div></main>
+  <footer><div class="wrap ft"><div><b style="color:var(--n900)">غيث لتنقية المياه</b><p style="margin:6px 0 0">أجهزة وفلاتر وصيانة، داخل مكة المكرمة وشحن لباقي المدن.</p></div><div><h4>الموقع</h4><button data-go="products">المنتجات</button><button data-soon="1">من نحن</button><button data-soon="1">مناطق الخدمة</button></div><div><h4>المساعدة</h4><button data-soon="1">الأسئلة الشائعة</button><button data-soon="1">الشحن والتوصيل</button><button data-soon="1">الإلغاء والاسترداد</button><button data-soon="1">الضمان والصيانة</button></div><div><h4>تواصل معنا</h4><button data-soon="1">واتساب</button><button data-soon="1">اتصال</button><button data-soon="1">الخصوصية والشروط</button></div><div class="bot"><span>© غيث لتنقية المياه</span><span>نموذج تصميم للمراجعة، البيانات أمثلة فقط</span></div></div></footer>`+sheetHtml()+(S.toast?`<div class="toast">${S.toast}</div>`:'');
+ const d=document.getElementById('drawer');d.hidden=!S.drawer;
+ d.innerHTML=`<div><span class="tag">ملاحظات المراجعة</span><h2>${n.t}</h2><ul>${n.r.map(x=>`<li>${x}</li>`).join('')}</ul><div class="sys">${n.s.map(x=>`<span>${x}</span>`).join('')}</div></div>
+ <div><h2>تجربة مدينة العميل</h2><div class="seg"><button data-city="makkah" class="${inMk()?'on':''}">مكة</button><button data-city="other" class="${!inMk()?'on':''}">خارج مكة</button></div><div class="muted" style="margin-top:6px">خارج مكة تختفي الصيانة من الموقع.</div></div>
+ <div><h2>شاشات الرحلة</h2><div class="steps">${STEPS.map(([k,l])=>`<button data-jump="${k}" class="${S.screen===k?'on':''}"><i></i>${l}</button>`).join('')}</div></div>`;
+}
+
+document.addEventListener('click',e=>{
+ const t=e.target.closest('button,[data-go]');if(!t)return;
+ const d=t.dataset;
+ if(d.drawer){S.drawer=!S.drawer;render();return}
+ if(d.jump){if(['done','track'].includes(d.jump)&&!S.order){S.order='GH-10482';S.user=S.user||'عميل تجريبي';S.orderStep=1}go(d.jump);return}
+ if(d.go){go(d.go);return}
+ if(d.cat){S.cat=d.cat;go('products');return}
+ if(d.pid){go('detail',{pid:+d.pid});return}
+ if(d.add){addCart(+d.add);return}
+ if(d.qty){const[id,dl]=d.qty.split(':').map(Number);const c=S.cart.find(x=>x.id===id);c.qty=Math.max(1,c.qty+dl);render();return}
+ if(d.rm){S.cart=S.cart.filter(x=>x.id!==+d.rm);render();return}
+ if(d.city){S.addr.city=d.city;S.install=d.city==='makkah';render();return}
+ if(d.inst!==undefined){S.install=d.inst==='1';render();return}
+ if(d.checkout){needLogin('pay');return}
+ if(d.pay){S.pay=d.pay;render();return}
+ if(d.paynow==='ok'){S.order='GH-'+(10480+Math.floor(Math.random()*90));S.orderStep=1;S.day=null;go('done');return}
+ if(d.paynow==='fail'){toast('فشل الدفع. الطلب ما زال بانتظار الدفع، حاول مرة أخرى.');return}
+ if(d.day!==undefined){S.day=+d.day;render();return}
+ if(d.confirmday){S.orderStep=2;go('track');return}
+ if(d.step){S.orderStep=Math.min(5,S.orderStep+1);render();return}
+ if(d.svc){S.svcTab=d.svc;render();return}
+ if(d.sday!==undefined){S.svcDay=+d.sday;render();return}
+ if(d.fault){S.fault=d.fault;render();return}
+ if(d.emgstep){const E=S.emg;if(E.step===3||E.step===4)return;E.step=Math.min(7,E.step+1);render();return}
+ if(d.emgaccept){S.emg.accept=d.emgaccept==='1';S.emg.step=4;render();return}
+ if(d.emgpay){S.emg.pay=d.emgpay;S.emg.step=S.emg.accept?5:7;render();return}
+ if(d.svcgo){needLogin('svc:'+d.svcgo);return}
+ if(d.login){S.sheet={step:1,next:d.login==='1'?'account':d.login};render();return}
+ if(d.closesheet){S.sheet=null;render();return}
+ if(d.sendotp){const v=document.getElementById('ph').value.trim();if(v.length<9){toast('أدخل رقم جوال صحيح');return}S.phone=v;S.sheet.step=2;render();return}
+ if(d.verify){const ph=S.phone;let a=ACCTS[ph],isNew=!a;if(!a)a=ACCTS[ph]={phone:ph,name:'',email:'',level:'lite'};const nx=S.sheet.next||'',nl=needLevel(nx);S.acct=a;
+  if((nl==='full'||(nl==='newfull'&&isNew))&&a.level!=='full'){S.sheet.step=3;S.sheet.isNew=isNew;render();return}
+  S.user=a.name||'عميل';if(isNew)toast('أنشأنا لك حسابًا برقم جوالك');afterAuth(nx);return}
+ if(d.regsave){const n=document.getElementById('rg_name').value.trim(),em=document.getElementById('rg_email').value.trim();S.sheet.name=n;S.sheet.email=em;
+  if(n.length<2){toast('اكتب اسمك');return}if(em&&!/^\S+@\S+\.\S+$/.test(em)){toast('البريد غير صحيح');return}if(!document.getElementById('rg_ok').checked){toast('وافق على الشروط للمتابعة');return}
+  const dd=document.getElementById('rg_dist');if(dd){S.addr.district=dd.value.trim()||S.addr.district;S.addr.street=document.getElementById('rg_street').value.trim()}
+  const a=acct();a.name=n;a.email=em;a.level='full';S.user=n;toast('تم حفظ بياناتك');afterAuth(S.sheet.next);return}
+ if(d.resend){S.sheet.step=1;render();return}
+ if(d.logout){S.user=null;S.acct=null;go('home');return}
+ if(d.complete){S.sheet={step:3,next:'account',name:acct().name,email:acct().email};render();return}
+
+});
+document.addEventListener('input',e=>{
+ const i=e.target;
+ if(i.id==='q'){S.q=i.value;const p=i.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(p,p)}
+ if(i.id==='dist')S.addr.district=i.value;
+ if(i.id==='street')S.addr.street=i.value;
+ if(i.dataset.otp!==undefined&&i.value){const nx=document.querySelector(`[data-otp="${+i.dataset.otp+1}"]`);if(nx)nx.focus()}
+});
+/* ===== v6: طلباتي بدورة متابعة ===== */
+NOTES.orders={t:'طلباتي',r:['قائمة كل طلبات العميل بحالتها ويتابعها من مكان واحد.','دورة الطلب: دفع ← تجهيز ← شحن أو تركيب ← تسليم ← تقييم ← أرشفة.','الإلغاء متاح قبل صرف المنتجات من المخزون، وبعده يتواصل العميل مع الدعم.','عند فشل الدفع يُرسل رابط جديد صالح 24 ساعة ويمكن اختيار وسيلة أخرى.','الأرقام والمهل هنا افتراضية وتُعدَّل من الإعدادات.'],s:['نظام المتجر','نظام الدفع','نظام الطلبات']};
+S.ordF='all';S.ordOpen=null;S.ords=[
+ {id:'GH-10482',date:'10 أكتوبر',kind:'جهاز مع تركيب',total:1913.6,st:'جارٍ',stage:'تجهيز الطلب',step:1,cancel:true},
+ {id:'GH-10477',date:'9 أكتوبر',kind:'طقم فلاتر',total:207,st:'بانتظار الدفع',stage:'لم يكتمل الدفع',why:'رصيد البطاقة غير كافٍ',cancel:true},
+ {id:'GH-10311',date:'21 سبتمبر',kind:'جهاز مع تركيب',total:1913.6,st:'مكتمل',stage:'تم التسليم والتركيب',rated:false},
+ {id:'GH-10200',date:'2 سبتمبر',kind:'خرطوم وقطع توصيل',total:51.75,st:'ملغي',stage:'أُلغي، وأُعيد المبلغ إلى البطاقة'}];
+const OST={'جارٍ':'b-info','بانتظار الدفع':'b-warn','مكتمل':'b-ok','ملغي':'b-gray'};
+VIEWS.orders=()=>{if(!S.user)return `${crumbs([['طلباتي']])}<h1 class="page-h">طلباتي</h1><div class="card empty"><b>سجّل الدخول لترى طلباتك</b><button class="btn sm" data-login="1">تسجيل الدخول برقم الجوال</button></div>`;const L=S.ords.filter(o=>S.ordF==='all'||(S.ordF==='act'?['جارٍ','بانتظار الدفع'].includes(o.st):S.ordF==='done'?o.st==='مكتمل':o.st==='ملغي'));
+ return `${crumbs([['حسابي','account'],['طلباتي']])}<h1 class="page-h">طلباتي</h1>
+ <div class="seg" style="max-width:420px">${[['all','الكل'],['act','الجارية'],['done','المكتملة'],['can','الملغاة']].map(([k,l])=>`<button data-ordf="${k}" class="${S.ordF===k?'on':''}">${l}</button>`).join('')}</div>
+ <div class="stack" style="margin-top:12px">${L.map(o=>`<div class="card stack"><div class="row between wrapr"><div><b dir="ltr">${o.id}</b> <span class="muted">· ${o.date} · ${o.kind}</span></div><span class="badge ${OST[o.st]}"><i></i>${o.st}</span></div>
+  <div class="row between wrapr"><div class="muted">${o.stage}</div><b>${fmt(o.total)} ر.س</b></div>
+  ${o.why?`<div class="alert warn">${ic('bell')}<div>لم يتم الدفع: ${o.why}. أرسلنا لك رابطًا جديدًا صالحًا 24 ساعة، وتستطيع الدفع بوسيلة أخرى.</div></div>`:''}
+  ${o.st==='مكتمل'&&!o.rated?`<div class="alert info">${ic('check')}<div>اكتمل طلبك. كيف كانت تجربتك؟ <button class="btn sm sec" data-orate="${o.id}">قيّم الطلب</button></div></div>`:''}
+  ${o.rated?`<div class="muted">شكرًا لتقييمك.</div>`:''}
+  ${S.ordOpen===o.id?`<div class="card" style="background:var(--n50)"><b>فاتورة ضريبية مبسطة</b><div class="sum"><div><span>المجموع قبل الضريبة</span><span>${fmt(Math.round(o.total/1.15*100)/100)}</span></div><div><span>ضريبة القيمة المضافة 15%</span><span>${fmt(Math.round((o.total-o.total/1.15)*100)/100)}</span></div><div class="tot"><span>الإجمالي</span><span>${fmt(o.total)} ر.س</span></div></div><div class="muted">النسخة النهائية بمعيار هيئة الزكاة وتصدر من نظام المحاسبة.</div></div>`:''}
+  <div class="row wrapr">${o.st==='جارٍ'?`<button class="btn sm" data-go="track">تتبع الطلب</button>`:''}${o.st==='بانتظار الدفع'?`<button class="btn sm" data-go="pay">ادفع الآن</button>`:''}${o.st==='مكتمل'?`<button class="btn sm sec" data-go="cart">إعادة الطلب</button>`:''}${o.st!=='بانتظار الدفع'?`<button class="btn sm ghost" data-oinv="${o.id}">${S.ordOpen===o.id?'إخفاء الفاتورة':'عرض الفاتورة'}</button>`:''}${o.cancel?`<button class="btn sm ghost" data-ocancel="${o.id}">إلغاء الطلب</button>`:''}</div>
+  ${o.st==='جارٍ'?`<div class="muted">الإلغاء متاح حتى صرف المنتجات من المخزون، وبعدها تواصل مع الدعم.</div>`:''}</div>`).join('')||'<div class="card empty"><b>لا توجد طلبات هنا</b></div>'}</div>`};
+STEPS.push(['orders','طلباتي']);
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+ if(d.ordf){S.ordF=d.ordf;render();return}
+ if(d.oinv){S.ordOpen=S.ordOpen===d.oinv?null:d.oinv;render();return}
+ if(d.orate){S.ords.find(o=>o.id===d.orate).rated=true;toast('شكرًا لتقييمك');return}
+ if(d.ocancel){const o=S.ords.find(x=>x.id===d.ocancel);o.st='ملغي';o.cancel=false;delete o.why;o.stage=o.step!==undefined?'أُلغي، وسيُعاد المبلغ إلى وسيلة الدفع':'أُلغي قبل الدفع';toast('أُلغي الطلب '+o.id);return}
+});
+
+/* ===== v9: الصفحة الرئيسية الكاملة ===== */
+NOTES.home={t:'الصفحة الرئيسية',r:['صفحة تعريفية وتسويقية تقود العميل إلى الشراء أو الصيانة.','اختيار المدينة يغيّر الصفحة: خارج مكة تختفي الصيانة والتركيب وتظهر رسالة توضح ذلك.','الأقسام والمنتجات المميزة والباقات تُدار من المدير (الكتالوج).','النصوص وآراء العملاء والأرقام أمثلة مؤقتة تُستبدل بمحتوى الجهة.','روابط التذييل (من نحن، الشروط وغيرها) ستكون صفحات مستقلة في الخطوة التالية.'],s:['نظام المتجر والكتالوج','إعدادات نطاق الخدمة']};
+S.faq=0;
+const FAQ=[
+ ['هل التركيب متاح في كل المدن؟','التركيب والصيانة متاحان حاليًا داخل مكة المكرمة فقط. باقي المدن نشحن لها المنتجات مع رقم تتبع.'],
+ ['كم تكلفة التركيب؟','رسم التركيب 150 ر.س قبل الضريبة داخل مكة، ويظهر لك بوضوح قبل إتمام الطلب.'],
+ ['متى أدفع في حالة البلاغ الطارئ؟','لا تدفع شيئًا عند إرسال البلاغ. الفني يفحص أولًا، ثم تدفع بعد موافقتك على التقرير: رسوم الفحص فقط، أو الفحص مع القطع إذا وافقت على الإصلاح.'],
+ ['كيف أعرف موعد تغيير الفلاتر؟','نحسب الموعد من آخر تغيير للفلاتر، ونتواصل معك عبر واتساب أو اتصال قبل الموعد، وتستطيع أيضًا تسجيل الصيانة بنفسك من الموقع.'],
+ ['ما وسائل الدفع؟','مدى والبطاقات وApple Pay عبر بوابة ميسر، أو الدفع نقدًا للفني في بعض الزيارات.']];
+const WHY=[['check','فلاتر أصلية','قطع متوافقة مع كل موديل ومضمونة المصدر.'],['wrench','فنيون معتمدون','فريق مدرب يصلك في اليوم الذي تختاره.'],['bell','متابعة بعد البيع','نذكّرك بموعد تغيير الفلاتر قبل أن تحتاجه.'],['pin','تغطية مكة المكرمة','تركيب وصيانة في أحياء مكة، وشحن لباقي المدن.']];
+const REV=[['أبو سعد','العزيزية','ركبوا الجهاز في نفس اليوم الذي اخترته، والفني كان محترمًا ومرتبًا.'],['أم محمد','الشوقية','بلاغ طارئ عن تسريب وصلني فني خلال ساعات، ولم أدفع إلا بعد الفحص.'],['خالد','جدة','طلبت الفلاتر وشُحنت بسرعة مع رقم تتبع واضح.']];
+VIEWS.home=()=>{const mk=inMk(),f=PRODUCTS.filter(p=>p.cat!=='bundles'&&p.cat!=='parts').slice(0,4),bun=PRODUCTS.find(p=>p.cat==='bundles');
+ const steps=mk?[['اطلب','اختر جهازك أو باقتك'],['ادفع','بمدى أو بطاقة أو Apple Pay'],['نركّب','فني معتمد في موعدك'],['نتابع','نذكرك بتغيير الفلاتر']]:[['اطلب','اختر جهازك أو فلاترك'],['ادفع','بمدى أو بطاقة أو Apple Pay'],['نشحن','يصلك رقم التتبع فورًا'],['تتابع','تتبّع الطلب من حسابك']];
+ return `<section class="hero"><div><div class="seg citysw" role="group" aria-label="المدينة"><button data-city="makkah" class="${mk?'on':''}">${ic('pin',16)} مكة المكرمة</button><button data-city="other" class="${mk?'':'on'}">مدينة أخرى</button></div>
+ <h1>ماء نقي لبيتك، وصيانة تصلك في موعدها</h1><p>أجهزة تنقية وفلاتر وباقات${mk?'، مع تركيب وصيانة داخل مكة المكرمة':'، تُشحن إلى مدينتك مع رقم تتبع'}.</p>
+ <div class="row wrapr"><button class="btn" data-go="products">تسوّق الأجهزة</button>${mk?`<button class="btn ghostw" data-go="service">اطلب صيانة</button>`:''}</div></div><div class="art">${ic('drop')}</div></section>
+ <div class="trust">${[['check','ضمان على الأجهزة'],['wrench','فنيون معتمدون'],['box','فلاتر أصلية'],['truck','شحن لكل المدن']].map(x=>`<div>${ic(x[0])}<span>${x[1]}</span></div>`).join('')}</div>
+ <div class="sec-h"><h2 class="h2">تسوّق حسب القسم</h2></div>
+ <div class="cats">${CATS.slice(1).map(c=>`<button class="cat" data-cat="${c[0]}"><span>${ic(CATICON[c[0]])}</span>${c[1]}</button>`).join('')}</div>
+ <div class="sec-h"><h2 class="h2">منتجات مميزة</h2><button class="btn sm sec" data-go="products">عرض الكل</button></div>
+ <div class="grid">${f.map(prodCard).join('')}</div>
+ <section class="bundle"><div><span class="badge b-warn"><i></i>باقة موفّرة</span><h2 class="h2" style="margin:8px 0">${bun.name}</h2><p class="muted" style="font-size:15px">${bun.desc} وفّر 90 ر.س مقارنة بشراء المكونات منفصلة.</p><div class="row wrapr"><b style="font-size:22px;white-space:nowrap">${fmt(bun.price)} ر.س</b><button class="btn" data-pid="${bun.id}">عرض الباقة</button></div></div><div class="art">${ic('store')}</div></section>
+ <div class="sec-h"><h2 class="h2">كيف نعمل</h2></div>
+ <div class="steps4">${steps.map((s,i)=>`<div class="card"><span class="num">${i+1}</span><b>${s[0]}</b><div class="muted">${s[1]}</div></div>`).join('')}</div>
+ <div class="sec-h"><h2 class="h2">الصيانة</h2></div>
+ ${mk?`<div class="two svc2"><div class="card stack">${ic('bell')}<b>صيانة دورية</b><div class="muted">نحسب موعد تغيير فلاترك ونتواصل معك لتختار اليوم المناسب.</div><button class="btn sm sec" data-go="service">احجز صيانة دورية</button></div>
+ <div class="card stack urgent">${ic('wrench')}<b>بلاغ طارئ</b><div class="muted">تسريب أو توقف الماء؟ أرسل البلاغ بدون دفع مسبق. يفحص الفني أولًا وتدفع بعد موافقتك.</div><button class="btn sm danger" data-go="service">أرسل بلاغًا طارئًا</button></div></div>`
+ :`<div class="alert info">${ic('pin')}<div>الصيانة والتركيب متاحان حاليًا داخل مكة المكرمة فقط. نشحن المنتجات إلى مدينتك، وتفاصيل التركيب الذاتي مرفقة مع كل جهاز.</div></div>`}
+ <div class="sec-h"><h2 class="h2">لماذا غيث</h2></div>
+ <div class="info3">${WHY.map(w=>`<div class="card">${ic(w[0])}<div><b>${w[1]}</b><div class="muted">${w[2]}</div></div></div>`).join('')}</div>
+ <div class="sec-h"><h2 class="h2">آراء عملائنا</h2><span class="muted">أمثلة للتصميم</span></div>
+ <div class="info3">${REV.map(r=>`<div class="card stack"><div class="stars" aria-label="5 من 5">★★★★★</div><div>${r[2]}</div><div class="muted"><b>${r[0]}</b> · ${r[1]}</div></div>`).join('')}</div>
+ <div class="sec-h"><h2 class="h2">أسئلة شائعة</h2></div>
+ <div class="card faq">${FAQ.map((q,i)=>`<div class="fq"><button data-faq="${i}" aria-expanded="${S.faq===i}"><span>${q[0]}</span><span aria-hidden="true">${S.faq===i?'−':'+'}</span></button>${S.faq===i?`<p>${q[1]}</p>`:''}</div>`).join('')}</div>
+ <section class="cta"><div><h2 class="h2" style="margin:0 0 4px">جاهز لماء أنقى؟</h2><div>ابدأ بطلب جهازك اليوم${mk?' أو احجز صيانة لجهازك الحالي':''}.</div></div><button class="btn" data-go="products">ابدأ التسوق</button></section>`};
+document.getElementById('app')&&0;
+const liteNote=()=>S.user&&acct().level!=='full'?`<div class="alert info" style="margin-bottom:12px">${ic('bell')}<div>سجّلنا رقم جوالك فقط. سيتصل بك فريقنا لإكمال العنوان وتفاصيل الخدمة، فلا تحتاج لتعبئة شيء الآن.</div></div>`:'';
+['emergency','service'].forEach(k=>{const f=VIEWS[k];VIEWS[k]=()=>liteNote()+f()});
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+ if(d.faq!==undefined){S.faq=S.faq===+d.faq?-1:+d.faq;render();return}
+ if(d.soon){toast('هذه الصفحة قيد التصميم، وتأتي في الخطوة التالية');return}
+});
+
+render();
+</script>
+</html>
