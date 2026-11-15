@@ -54,3 +54,44 @@ a{color:inherit;text-decoration:none}
 
 .notice{display:flex;flex-direction:column;align-items:flex-start;gap:8px;background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:18px}
 .notice.bad{border-color:var(--bad-500);background:var(--bad-50)}
+
+/* Header account area */
+.nav{flex:1}
+.hact{display:flex;gap:8px;align-items:center}
+.acct-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;background:var(--n100);color:var(--n700);font-weight:500}
+.acct-btn:hover{background:var(--primary-50);color:var(--primary-700)}
+.acct-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7}
+.acct-phone{color:var(--n500);font-size:12px}
+@media (max-width:520px){.acct-phone{display:none}}
+
+/* Forms */
+.card{background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.narrow{max-width:560px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.wrapr{flex-wrap:wrap}
+.h3{font-size:16px;font-weight:600;margin:0}
+.field{display:flex;flex-direction:column;gap:6px;margin-block:14px}
+.field label{font-size:14px;font-weight:500}
+.input{height:48px;border:1px solid var(--n300);border-radius:8px;background:var(--surface);padding:0 14px;width:100%}
+.input:focus{border-color:var(--primary-600);outline:2px solid var(--primary-100)}
+.input[aria-invalid="true"]{border-color:var(--bad-500)}
+.input.otp{font-size:24px;letter-spacing:.5em;text-align:center;font-variant-numeric:tabular-nums}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.5;cursor:not-allowed;filter:none}
+.btn.ghost{background:none;border:1px solid var(--n300);color:var(--n700)}
+.form-error{color:var(--bad-700);font-size:14px;margin:0 0 12px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.check input{margin-top:5px;width:18px;height:18px;flex:none}
+.linkbtn{background:none;border:0;padding:4px 0;color:var(--primary-700);font-weight:500;cursor:pointer}
+.linkbtn[disabled]{color:var(--n500);cursor:default}
+
+/* Login */
+.auth-wrap{display:grid;place-items:center;padding-block:24px}
+.auth-card{width:100%;max-width:420px}
+.auth-card .h2{margin-bottom:4px}
+.auth-links{display:flex;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}
+
+.notice.warn{border-color:var(--warn-500);background:var(--warn-50);color:var(--warn-700)}
+.notice.ok{border-color:var(--ok-500);background:var(--ok-50);color:var(--ok-700)}

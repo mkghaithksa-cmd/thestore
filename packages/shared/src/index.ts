@@ -17,3 +17,4 @@ export type OrderStatus =
   | 'cancelled'
 
 export * from './catalog'
+export * from './customer'
