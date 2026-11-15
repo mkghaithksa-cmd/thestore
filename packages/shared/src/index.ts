@@ -15,3 +15,5 @@ export type OrderStatus =
   | 'delivered'
   | 'completed'
   | 'cancelled'
+
+export * from './catalog'
