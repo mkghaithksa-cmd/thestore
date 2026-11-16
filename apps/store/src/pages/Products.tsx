@@ -4,6 +4,7 @@ import { ProductCard } from '../components/ProductCard'
 import { CatalogStatus } from '../components/CatalogStatus'
 import { useCatalog } from '../lib/useCatalog'
 import { availableHere, useLocationChoice } from '../lib/location'
+import { usePageMeta } from '../lib/seo'
 import { SORTS, isSortKey, matchesQuery, sortProducts, type SortKey } from '../lib/search'
 
 export function Products() {
@@ -14,6 +15,8 @@ export function Products() {
   const sortParam = params.get('sort')
   const sort: SortKey = isSortKey(sortParam) ? sortParam : 'featured'
   const q = params.get('q') ?? ''
+  const catName = state.status === 'success' ? state.data.categories.find((c) => c.slug === active)?.name_ar : undefined
+  usePageMeta(catName ?? 'كل المنتجات', catName ? `تسوّق ${catName}: أسعار شاملة الضريبة، والتركيب داخل مكة المكرمة، والشحن لكل مدن المملكة.` : null)
   // The box updates instantly; the URL follows after a short pause.
   const [text, setText] = useState(q)
   useEffect(() => setText(q), [q])

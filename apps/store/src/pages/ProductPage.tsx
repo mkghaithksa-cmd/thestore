@@ -11,6 +11,7 @@ import { ReviewCard, Stars } from '../components/HomeBits'
 import { fetchProductReviews, ratingSummary } from '../lib/home'
 import type { Review } from '@ghaith/shared'
 import { availableHere, useLocationChoice } from '../lib/location'
+import { usePageMeta } from '../lib/seo'
 import type { StoreSettings } from '@ghaith/shared'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -152,12 +153,7 @@ export function ProductPage() {
   const reviews = useReviews(product?.id)
   const rating = ratingSummary(reviews)
 
-  useEffect(() => {
-    if (product) document.title = `${product.name_ar} | غيث لتنقية المياه`
-    return () => {
-      document.title = 'غيث لتنقية المياه'
-    }
-  }, [product])
+  usePageMeta(product?.name_ar ?? null, product?.description_ar)
 
   if (state.status !== 'success') return <CatalogStatus state={state} reload={reload} />
 
