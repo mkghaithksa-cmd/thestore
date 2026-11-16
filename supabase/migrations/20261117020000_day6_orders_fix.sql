@@ -107,11 +107,12 @@ begin
     raise exception 'too_many_items';
   end if;
 
-  create temporary table if not exists pg_temp.order_lines (
+  -- A fresh list each call (no DELETE: Supabase refuses DELETE without WHERE).
+  drop table if exists pg_temp.order_lines;
+  create temporary table pg_temp.order_lines (
     product_id uuid primary key, qty integer, sku text, name_ar text, type text,
     unit_price numeric(12, 2), installable boolean
   ) on commit drop;
-  delete from pg_temp.order_lines where true; -- Supabase refuses DELETE without WHERE
 
   begin
     insert into pg_temp.order_lines (product_id, qty)
