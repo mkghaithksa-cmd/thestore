@@ -100,7 +100,7 @@ export function Cart() {
                 <button className="linkbtn" onClick={() => notHere.forEach((r) => cart.remove(r.line.productId))}>
                   إزالتها من السلة
                 </button>
-                <button className="linkbtn" onClick={openDialog}>
+                <button className="linkbtn" onClick={() => openDialog()}>
                   تغيير الموقع
                 </button>
               </div>
@@ -151,7 +151,7 @@ export function Cart() {
                   ? 'تقدر تختار التركيب عند إتمام الطلب، ورسومه تُحسب هناك.'
                   : 'العنوان الكامل تكتبه عند إتمام الطلب.'}
             </span>
-            <button type="button" className="linkbtn" onClick={openDialog}>
+            <button type="button" className="linkbtn" onClick={() => openDialog()}>
               {location ? 'تغيير الموقع' : 'حدد موقعك'}
             </button>
           </div>

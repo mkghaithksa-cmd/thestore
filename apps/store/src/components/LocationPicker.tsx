@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { MECCA_CITY, OTHER_CITY, SAUDI_CITIES } from '@ghaith/shared'
-import { DETECT_ERRORS, detectLocation, manualLocation, useLocationChoice, type DetectError, type StoreLocation } from '../lib/location'
+import { DETECT_ERRORS, detectLocation, manualLocation, pinnedLocation, useLocationChoice, type DetectError, type StoreLocation } from '../lib/location'
+
+// The map library is only downloaded when the customer opens the map.
+const MapPicker = lazy(() => import('./MapPicker'))
 
 function PinIcon() {
   return (
@@ -15,7 +18,7 @@ function PinIcon() {
 export function LocationButton() {
   const { location, openDialog } = useLocationChoice()
   return (
-    <button type="button" className="loc-btn" onClick={openDialog} aria-haspopup="dialog">
+    <button type="button" className="loc-btn" onClick={() => openDialog()} aria-haspopup="dialog">
       <PinIcon />
       <span className="loc-label">
         <small>{location?.zone === 'outside' ? 'الشحن إلى' : 'موقعك'}</small>
@@ -55,13 +58,16 @@ export function LocationPrompt() {
           <b>وين موقعك؟</b> التركيب والصيانة داخل مكة المكرمة، والشحن لباقي المدن.
         </p>
         <div className="loc-prompt-actions">
-          <button type="button" className="btn sm" onClick={run} disabled={busy}>
-            {busy ? 'جاري التحديد…' : 'حدد موقعي تلقائياً'}
+          <button type="button" className="btn sm" onClick={() => openDialog('map')}>
+            حدد بيتك على الخريطة
+          </button>
+          <button type="button" className="btn sm ghost" onClick={run} disabled={busy}>
+            {busy ? 'جاري التحديد…' : 'تحديد تلقائي'}
           </button>
           <button type="button" className="btn sm ghost" onClick={() => set(manualLocation(MECCA_CITY))}>
             داخل مكة
           </button>
-          <button type="button" className="btn sm ghost" onClick={openDialog}>
+          <button type="button" className="btn sm ghost" onClick={() => openDialog()}>
             مدينة أخرى
           </button>
           <button type="button" className="linkbtn" onClick={dismissPrompt}>
@@ -80,7 +86,10 @@ export function LocationPrompt() {
 
 /** The full chooser: detect automatically, or pick Mecca / another city. */
 export function LocationDialog() {
-  const { location, set, dialogOpen, closeDialog } = useLocationChoice()
+  const { location, set, dialogOpen, dialogView, closeDialog } = useLocationChoice()
+  const [view, setView] = useState(dialogView)
+  const [pinBusy, setPinBusy] = useState(false)
+  const [pinError, setPinError] = useState('')
   const ref = useRef<HTMLDialogElement>(null)
   const [mode, setMode] = useState<'mecca' | 'outside'>('mecca')
   const [city, setCity] = useState('')
@@ -95,9 +104,11 @@ export function LocationDialog() {
     if (dialogOpen && !d.open) {
       setMode(location?.zone ?? 'mecca')
       setCity(location?.zone === 'outside' ? location.city : '')
+      setView(dialogView)
+      setPinError('')
       d.showModal()
     } else if (!dialogOpen && d.open) d.close()
-  }, [dialogOpen, location])
+  }, [dialogOpen, location, dialogView])
 
   const save = () => {
     if (mode === 'mecca') set(manualLocation(MECCA_CITY))
@@ -106,8 +117,23 @@ export function LocationDialog() {
     closeDialog()
   }
 
+  const confirmPin = async (lat: number, lng: number) => {
+    setPinBusy(true)
+    setPinError('')
+    try {
+      set(await pinnedLocation(lat, lng))
+      closeDialog()
+    } catch {
+      setPinError(DETECT_ERRORS['check-failed'])
+    } finally {
+      setPinBusy(false)
+    }
+  }
+
+  const initialPin = location?.lat != null && location.lng != null ? { lat: location.lat, lng: location.lng } : null
+
   return (
-    <dialog ref={ref} className="loc-dialog" aria-labelledby="loc-title" onClose={closeDialog} onCancel={closeDialog}>
+    <dialog ref={ref} className={view === 'map' ? 'loc-dialog wide' : 'loc-dialog'} aria-labelledby="loc-title" onClose={closeDialog} onCancel={closeDialog}>
       <form
         method="dialog"
         onSubmit={(e) => {
@@ -123,7 +149,25 @@ export function LocationDialog() {
             ×
           </button>
         </div>
+        {view === 'map' && dialogOpen ? (
+          <>
+            <Suspense fallback={<div className="map-loading">جاري تحميل الخريطة…</div>}>
+              <MapPicker initial={initialPin} busy={pinBusy} onConfirm={confirmPin} onCancel={() => setView('choose')} />
+            </Suspense>
+            {pinError && (
+              <p className="loc-error" role="alert">
+                {pinError}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
         <p className="muted">التركيب والصيانة متاحة داخل مكة المكرمة فقط، وباقي المدن نشحن لها.</p>
+
+        <button type="button" className="btn block loc-detect" onClick={() => setView('map')}>
+          <PinIcon />
+          حدد بيتك على الخريطة
+        </button>
 
         <button type="button" className="btn block ghost loc-detect" onClick={run} disabled={busy}>
           <PinIcon />
@@ -175,7 +219,12 @@ export function LocationDialog() {
         <button type="submit" className="btn block" disabled={mode === 'outside' && !city}>
           حفظ
         </button>
-        {location?.source === 'gps' && (
+        {location?.source === 'pin' && (
+          <p className="muted center">موقع بيتك محدد على الخريطة. يبقى محفوظاً في جهازك ونستخدمه عند إتمام الطلب.</p>
+        )}
+          </>
+        )}
+        {view !== 'map' && location?.source === 'gps' && (
           <p className="muted center">تم التحديد تلقائياً. نستخدم موقعك فقط لمعرفة هل أنت داخل منطقة الخدمة، ويبقى محفوظاً في جهازك.</p>
         )}
       </form>

@@ -84,7 +84,7 @@ function Delivery({ product, settings }: { product: ProductWithCategory; setting
   const { location, inMecca, openDialog } = useLocationChoice()
   const vat = settings.vat_rate
   const change = (
-    <button type="button" className="linkbtn" onClick={openDialog}>
+    <button type="button" className="linkbtn" onClick={() => openDialog()}>
       {location ? 'تغيير الموقع' : 'حدد موقعك'}
     </button>
   )

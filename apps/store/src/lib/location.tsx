@@ -10,8 +10,8 @@ import { supabase } from './supabase'
 export interface StoreLocation {
   zone: Zone
   city: string
-  source: 'gps' | 'manual'
-  /** Rounded to about 100 m; only kept when detected, to prefill the map later. */
+  source: 'gps' | 'manual' | 'pin'
+  /** From the map pin (about 1 m) or auto-detect (about 100 m); kept in this browser to prefill the checkout. */
   lat?: number
   lng?: number
   at: string
@@ -61,15 +61,25 @@ function getPosition(): Promise<GeolocationPosition> {
 /** Ask the browser for the position, then let the server decide if it is in the service area. */
 export async function detectLocation(): Promise<StoreLocation> {
   const pos = await getPosition()
-  const lat = Math.round(pos.coords.latitude * 1000) / 1000
-  const lng = Math.round(pos.coords.longitude * 1000) / 1000
-  const { data, error } = await supabase.rpc('is_in_service_area', { lat: pos.coords.latitude, lng: pos.coords.longitude })
+  return checkPoint(pos.coords.latitude, pos.coords.longitude, 'gps')
+}
+
+/** The customer placed the pin on their house: same server check, finer precision. */
+export function pinnedLocation(lat: number, lng: number): Promise<StoreLocation> {
+  return checkPoint(lat, lng, 'pin')
+}
+
+async function checkPoint(rawLat: number, rawLng: number, source: 'gps' | 'pin'): Promise<StoreLocation> {
+  const f = source === 'pin' ? 100000 : 1000
+  const lat = Math.round(rawLat * f) / f
+  const lng = Math.round(rawLng * f) / f
+  const { data, error } = await supabase.rpc('is_in_service_area', { lat, lng })
   if (error || typeof data !== 'boolean') throw 'check-failed' satisfies DetectError
   const near = nearestCity(lat, lng)
   return {
     zone: data ? 'mecca' : 'outside',
     city: data ? MECCA_CITY : near && near !== MECCA_CITY ? near : OTHER_CITY,
-    source: 'gps',
+    source,
     lat,
     lng,
     at: new Date().toISOString(),
@@ -89,15 +99,20 @@ interface LocationState {
   promptDismissed: boolean
   dismissPrompt: () => void
   dialogOpen: boolean
-  openDialog: () => void
+  /** Which screen the chooser opens on: the map pin, or the quick choice. */
+  dialogView: DialogView
+  openDialog: (view?: DialogView) => void
   closeDialog: () => void
 }
+
+export type DialogView = 'map' | 'choose'
 
 const LocationContext = createContext<LocationState | null>(null)
 
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useState<StoreLocation | null>(read)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogView, setDialogView] = useState<DialogView>('choose')
   const [promptDismissed, setDismissed] = useState(() => {
     try {
       return sessionStorage.getItem(DISMISS_KEY) === '1'
@@ -138,10 +153,14 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         }
       },
       dialogOpen,
-      openDialog: () => setDialogOpen(true),
+      dialogView,
+      openDialog: (view = 'choose') => {
+        setDialogView(view)
+        setDialogOpen(true)
+      },
       closeDialog: () => setDialogOpen(false),
     }),
-    [location, set, promptDismissed, dialogOpen],
+    [location, set, promptDismissed, dialogOpen, dialogView],
   )
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>
