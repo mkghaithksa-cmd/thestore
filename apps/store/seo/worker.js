@@ -63,7 +63,7 @@ function headTags({ title, description, url, image, type = 'website', noindex = 
     `<meta property="og:title" content="${esc(title)}">`,
     `<meta property="og:description" content="${esc(description)}">`,
     `<meta property="og:url" content="${esc(url)}">`,
-    `<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">`,
+    `<meta name="twitter:card" content="${type === 'product' ? 'summary_large_image' : 'summary'}">`,
   ]
   if (image) t.push(`<meta property="og:image" content="${esc(image)}">`, `<meta name="twitter:image" content="${esc(image)}">`)
   if (price != null) {
