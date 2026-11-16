@@ -107,3 +107,6 @@ td input[type=checkbox]{width:18px;height:18px}
 .img-add:hover{background:var(--primary-50)}
 .img-add.busy{opacity:.6;cursor:progress}
 .sub-nav{display:flex;gap:8px;flex-wrap:wrap}
+.bundle-sum{display:flex;flex-direction:column;gap:6px;background:var(--n100);border-radius:10px;padding:12px}
+tr.dim td{opacity:.6}
+.indent{padding-inline-start:18px}

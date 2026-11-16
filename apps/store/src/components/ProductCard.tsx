@@ -1,5 +1,5 @@
 import { PRODUCT_TYPE_LABELS, priceWithVat } from '@ghaith/shared'
-import { formatSar, mainImageUrl, type ProductWithCategory } from '../lib/catalog'
+import { bundleComponentsTotal, formatSar, mainImageUrl, type ProductWithCategory } from '../lib/catalog'
 
 function PlaceholderArt({ type }: { type: ProductWithCategory['type'] }) {
   // Water drop for devices/bundles, box for everything else.
@@ -17,6 +17,9 @@ function PlaceholderArt({ type }: { type: ProductWithCategory['type'] }) {
 export function ProductCard({ product, vatRate }: { product: ProductWithCategory; vatRate: number }) {
   const total = priceWithVat(product.price_before_vat, vatRate)
   const img = mainImageUrl(product)
+  const separate = bundleComponentsTotal(product)
+  const saving = separate !== null && separate > product.price_before_vat ? priceWithVat(separate - product.price_before_vat, vatRate) : 0
+  const parts = product.type === 'bundle' ? product.components.filter((c) => c.product) : []
   return (
     <article className="prod">
       <div className="prod-img">
@@ -26,10 +29,26 @@ export function ProductCard({ product, vatRate }: { product: ProductWithCategory
           <PlaceholderArt type={product.type} />
         )}
       </div>
-      <span className="tag">{product.category?.name_ar ?? PRODUCT_TYPE_LABELS[product.type]}</span>
+      <div className="tags">
+        {product.type === 'bundle' && <span className="tag bundle">باقة</span>}
+        <span className="tag">{product.category?.name_ar ?? PRODUCT_TYPE_LABELS[product.type]}</span>
+      </div>
       <b>{product.name_ar}</b>
       {product.description_ar && <p className="muted">{product.description_ar}</p>}
-      {product.specs.length > 0 && (
+      {parts.length > 0 && (
+        <div className="includes">
+          <small>تشمل:</small>
+          <ul className="specs">
+            {parts.map((c) => (
+              <li key={c.product!.id}>
+                {c.qty > 1 ? `${c.qty} × ` : ''}
+                {c.product!.name_ar}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {parts.length === 0 && product.specs.length > 0 && (
         <ul className="specs">
           {product.specs.map((s) => (
             <li key={s}>{s}</li>
@@ -39,6 +58,7 @@ export function ProductCard({ product, vatRate }: { product: ProductWithCategory
       <div className="price">
         {formatSar(total)} <small>شامل الضريبة</small>
       </div>
+      {saving > 0 && <span className="saving">وفّر {formatSar(saving)}</span>}
     </article>
   )
 }

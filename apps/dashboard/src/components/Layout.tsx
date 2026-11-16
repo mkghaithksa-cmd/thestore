@@ -6,7 +6,10 @@ import { useStaffAuth } from '../lib/staffAuth'
 /** Sidebar links; users_roles has two screens. */
 const NAV = STAFF_PAGES.flatMap((p): { to: string; page: StaffPage; label: string }[] =>
   p.key === 'catalog'
-    ? [{ to: '/catalog', page: p.key, label: 'المنتجات' }]
+    ? [
+        { to: '/catalog', page: p.key, label: 'المنتجات' },
+        { to: '/catalog/categories', page: p.key, label: 'التصنيفات والشركات' },
+      ]
     : p.key === 'users_roles'
     ? [
         { to: '/users', page: p.key, label: 'المستخدمون' },

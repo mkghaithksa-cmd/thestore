@@ -72,6 +72,8 @@ export function catalogError(message: string): string {
     return 'رمز SKU مستخدم لمنتج آخر.'
   if (message.includes('invalid_sku')) return 'أدخل رمز SKU.'
   if (message.includes('invalid_name')) return 'أدخل اسم المنتج.'
+  if (message.includes('bundle_in_bundle')) return 'لا يمكن وضع باقة داخل باقة.'
+  if (message.includes('not_a_bundle')) return 'المكونات تُضاف للباقات فقط.'
   if (message.includes('too_many_images')) return 'الحد الأقصى 5 صور لكل منتج.'
   if (message.includes('row-level security') || message.includes('permission denied'))
     return 'لا تملك صلاحية هذا الإجراء.'

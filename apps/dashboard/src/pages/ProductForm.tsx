@@ -5,6 +5,7 @@ import {
   PRODUCT_TYPE_LABELS,
   priceWithVat,
   type Category,
+  type BundleItem,
   type FilterCompatibility,
   type Manufacturer,
   type Product,
@@ -41,6 +42,8 @@ interface Draft {
 }
 
 type CompatDraft = { device_model: string; stage_number: string; lifetime_months: string }
+type ComponentDraft = { component_product_id: string; qty: string }
+type ComponentChoice = Pick<Product, 'id' | 'name_ar' | 'sku' | 'type' | 'price_before_vat' | 'status'>
 
 const EMPTY: Draft = {
   type: 'device',
@@ -111,6 +114,8 @@ export function ProductForm() {
   const [categories, setCategories] = useState<Category[]>([])
   const [makers, setMakers] = useState<Manufacturer[]>([])
   const [deviceModels, setDeviceModels] = useState<string[]>([])
+  const [components, setComponents] = useState<ComponentDraft[]>([])
+  const [choices, setChoices] = useState<ComponentChoice[]>([])
   const [vat, setVat] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -120,25 +125,28 @@ export function ProductForm() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [cats, mks, settings, devices] = await Promise.all([
+      const [cats, mks, settings, devices, choiceRes] = await Promise.all([
         fetchCategories(),
         fetchManufacturers(),
         fetchSettings(),
         supabase.from('products').select('model').eq('type', 'device').not('model', 'is', null),
+        supabase.from('products').select('id, name_ar, sku, type, price_before_vat, status').neq('type', 'bundle').order('name_ar'),
       ])
       if (cancelled) return
       setCategories(cats)
       setMakers(mks)
       setVat(settings.vat_rate)
       setDeviceModels([...new Set((devices.data ?? []).map((d) => d.model as string))].sort())
+      setChoices((choiceRes.data ?? []) as ComponentChoice[])
       if (!id) return
-      const [{ data: product }, costRes, compatRes, imgRes] = await Promise.all([
+      const [{ data: product }, costRes, compatRes, imgRes, bundleRes] = await Promise.all([
         supabase.from('products').select('*').eq('id', id).maybeSingle(),
         canSeeCost
           ? supabase.from('product_costs').select('cost').eq('product_id', id).maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from('filter_compatibility').select('*').eq('filter_product_id', id),
         supabase.from('product_images').select('*').eq('product_id', id),
+        supabase.from('bundle_items').select('component_product_id, qty').eq('bundle_product_id', id),
       ])
       if (cancelled) return
       if (!product) throw new Error('not_found')
@@ -151,6 +159,7 @@ export function ProductForm() {
         })),
       )
       setImages((imgRes.data ?? []) as ProductImage[])
+      setComponents(((bundleRes.data ?? []) as BundleItem[]).map((b) => ({ component_product_id: b.component_product_id, qty: String(b.qty) })))
     }
     load()
       .catch((e: Error) => setError(e.message === 'not_found' ? 'المنتج غير موجود.' : 'تعذّر التحميل.'))
@@ -167,6 +176,10 @@ export function ProductForm() {
   const fields = PRODUCT_TYPE_FIELDS[draft.type]
   const price = parseAmount(draft.price)
   const cost = parseAmount(draft.cost)
+  const componentsTotal = components.reduce((sum, c) => {
+    const o = choices.find((x) => x.id === c.component_product_id)
+    return sum + (o ? Number(o.price_before_vat) * (Number(c.qty) || 0) : 0)
+  }, 0)
   const margin = price > 0 && cost >= 0 ? ((price - cost) / price) * 100 : null
 
   function validate(): string | null {
@@ -176,6 +189,12 @@ export function ProductForm() {
     if (!(price >= 0)) return 'أدخل السعر قبل الضريبة.'
     if (draft.status === 'published' && !(price > 0)) return 'لا يمكن نشر منتج بسعر صفر.'
     if (canSeeCost && draft.cost.trim() && !(cost >= 0)) return 'التكلفة غير صحيحة.'
+    if (fields.components) {
+      if (components.length === 0) return 'أضف مكونات الباقة.'
+      if (components.some((c) => !c.component_product_id)) return 'اختر المنتج في كل سطر من مكونات الباقة.'
+      if (components.some((c) => !(Number(c.qty) > 0))) return 'الكمية يجب أن تكون 1 أو أكثر.'
+      if (new Set(components.map((c) => c.component_product_id)).size !== components.length) return 'منتج مكرر في مكونات الباقة.'
+    }
     for (const c of compat) {
       if (!c.device_model.trim()) return 'اختر موديل الجهاز في كل سطر توافق.'
       if (!(Number(c.lifetime_months) > 0)) return 'عمر الفلتر يجب أن يكون شهراً أو أكثر.'
@@ -243,6 +262,17 @@ export function ProductForm() {
           const { error: cErr } = await supabase.from('filter_compatibility').insert(rows)
           if (cErr) throw new Error(cErr.message)
         }
+      }
+
+      if (fields.components) {
+        if (!isNew) {
+          const { error: delErr } = await supabase.from('bundle_items').delete().eq('bundle_product_id', productId)
+          if (delErr) throw new Error(delErr.message)
+        }
+        const { error: bErr } = await supabase.from('bundle_items').insert(
+          components.map((c) => ({ bundle_product_id: productId, component_product_id: c.component_product_id, qty: Number(c.qty) })),
+        )
+        if (bErr) throw new Error(bErr.message)
       }
 
       if (isNew) navigate(`/catalog/${productId}`, { replace: true, state: { created: true } })
@@ -409,6 +439,56 @@ export function ProductForm() {
                   <input type="checkbox" checked={draft.tracks_stock} onChange={(e) => set('tracks_stock', e.target.checked)} />
                   نتابع مخزونه
                 </label>
+              )}
+            </section>
+          )}
+
+          {fields.components && (
+            <section className="card stack">
+              <div>
+                <h2 className="h3">مكونات الباقة</h2>
+                <span className="muted">اختر المنتجات وكمية كل واحد. سعر الباقة تحدده أنت في قسم السعر.</span>
+              </div>
+              {components.map((c, i) => (
+                <div key={i} className="row wrapr align-end">
+                  <Field label="المنتج" htmlFor={`bc-${i}`}>
+                    <select id={`bc-${i}`} className="input" value={c.component_product_id} onChange={(e) => setComponents((rows) => rows.map((r, j) => (j === i ? { ...r, component_product_id: e.target.value } : r)))}>
+                      <option value="">اختر…</option>
+                      {choices.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name_ar} ({o.sku}){o.status === 'draft' ? ' — مسودة' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="الكمية" htmlFor={`bq-${i}`}>
+                    <input id={`bq-${i}`} className="input sm num" inputMode="numeric" dir="ltr" value={c.qty} onChange={(e) => setComponents((rows) => rows.map((r, j) => (j === i ? { ...r, qty: e.target.value.replace(/D/g, '') } : r)))} />
+                  </Field>
+                  <button type="button" className="btn sm ghost field-btn" onClick={() => setComponents((rows) => rows.filter((_, j) => j !== i))}>
+                    حذف
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="btn sm sec self-start" onClick={() => setComponents((rows) => [...rows, { component_product_id: '', qty: '1' }])}>
+                + إضافة منتج للباقة
+              </button>
+              {vat !== null && componentsTotal > 0 && (
+                <div className="bundle-sum">
+                  <span>مجموع المكونات لو اشتراها العميل منفصلة: <b className="num">{formatSar(priceWithVat(componentsTotal, vat))}</b></span>
+                  {price >= 0 && (
+                    <span>
+                      سعر الباقة: <b className="num">{formatSar(priceWithVat(price, vat))}</b>
+                      {componentsTotal > price ? (
+                        <span className="badge b-ok ms">يوفّر العميل {formatSar(priceWithVat(componentsTotal - price, vat))}</span>
+                      ) : (
+                        <span className="badge b-warn ms">سعر الباقة ليس أقل من مجموع المكونات</span>
+                      )}
+                    </span>
+                  )}
+                  {components.some((c) => choices.find((o) => o.id === c.component_product_id)?.status === 'draft') && (
+                    <span className="muted">تنبيه: بعض المكونات مسودة، فلن تظهر للعميل ضمن الباقة حتى تنشرها.</span>
+                  )}
+                </div>
               )}
             </section>
           )}

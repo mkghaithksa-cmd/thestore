@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { StaffAuthProvider } from './lib/staffAuth'
 import { ComingSoon, Home } from './pages/Home'
+import { Categories } from './pages/Categories'
 import { Login } from './pages/Login'
 import { ProductForm } from './pages/ProductForm'
 import { Products } from './pages/Products'
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/roles" element={<Roles />} />
             <Route path="/catalog" element={<Products />} />
+            <Route path="/catalog/categories" element={<Categories />} />
             <Route path="/catalog/new" element={<ProductForm />} />
             <Route path="/catalog/:id" element={<ProductForm key="edit" />} />
             <Route path="/p/:page" element={<ComingSoon />} />

@@ -253,5 +253,24 @@ await as('authenticated', OPS, String(now() + 10))
 ok(await denied(`insert into products (sku, name_ar, type, category_id, price_before_vat) values ('OPS-1', 'x', 'part', '${devCat}', 1)`),
   'operations staff (catalog view only) cannot add products')
 
+// --- Day 4: categories, manufacturers, bundles -----------------------------------
+console.log('Categories and bundles')
+await as('authenticated', ADMIN, String(now() + 10))
+const sub = await rows(`insert into categories (name_ar, parent_id) values (' فلاتر منزلية ', (select id from categories where slug = 'filters')) returning slug, name_ar`)
+ok(sub[0].slug.startsWith('c-') && sub[0].name_ar === 'فلاتر منزلية', 'a new sub-category gets a slug automatically')
+ok(await denied(`insert into categories (name_ar, parent_id) values ('x', (select id from categories where name_ar = 'فلاتر منزلية'))`),
+  'categories are at most two levels deep')
+ok(await denied(`delete from categories where slug = 'parts'`), 'categories cannot be deleted (hide instead)')
+ok(await denied(`delete from manufacturers`), 'manufacturers cannot be deleted (deactivate instead)')
+const bnd = (await rows(`select id from products where sku = 'BND-500'`))[0].id
+const dev = (await rows(`select id from products where sku = 'DEV-GH300'`))[0].id
+ok((await errorOf(`insert into bundle_items (bundle_product_id, component_product_id) values ('${dev}', '${pid}')`))?.includes('not_a_bundle'),
+  'only a bundle can have components')
+ok((await errorOf(`insert into bundle_items (bundle_product_id, component_product_id) values ('${bnd}', '${bnd}')`)) !== null,
+  'a bundle cannot contain itself')
+await db.query(`insert into bundle_items (bundle_product_id, component_product_id, qty) values ('${bnd}', '${dev}', 2) on conflict do nothing`)
+await as('anon')
+ok((await count(`select 1 from bundle_items where bundle_product_id = '${bnd}'`)) >= 1, 'visitors see the contents of a published bundle')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)
