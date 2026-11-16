@@ -5,8 +5,8 @@ export type AsyncState<T> =
   | { status: 'error'; error: Error }
   | { status: 'success'; data: T }
 
-/** Runs an async loader on mount; `reload` re-runs it. */
-export function useAsync<T>(loader: () => Promise<T>) {
+/** Runs an async loader on mount (and when `deps` change); `reload` re-runs it. */
+export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []) {
   const [state, setState] = useState<AsyncState<T>>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
@@ -23,7 +23,7 @@ export function useAsync<T>(loader: () => Promise<T>) {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attempt])
+  }, [attempt, ...deps])
 
   const reload = useCallback(() => setAttempt((n) => n + 1), [])
   return { state, reload }

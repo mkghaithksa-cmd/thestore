@@ -18,7 +18,10 @@ const NAV = STAFF_PAGES.flatMap((p): { to: string; page: StaffPage; label: strin
         { to: '/roles', page: p.key, label: 'الأدوار والصلاحيات' },
       ]
     : p.key === 'settings'
-      ? [{ to: '/settings', page: p.key, label: 'الإعدادات' }]
+      ? [
+          { to: '/settings', page: p.key, label: 'الإعدادات' },
+          { to: '/settings/pages', page: p.key, label: 'صفحات المتجر' },
+        ]
       : [{ to: p.key === 'dashboard' ? '/' : `/p/${p.key}`, page: p.key, label: p.label }],
 )
 
@@ -36,7 +39,7 @@ export function Layout() {
         <BrandMark />
         <nav className="side-nav" onClick={() => setOpen(false)}>
           {NAV.filter((n) => can(n.page, 'view')).map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.to === '/' || n.to === '/catalog'} className="nv">
+            <NavLink key={n.to} to={n.to} end={n.to === '/' || n.to === '/catalog' || n.to === '/settings'} className="nv">
               {n.label}
             </NavLink>
           ))}

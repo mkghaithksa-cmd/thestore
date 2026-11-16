@@ -1,5 +1,5 @@
 import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom'
-import { BUSINESS, formatSaudiPhoneLocal, telHref } from '@ghaith/shared'
+import { BUSINESS, STORE_PAGES, formatSaudiPhoneLocal, telHref } from '@ghaith/shared'
 import { RequireAuth } from './components/RequireAuth'
 import { AuthProvider, useAuth } from './lib/auth'
 import { CartProvider, useCart } from './lib/cart'
@@ -8,6 +8,7 @@ import { LocationButton, LocationDialog, LocationPrompt } from './components/Loc
 import { Cart } from './pages/Cart'
 import { Account } from './pages/Account'
 import { Home } from './pages/Home'
+import { InfoPage } from './pages/InfoPage'
 import { Login } from './pages/Login'
 import { Orders } from './pages/Orders'
 import { ProductPage } from './pages/ProductPage'
@@ -97,6 +98,14 @@ function Footer() {
           <Link to="/orders">طلباتي</Link>
           <Link to="/account">حسابي</Link>
         </nav>
+        <nav aria-label="معلومات المتجر">
+          <h2>معلومات</h2>
+          {STORE_PAGES.map((p) => (
+            <Link key={p.slug} to={`/pages/${p.slug}`}>
+              {p.title}
+            </Link>
+          ))}
+        </nav>
         <div>
           <h2>تواصل معنا</h2>
           {BUSINESS.phones.map((p) => (
@@ -171,6 +180,7 @@ export default function App() {
             <Route path="/products" element={<Products />} />
             <Route path="/products/:key" element={<ProductPage />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/pages/:slug" element={<InfoPage />} />
             <Route path="/login" element={<Login />} />
             <Route
               path="/account"

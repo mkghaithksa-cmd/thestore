@@ -9,6 +9,7 @@ import { ProductForm } from './pages/ProductForm'
 import { Products } from './pages/Products'
 import { Roles } from './pages/Roles'
 import { Settings } from './pages/Settings'
+import { StorePages } from './pages/StorePages'
 import { Users } from './pages/Users'
 import './App.css'
 
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/roles" element={<Roles />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/pages" element={<StorePages />} />
             <Route path="/catalog" element={<Products />} />
             <Route path="/catalog/banners" element={<Banners />} />
             <Route path="/catalog/categories" element={<Categories />} />
