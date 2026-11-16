@@ -30,8 +30,11 @@ export function ProductCard({ product, vatRate }: { product: ProductWithCategory
         )}
       </div>
       <div className="tags">
-        {product.type === 'bundle' && <span className="tag bundle">باقة</span>}
-        <span className="tag">{product.category?.name_ar ?? PRODUCT_TYPE_LABELS[product.type]}</span>
+        {product.type === 'bundle' ? (
+          <span className="tag bundle">باقة</span>
+        ) : (
+          <span className="tag">{product.category?.name_ar ?? PRODUCT_TYPE_LABELS[product.type]}</span>
+        )}
       </div>
       <b>{product.name_ar}</b>
       {product.description_ar && <p className="muted">{product.description_ar}</p>}

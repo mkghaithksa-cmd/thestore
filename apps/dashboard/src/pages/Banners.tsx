@@ -263,7 +263,7 @@ function BannerForm({
               <label htmlFor="lr">التصنيف</label>
               <select id="lr" className="input" value={linkRef} onChange={(e) => setLinkRef(e.target.value)}>
                 <option value="">اختر…</option>
-                {categories.map((c) => (
+                {categories.filter((c) => c.is_visible || c.slug === linkRef).map((c) => (
                   <option key={c.id} value={c.slug}>
                     {c.name_ar}
                   </option>
