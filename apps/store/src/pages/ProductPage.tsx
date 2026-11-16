@@ -7,6 +7,9 @@ import { QtyStepper } from '../components/QtyStepper'
 import { MAX_QTY, useCart } from '../lib/cart'
 import { bundleComponentsTotal, formatSar, imageUrls, type ProductWithCategory } from '../lib/catalog'
 import { useCatalog } from '../lib/useCatalog'
+import { ReviewCard, Stars } from '../components/HomeBits'
+import { fetchProductReviews, ratingSummary } from '../lib/home'
+import type { Review } from '@ghaith/shared'
 import { availableHere, useLocationChoice } from '../lib/location'
 import type { StoreSettings } from '@ghaith/shared'
 
@@ -120,6 +123,16 @@ function Delivery({ product, settings }: { product: ProductWithCategory; setting
   )
 }
 
+/** Approved reviews and the average, under the product. */
+function useReviews(productId: string | undefined) {
+  const [reviews, setReviews] = useState<Review[]>([])
+  useEffect(() => {
+    setReviews([])
+    if (productId) fetchProductReviews(productId).then(setReviews, () => setReviews([]))
+  }, [productId])
+  return reviews
+}
+
 function months(n: number) {
   if (n === 1) return 'شهر واحد'
   if (n === 2) return 'شهران'
@@ -136,6 +149,8 @@ export function ProductPage() {
     state.status === 'success'
       ? state.data.products.find((p) => (UUID.test(key) ? p.id === key : p.sku.toLowerCase() === key.toLowerCase()))
       : undefined
+  const reviews = useReviews(product?.id)
+  const rating = ratingSummary(reviews)
 
   useEffect(() => {
     if (product) document.title = `${product.name_ar} | غيث لتنقية المياه`
@@ -195,6 +210,14 @@ export function ProductPage() {
             {product.installable_in_mecca && inMecca && <span className="tag ok">التركيب متاح داخل مكة</span>}
           </div>
           <h1 className="pdp-name">{product.name_ar}</h1>
+          {rating && (
+            <a href="#reviews" className="pdp-rating">
+              <Stars value={rating.avg} label={`التقييم ${rating.avg} من 5`} />
+              <span>
+                {rating.avg} · {rating.count === 1 ? 'تقييم واحد' : rating.count === 2 ? 'تقييمان' : `${rating.count} تقييمات`}
+              </span>
+            </a>
+          )}
           {product.name_en && (
             <p className="muted" dir="ltr">
               {product.name_en}
@@ -276,6 +299,17 @@ export function ProductPage() {
           )}
         </div>
       </article>
+
+      {reviews.length > 0 && (
+        <section className="related" id="reviews">
+          <h2 className="h2">آراء العملاء</h2>
+          <div className="reviews-grid">
+            {reviews.map((r) => (
+              <ReviewCard key={r.id} review={r} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {related.length > 0 && (
         <section className="related">

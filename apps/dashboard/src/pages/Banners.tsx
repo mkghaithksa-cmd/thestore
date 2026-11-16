@@ -3,6 +3,7 @@ import {
   BANNERS_BUCKET,
   BANNER_SIZES,
   MAX_ACTIVE_BANNERS,
+  MAX_MID_BANNERS,
   type BannerLinkKind,
   type Category,
   type HomeBanner,
@@ -16,12 +17,24 @@ import { supabase } from '../lib/supabase'
 
 type Slot = 'desktop' | 'mobile'
 type Picked = { file: File; preview: string; warning: string | null }
+export type Placement = 'hero' | 'mid'
+type Sizes = Record<Slot, { width: number; height: number; ratio: number; label: string }>
+
+/** Slider banners are wide; the two mid-page banners are 2:1. */
+const SIZES: Record<Placement, Sizes> = {
+  hero: BANNER_SIZES,
+  mid: {
+    desktop: { width: 1200, height: 600, ratio: 2, label: 'لابتوب' },
+    mobile: { width: 1080, height: 540, ratio: 2, label: 'جوال' },
+  },
+}
+const MAX: Record<Placement, number> = { hero: MAX_ACTIVE_BANNERS, mid: MAX_MID_BANNERS }
 
 const bannerUrl = (path: string) => imageUrl(path, BANNERS_BUCKET)
 
 /** Warns when the picked image is far from the recommended ratio or too small. */
-async function checkImage(file: File, slot: Slot): Promise<string | null> {
-  const want = BANNER_SIZES[slot]
+async function checkImage(file: File, slot: Slot, sizes: Sizes): Promise<string | null> {
+  const want = sizes[slot]
   const { width, height } = await imageSize(file)
   const ratio = width / height
   if (Math.abs(ratio - want.ratio) / want.ratio > 0.08) {
@@ -45,14 +58,16 @@ function ImagePick({
   current,
   onPick,
   required,
+  sizes,
 }: {
+  sizes: Sizes
   slot: Slot
   picked: Picked | null
   current: string | null
   onPick: (p: Picked | null) => void
   required?: boolean
 }) {
-  const size = BANNER_SIZES[slot]
+  const size = sizes[slot]
   const src = picked?.preview ?? (current ? bannerUrl(current) : null)
   return (
     <div className="field">
@@ -61,7 +76,7 @@ function ImagePick({
       </label>
       <span className="muted">
         المقاس المطلوب: <b dir="ltr">{size.width} × {size.height}</b> بكسل
-        {slot === 'mobile' && ' — بدونها نعرض صورة اللابتوب كاملة على الجوال.'}
+        {slot === 'mobile' && ' — بدونها نعرض صورة اللابتوب على الجوال.'}
       </span>
       <div className={`banner-pick ${slot}`}>
         {src ? <img src={src} alt="" /> : <span className="muted">لا توجد صورة</span>}
@@ -78,7 +93,7 @@ function ImagePick({
               const file = e.target.files?.[0]
               e.target.value = ''
               if (!file) return
-              onPick({ file, preview: URL.createObjectURL(file), warning: await checkImage(file, slot) })
+              onPick({ file, preview: URL.createObjectURL(file), warning: await checkImage(file, slot, sizes) })
             }}
           />
         </label>
@@ -99,7 +114,9 @@ function BannerForm({
   products,
   nextOrder,
   onDone,
+  placement,
 }: {
+  placement: Placement
   banner: HomeBanner | null
   nextOrder: number
   categories: Category[]
@@ -122,7 +139,7 @@ function BannerForm({
   const mobileSrc = removeMobile ? null : (mobile?.preview ?? (banner?.mobile_path ? bannerUrl(banner.mobile_path) : null))
 
   async function upload(id: string, slot: Slot, file: File): Promise<string> {
-    const size = BANNER_SIZES[slot]
+    const size = SIZES[placement][slot]
     const img = await prepareImage(file, Math.max(size.width, size.height), 0.88)
     const path = `${id}/${slot}-${crypto.randomUUID().slice(0, 8)}.${img.ext}`
     const { error: e } = await supabase.storage.from(BANNERS_BUCKET).upload(path, img.blob, {
@@ -163,7 +180,7 @@ function BannerForm({
       }
       const res = banner
         ? await supabase.from('home_banners').update(row).eq('id', id)
-        : await supabase.from('home_banners').insert({ id, ...row, sort_order: nextOrder })
+        : await supabase.from('home_banners').insert({ id, ...row, placement, sort_order: nextOrder })
       if (res.error) throw new Error(res.error.message)
       // Remove replaced files.
       const old = [desktop && banner?.desktop_path, (mobile || removeMobile) && banner?.mobile_path].filter(Boolean) as string[]
@@ -172,7 +189,7 @@ function BannerForm({
     } catch (err) {
       if (uploaded.length) await supabase.storage.from(BANNERS_BUCKET).remove(uploaded)
       const msg = err instanceof Error ? err.message : ''
-      setError(msg.includes('too_many_banners') ? `الحد الأقصى ${MAX_ACTIVE_BANNERS} بنرات مفعّلة. أوقف بنراً أولاً.` : catalogError(msg))
+      setError(msg.includes('too_many_banners') ? `الحد الأقصى ${MAX[placement]} بنرات مفعّلة هنا. أوقف بنراً أولاً.` : catalogError(msg))
     } finally {
       setBusy(false)
     }
@@ -196,9 +213,10 @@ function BannerForm({
         </div>
 
         <div className="grid-form">
-          <ImagePick slot="desktop" picked={desktop} current={banner?.desktop_path ?? null} onPick={setDesktop} required />
+          <ImagePick sizes={SIZES[placement]} slot="desktop" picked={desktop} current={banner?.desktop_path ?? null} onPick={setDesktop} required />
           <div className="stack">
             <ImagePick
+              sizes={SIZES[placement]}
               slot="mobile"
               picked={mobile}
               current={removeMobile ? null : (banner?.mobile_path ?? null)}
@@ -321,7 +339,8 @@ function bannerState(b: HomeBanner): { label: string; cls: string } {
   return { label: 'ظاهر الآن', cls: 'b-ok' }
 }
 
-export function Banners() {
+/** Banner list + form for one placement. Embedded inside the home page builder. */
+export function Banners({ placement = 'hero', embedded = false }: { placement?: Placement; embedded?: boolean }) {
   const { can } = useStaffAuth()
   const canAdd = can('catalog', 'add')
   const canEdit = can('catalog', 'edit')
@@ -333,7 +352,7 @@ export function Banners() {
 
   const load = useCallback(async () => {
     const [b, c, p] = await Promise.all([
-      supabase.from('home_banners').select('*').order('sort_order'),
+      supabase.from('home_banners').select('*').eq('placement', placement).order('sort_order'),
       fetchCategories(),
       supabase.from('products').select('id, name_ar, sku').eq('status', 'published').order('name_ar'),
     ])
@@ -351,7 +370,7 @@ export function Banners() {
     setError(null)
     const { error: e } = await supabase.from('home_banners').update(patch).eq('id', b.id)
     if (e)
-      setError(e.message.includes('too_many_banners') ? `الحد الأقصى ${MAX_ACTIVE_BANNERS} بنرات مفعّلة. أوقف بنراً أولاً.` : catalogError(e.message))
+      setError(e.message.includes('too_many_banners') ? `الحد الأقصى ${MAX[placement]} بنرات مفعّلة هنا. أوقف بنراً أولاً.` : catalogError(e.message))
     else load()
   }
 
@@ -377,13 +396,17 @@ export function Banners() {
 
   const activeCount = (banners ?? []).filter((b) => b.is_active).length
 
-  return (
-    <RequirePage page="catalog">
-      <div className="ph">
+  const body = (
+    <>
+      <div className={embedded ? 'row between wrapr' : 'ph'}>
         <div>
-          <h1>بنرات الصفحة الرئيسية</h1>
-          <p>
-            تظهر أعلى رئيسية المتجر وتتقلب تلقائياً. المفعّل الآن {activeCount} من {MAX_ACTIVE_BANNERS}.
+          {embedded ? (
+            <b>{placement === 'mid' ? 'بنرات وسط الصفحة' : 'بنرات السلايدر'}</b>
+          ) : (
+            <h1>بنرات الصفحة الرئيسية</h1>
+          )}
+          <p className={embedded ? 'muted' : undefined}>
+            {placement === 'mid' ? 'بنران جنب بعض وسط الرئيسية.' : 'تظهر أعلى رئيسية المتجر وتتقلب تلقائياً.'} المفعّل الآن {activeCount} من {MAX[placement]}.
           </p>
         </div>
         {canAdd && !editing && (
@@ -398,6 +421,7 @@ export function Banners() {
         <BannerForm
           key={editing === 'new' ? 'new' : editing.id}
           banner={editing === 'new' ? null : editing}
+          placement={placement}
           categories={categories}
           products={products}
           nextOrder={Math.max(0, ...(banners ?? []).map((b) => b.sort_order)) + 1}
@@ -413,7 +437,7 @@ export function Banners() {
       ) : banners.length === 0 ? (
         <div className="notice">
           <b>لا توجد بنرات بعد.</b>
-          <span className="muted">بدون بنرات تعرض الرئيسية الترحيب الافتراضي.</span>
+          <span className="muted">{placement === 'mid' ? 'بدونها يختفي هذا القسم من الرئيسية.' : 'بدون بنرات تعرض الرئيسية الترحيب الافتراضي.'}</span>
         </div>
       ) : (
         <div className="stack">
@@ -459,6 +483,7 @@ export function Banners() {
           })}
         </div>
       )}
-    </RequirePage>
+    </>
   )
+  return embedded ? body : <RequirePage page="catalog">{body}</RequirePage>
 }

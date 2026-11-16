@@ -8,6 +8,8 @@ export interface Category {
   parent_id: string | null
   sort_order: number
   is_visible: boolean
+  /** Picture for the home category tiles (banners bucket, categories/...). */
+  image_path?: string | null
   created_at: string
 }
 
@@ -129,6 +131,7 @@ export interface HomeBanner {
   is_active: boolean
   starts_at: string | null
   ends_at: string | null
+  placement: 'hero' | 'mid'
   created_at: string
   updated_at: string
 }

@@ -1,8 +1,9 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { StaffAuthProvider } from './lib/staffAuth'
 import { ComingSoon, Home } from './pages/Home'
-import { Banners } from './pages/Banners'
+import { HomeBuilder } from './pages/HomeBuilder'
+import { Reviews } from './pages/Reviews'
 import { Categories } from './pages/Categories'
 import { Login } from './pages/Login'
 import { ProductForm } from './pages/ProductForm'
@@ -26,7 +27,9 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/pages" element={<StorePages />} />
             <Route path="/catalog" element={<Products />} />
-            <Route path="/catalog/banners" element={<Banners />} />
+            <Route path="/catalog/banners" element={<Navigate to="/catalog/home" replace />} />
+            <Route path="/catalog/home" element={<HomeBuilder />} />
+            <Route path="/catalog/reviews" element={<Reviews />} />
             <Route path="/catalog/categories" element={<Categories />} />
             <Route path="/catalog/new" element={<ProductForm />} />
             <Route path="/catalog/:id" element={<ProductForm key="edit" />} />
