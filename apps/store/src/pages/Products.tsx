@@ -3,10 +3,12 @@ import { useSearchParams } from 'react-router-dom'
 import { ProductCard } from '../components/ProductCard'
 import { CatalogStatus } from '../components/CatalogStatus'
 import { useCatalog } from '../lib/useCatalog'
+import { availableHere, useLocationChoice } from '../lib/location'
 import { SORTS, isSortKey, matchesQuery, sortProducts, type SortKey } from '../lib/search'
 
 export function Products() {
   const { state, reload } = useCatalog()
+  const { inMecca } = useLocationChoice()
   const [params, setParams] = useSearchParams()
   const active = params.get('cat') ?? 'all'
   const sortParam = params.get('sort')
@@ -48,7 +50,9 @@ export function Products() {
     )
   }
 
-  const { products, categories, settings } = state.data
+  const { categories, settings } = state.data
+  // Outside Mecca, services (installation, maintenance) are not offered.
+  const products = state.data.products.filter((p) => availableHere(p.type, inMecca))
   // A category includes its sub-categories.
   const selected = categories.find((c) => c.slug === active)
   const ids = new Set(selected ? [selected.id, ...categories.filter((c) => c.parent_id === selected.id).map((c) => c.id)] : [])

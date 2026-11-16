@@ -7,6 +7,8 @@ import { QtyStepper } from '../components/QtyStepper'
 import { MAX_QTY, useCart } from '../lib/cart'
 import { bundleComponentsTotal, formatSar, imageUrls, type ProductWithCategory } from '../lib/catalog'
 import { useCatalog } from '../lib/useCatalog'
+import { availableHere, useLocationChoice } from '../lib/location'
+import type { StoreSettings } from '@ghaith/shared'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -77,6 +79,47 @@ function AddToCart({ product }: { product: ProductWithCategory }) {
   )
 }
 
+/** How the product reaches this customer, based on their chosen location. */
+function Delivery({ product, settings }: { product: ProductWithCategory; settings: StoreSettings }) {
+  const { location, inMecca, openDialog } = useLocationChoice()
+  const vat = settings.vat_rate
+  const change = (
+    <button type="button" className="linkbtn" onClick={openDialog}>
+      {location ? 'تغيير الموقع' : 'حدد موقعك'}
+    </button>
+  )
+  if (!inMecca && product.type === 'service') {
+    return (
+      <div className="delivery off" role="status">
+        <b>هذه الخدمة متاحة داخل مكة المكرمة فقط.</b>
+        <span>موقعك الحالي: {location?.city}</span>
+        {change}
+      </div>
+    )
+  }
+  if (!inMecca) {
+    return (
+      <div className="delivery">
+        <b>الشحن إلى {location?.city}</b>
+        <span>رسوم الشحن {formatSar(priceWithVat(settings.shipping_fee, vat))} للطلب شامل الضريبة.</span>
+        {product.installable_in_mecca && <span className="muted">خدمة التركيب متاحة داخل مكة المكرمة فقط.</span>}
+        {change}
+      </div>
+    )
+  }
+  return (
+    <div className="delivery">
+      <b>{location ? 'التوصيل داخل مكة المكرمة' : 'التوصيل داخل مكة والشحن لباقي المدن'}</b>
+      {product.installable_in_mecca && (
+        <span>
+          التركيب متاح داخل مكة برسوم {formatSar(priceWithVat(settings.install_fee, vat))} شامل الضريبة، وتختاره عند إتمام الطلب.
+        </span>
+      )}
+      {change}
+    </div>
+  )
+}
+
 function months(n: number) {
   if (n === 1) return 'شهر واحد'
   if (n === 2) return 'شهران'
@@ -87,6 +130,7 @@ function months(n: number) {
 export function ProductPage() {
   const { key = '' } = useParams()
   const { state, reload } = useCatalog()
+  const { inMecca } = useLocationChoice()
 
   const product =
     state.status === 'success'
@@ -119,7 +163,7 @@ export function ProductPage() {
   const separate = bundleComponentsTotal(product)
   const saving = separate !== null && separate > product.price_before_vat ? priceWithVat(separate - product.price_before_vat, vat) : 0
   const category = categories.find((c) => c.id === product.category_id)
-  const related = products.filter((p) => p.category_id === product.category_id && p.id !== product.id).slice(0, 4)
+  const related = products.filter((p) => p.category_id === product.category_id && p.id !== product.id && availableHere(p.type, inMecca)).slice(0, 4)
   const parts = product.type === 'bundle' ? product.components.filter((c) => c.product) : []
 
   const details: [string, string][] = []
@@ -148,7 +192,7 @@ export function ProductPage() {
         <div className="pdp-info">
           <div className="tags">
             <span className={product.type === 'bundle' ? 'tag bundle' : 'tag'}>{PRODUCT_TYPE_LABELS[product.type]}</span>
-            {product.installable_in_mecca && <span className="tag ok">التركيب متاح داخل مكة</span>}
+            {product.installable_in_mecca && inMecca && <span className="tag ok">التركيب متاح داخل مكة</span>}
           </div>
           <h1 className="pdp-name">{product.name_ar}</h1>
           {product.name_en && (
@@ -165,7 +209,9 @@ export function ProductPage() {
           </p>
           {saving > 0 && <span className="saving">وفّر {formatSar(saving)} مقارنة بشراء المكونات منفصلة</span>}
 
-          <AddToCart product={product} />
+          {availableHere(product.type, inMecca) && <AddToCart product={product} />}
+
+          <Delivery product={product} settings={settings} />
 
           {product.description_ar && <p className="pdp-desc">{product.description_ar}</p>}
 

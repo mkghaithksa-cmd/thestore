@@ -7,9 +7,11 @@ import { QtyStepper } from '../components/QtyStepper'
 import { useCart } from '../lib/cart'
 import { formatSar, mainImageUrl } from '../lib/catalog'
 import { useCatalog } from '../lib/useCatalog'
+import { availableHere, useLocationChoice } from '../lib/location'
 
 export function Cart() {
   const cart = useCart()
+  const { location, inMecca, openDialog } = useLocationChoice()
   const { state, reload } = useCatalog()
 
   useEffect(() => {
@@ -46,12 +48,16 @@ export function Cart() {
   const { products, settings } = state.data
   const vat = Number(settings.vat_rate)
   const rows = cart.lines.map((l) => ({ line: l, product: products.find((p) => p.id === l.productId) }))
-  const available = rows.filter((r) => r.product)
+  // Services cannot be booked outside Mecca: they stay in the cart but are not counted.
+  const available = rows.filter((r) => r.product && availableHere(r.product.type, inMecca))
+  const notHere = rows.filter((r) => r.product && !availableHere(r.product.type, inMecca))
   const missing = rows.filter((r) => !r.product)
 
   const subtotal = available.reduce((s, r) => s + Number(r.product!.price_before_vat) * r.line.qty, 0)
-  const vatAmount = Math.round(subtotal * vat * 100) / 100
-  const total = Math.round((subtotal + vatAmount) * 100) / 100
+  // Outside Mecca the order ships; the fee is per order and VAT applies to it too.
+  const shipping = !inMecca && available.length ? Number(settings.shipping_fee) : 0
+  const vatAmount = Math.round((subtotal + shipping) * vat * 100) / 100
+  const total = Math.round((subtotal + shipping + vatAmount) * 100) / 100
 
   return (
     <>
@@ -85,6 +91,22 @@ export function Cart() {
             )
           })}
 
+          {notHere.length > 0 && (
+            <div className="notice warn" role="status">
+              <b>
+                {notHere.map((r) => r.product!.name_ar).join('، ')}: متاحة داخل مكة المكرمة فقط، ولن تُحسب في طلب الشحن إلى {location?.city}.
+              </b>
+              <div className="row wrapr">
+                <button className="linkbtn" onClick={() => notHere.forEach((r) => cart.remove(r.line.productId))}>
+                  إزالتها من السلة
+                </button>
+                <button className="linkbtn" onClick={openDialog}>
+                  تغيير الموقع
+                </button>
+              </div>
+            </div>
+          )}
+
           {missing.length > 0 && (
             <div className="notice warn" role="status">
               <b>
@@ -105,6 +127,12 @@ export function Cart() {
               <dt>المجموع قبل الضريبة</dt>
               <dd>{formatSar(subtotal)}</dd>
             </div>
+            {shipping > 0 && (
+              <div>
+                <dt>الشحن إلى {location?.city}</dt>
+                <dd>{formatSar(shipping)}</dd>
+              </div>
+            )}
             <div>
               <dt>ضريبة القيمة المضافة ({Math.round(vat * 100)}٪)</dt>
               <dd>{formatSar(vatAmount)}</dd>
@@ -114,7 +142,19 @@ export function Cart() {
               <dd>{formatSar(total)}</dd>
             </div>
           </dl>
-          <p className="muted">رسوم التركيب أو الشحن تُحسب في الخطوة التالية حسب موقعك.</p>
+          <div className="delivery">
+            <b>{!location ? 'حدد موقعك' : inMecca ? 'التوصيل داخل مكة المكرمة' : 'الشحن إلى ' + location.city}</b>
+            <span className="muted">
+              {!location
+                ? 'التركيب داخل مكة فقط، وباقي المدن نشحن لها برسوم شحن.'
+                : inMecca
+                  ? 'تقدر تختار التركيب عند إتمام الطلب، ورسومه تُحسب هناك.'
+                  : 'العنوان الكامل تكتبه عند إتمام الطلب.'}
+            </span>
+            <button type="button" className="linkbtn" onClick={openDialog}>
+              {location ? 'تغيير الموقع' : 'حدد موقعك'}
+            </button>
+          </div>
           <button className="btn block" disabled title="يُفعَّل مع صفحة الدفع">
             إتمام الطلب (قريباً)
           </button>

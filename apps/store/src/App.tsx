@@ -3,6 +3,8 @@ import { BUSINESS, formatSaudiPhoneLocal, telHref } from '@ghaith/shared'
 import { RequireAuth } from './components/RequireAuth'
 import { AuthProvider, useAuth } from './lib/auth'
 import { CartProvider, useCart } from './lib/cart'
+import { LocationProvider } from './lib/location'
+import { LocationButton, LocationDialog, LocationPrompt } from './components/LocationPicker'
 import { Cart } from './pages/Cart'
 import { Account } from './pages/Account'
 import { Home } from './pages/Home'
@@ -133,6 +135,7 @@ function Header() {
           <NavLink to="/orders">طلباتي</NavLink>
         </nav>
         <div className="hact">
+          <LocationButton />
           <CartButton />
           <AccountButton />
         </div>
@@ -156,9 +159,12 @@ export default function App() {
   return (
     <AuthProvider>
       <CartProvider>
+      <LocationProvider>
       <BrowserRouter>
         <TopBar />
         <Header />
+        <LocationPrompt />
+        <LocationDialog />
         <main className="wrap">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -187,6 +193,7 @@ export default function App() {
         </main>
         <Footer />
       </BrowserRouter>
+      </LocationProvider>
       </CartProvider>
     </AuthProvider>
   )

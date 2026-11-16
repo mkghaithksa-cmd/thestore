@@ -6,15 +6,17 @@ import { fetchBanners } from '../lib/catalog'
 import { ProductCard } from '../components/ProductCard'
 import { CatalogStatus } from '../components/CatalogStatus'
 import { useCatalog } from '../lib/useCatalog'
+import { availableHere, useLocationChoice } from '../lib/location'
 
 export function Home() {
   const { state, reload } = useCatalog()
+  const { inMecca } = useLocationChoice()
   const [banners, setBanners] = useState<HomeBanner[] | null>(null)
   useEffect(() => {
     // Banners are optional: without them (or on error) the default welcome shows.
     fetchBanners().then(setBanners, () => setBanners([]))
   }, [])
-  const featured = state.status === 'success' ? state.data.products.filter((p) => p.is_featured) : []
+  const featured = state.status === 'success' ? state.data.products.filter((p) => p.is_featured && availableHere(p.type, inMecca)) : []
 
   return (
     <>
