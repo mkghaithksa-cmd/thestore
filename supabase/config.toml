@@ -415,3 +415,14 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Ghaith Edge Functions. JWT is checked inside the functions themselves
+# (staff-login and bootstrap-admin are called before anyone is signed in).
+[functions.staff-login]
+verify_jwt = false
+
+[functions.bootstrap-admin]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false

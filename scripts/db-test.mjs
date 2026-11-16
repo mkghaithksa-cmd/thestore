@@ -6,17 +6,19 @@
 //
 // No Docker and no connection to the real project are needed.
 import { PGlite } from '@electric-sql/pglite'
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const migrationsDir = path.join(root, 'supabase', 'migrations')
-const db = new PGlite()
+const db = new PGlite({ extensions: { pgcrypto } })
 
 // --- Minimal Supabase stand-ins ------------------------------------------
 await db.exec(`
-  create role anon; create role authenticated; create role service_role;
+  create role anon; create role authenticated; create role service_role bypassrls;
+  create schema extensions;
   grant usage on schema public to anon, authenticated, service_role;
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
   alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
@@ -27,7 +29,10 @@ await db.exec(`
   create table auth.users (id uuid primary key, phone text, raw_app_meta_data jsonb default '{}');
   create function auth.uid() returns uuid language sql stable
     as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
-  grant execute on function auth.uid() to anon, authenticated;
+  create function auth.jwt() returns jsonb language sql stable
+    as $$ select jsonb_strip_nulls(jsonb_build_object('iat', nullif(current_setting('test.iat', true), '')::bigint)) $$;
+  grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
+  create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid);
 
   create schema storage;
   grant usage on schema storage to anon, authenticated;
@@ -61,9 +66,18 @@ const denied = async (sql) => {
     return true
   }
 }
-const as = async (role, uid = '') => {
-  await db.exec(`reset role; set test.uid = '${uid}'; ${role === 'owner' ? '' : `set role ${role};`}`)
+const as = async (role, uid = '', iat = '') => {
+  await db.exec(`reset role; set test.uid = '${uid}'; set test.iat = '${iat}'; ${role === 'owner' ? '' : `set role ${role};`}`)
 }
+const errorOf = async (sql) => {
+  try {
+    await db.query(sql)
+    return null
+  } catch (e) {
+    return e.message
+  }
+}
+const now = () => Math.floor(Date.now() / 1000)
 
 const A = '00000000-0000-0000-0000-00000000000a' // customer A
 const B = '00000000-0000-0000-0000-00000000000b' // customer B
@@ -147,6 +161,61 @@ ok(await denied('delete from audit_log'), 'nobody can delete audit rows (even ow
 await db.exec(`update categories set is_visible = false where slug = 'bundles'`)
 await as('anon')
 ok((await count('select 1 from products')) === 5, 'hiding a category hides its products')
+
+// --- Day 3: staff login -------------------------------------------------------
+console.log('Staff login')
+const OPS_PHONE = '+966511111111'
+const verify = async (code) => (await rows(`select public.staff_verify_code('${OPS_PHONE}', '${code}') as r`))[0].r
+
+await as('owner')
+await db.exec(`update categories set is_visible = true`)
+await db.exec(`insert into auth.users (id, phone, raw_app_meta_data) values ('00000000-0000-0000-0000-0000000000d1', '966533333333', '{"kind":"staff"}')`)
+ok((await count(`select 1 from customers where phone = '+966533333333'`)) === 0, 'staff auth users never get a customer row')
+
+await as('anon')
+ok(await denied(`select public.staff_verify_code('${OPS_PHONE}', '123456')`), 'visitors cannot call the code check')
+await as('authenticated', A)
+ok(await denied(`select public.staff_verify_code('${OPS_PHONE}', '123456')`), 'customers cannot call the code check')
+ok((await count('select * from public.my_permissions()')) === 0, 'a customer has no staff permissions')
+ok((await errorOf(`select public.staff_set_code('${OPS}', '111111')`)) !== null, 'a customer cannot change a staff code')
+ok(await denied(`update staff_profiles set is_active = false`), 'nobody can toggle staff directly (must use functions)')
+
+await as('authenticated', OPS)
+ok((await errorOf(`select public.staff_set_code('${ADMIN}', '111111')`))?.includes('forbidden'), 'operations staff cannot change other codes')
+ok((await errorOf(`select public.staff_register('${A}', 'x', '+966544444444', (select id from roles where name = 'خدمة عملاء'), '123456')`))?.includes('forbidden'), 'operations staff cannot add staff')
+
+await as('authenticated', ADMIN)
+ok((await errorOf(`select public.staff_set_code('${OPS}', '12345')`))?.includes('invalid_code'), 'codes must be exactly 6 digits')
+await db.query(`select public.staff_set_code('${OPS}', '246810')`)
+ok(true, 'admin sets a staff code')
+ok((await errorOf(`select public.staff_set_active('${ADMIN}', false)`))?.includes('cannot_change_self'), 'admin cannot disable themselves')
+ok((await errorOf(`select public.staff_set_role('${ADMIN}', (select id from roles where name = 'خدمة عملاء'))`))?.includes('cannot_change_self'), 'admin cannot change own role')
+ok((await count(`select public.role_create('مشرف', (select id from roles where name = 'موظف عمليات'))`)) === 1, 'admin creates a role copying permissions')
+ok((await count(`select 1 from role_permissions rp join roles r on r.id = rp.role_id where r.name = 'مشرف'`)) === 12, 'new role has all 12 pages')
+
+await as('authenticated', OPS, String(now() - 3600))
+ok((await count('select * from public.my_permissions()')) === 0, 'old session loses staff rights after a code change')
+await as('authenticated', OPS, String(now() + 1))
+ok((await count('select * from public.my_permissions()')) === 12, 'a fresh session has staff rights')
+
+await as('service_role')
+ok((await verify('246810')).status === 'ok', 'correct code → ok')
+for (let i = 1; i <= 4; i++) await verify('000000')
+const fifth = await verify('000000')
+ok(fifth.status === 'locked', '5 wrong codes → locked')
+ok((await verify('246810')).status === 'locked', 'locked even with the right code (15 minutes)')
+ok((await verify('999999')).status === 'locked', 'stays locked')
+ok((await rows(`select public.staff_verify_code('+966500000009', '246810') as r`))[0].r.status === 'invalid', 'unknown phone → invalid')
+ok((await errorOf(`select public.staff_bootstrap('${B}', 'x', '+966555555555', '123456')`))?.includes('already_bootstrapped'), 'first-admin setup refuses once an admin exists')
+
+await as('owner')
+await db.exec(`update staff_profiles set locked_until = null where user_id = '${OPS}'`)
+await as('authenticated', ADMIN)
+await db.query(`select public.staff_set_active('${OPS}', false)`)
+await as('service_role')
+ok((await verify('246810')).status === 'disabled', 'a disabled member cannot log in')
+await as('authenticated', OPS, String(now() + 5))
+ok((await count('select * from public.my_permissions()')) === 0, 'a disabled member has no rights')
 
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

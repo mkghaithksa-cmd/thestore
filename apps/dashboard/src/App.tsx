@@ -1,25 +1,27 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { VAT_RATE } from '@ghaith/shared'
+import { Layout } from './components/Layout'
+import { StaffAuthProvider } from './lib/staffAuth'
+import { ComingSoon, Home } from './pages/Home'
+import { Login } from './pages/Login'
+import { Roles } from './pages/Roles'
+import { Users } from './pages/Users'
 import './App.css'
-
-function Home() {
-  return (
-    <main className="shell">
-      <section className="card">
-      <h1>لوحة الإدارة</h1>
-      <p>إدارة الطلبات والمنتجات والفريق — قيد الإنشاء.</p>
-      <p className="muted">الأسعار شاملة ضريبة القيمة المضافة {VAT_RATE * 100}٪</p>
-    </section>
-    </main>
-  )
-}
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="*" element={<Home />} />
-      </Routes>
-    </BrowserRouter>
+    <StaffAuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/roles" element={<Roles />} />
+            <Route path="/p/:page" element={<ComingSoon />} />
+            <Route path="*" element={<div className="notice">الصفحة غير موجودة.</div>} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </StaffAuthProvider>
   )
 }

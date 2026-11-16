@@ -18,3 +18,4 @@ export type OrderStatus =
 
 export * from './catalog'
 export * from './customer'
+export * from './staff'
