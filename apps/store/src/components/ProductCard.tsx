@@ -1,5 +1,5 @@
 import { PRODUCT_TYPE_LABELS, priceWithVat } from '@ghaith/shared'
-import { formatSar, type ProductWithCategory } from '../lib/catalog'
+import { formatSar, mainImageUrl, type ProductWithCategory } from '../lib/catalog'
 
 function PlaceholderArt({ type }: { type: ProductWithCategory['type'] }) {
   // Water drop for devices/bundles, box for everything else.
@@ -16,11 +16,12 @@ function PlaceholderArt({ type }: { type: ProductWithCategory['type'] }) {
 
 export function ProductCard({ product, vatRate }: { product: ProductWithCategory; vatRate: number }) {
   const total = priceWithVat(product.price_before_vat, vatRate)
+  const img = mainImageUrl(product)
   return (
     <article className="prod">
       <div className="prod-img">
-        {product.image_url ? (
-          <img src={product.image_url} alt={product.name_ar} loading="lazy" />
+        {img ? (
+          <img src={img} alt={product.name_ar} loading="lazy" />
         ) : (
           <PlaceholderArt type={product.type} />
         )}

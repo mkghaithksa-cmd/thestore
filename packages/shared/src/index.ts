@@ -1,8 +1,5 @@
-/**
- * Default VAT rate for Saudi Arabia (15%).
- * The live value is overridden by the `settings` table in Supabase.
- */
-export const VAT_RATE = 0.15
+// VAT, fees and service areas are read from the `settings` tables only —
+// never hard-coded here.
 
 export type ProductType = 'device' | 'filter' | 'part' | 'service' | 'bundle'
 

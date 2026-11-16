@@ -217,5 +217,41 @@ ok((await verify('246810')).status === 'disabled', 'a disabled member cannot log
 await as('authenticated', OPS, String(now() + 5))
 ok((await count('select * from public.my_permissions()')) === 0, 'a disabled member has no rights')
 
+// --- Day 4: system admin sees every page ---------------------------------------
+console.log('System admin pages')
+await as('authenticated', ADMIN, String(now() + 10))
+const adminPerms = await rows('select * from public.my_permissions()')
+ok(adminPerms.length === 12 && adminPerms.every((p) => p.can_view && p.can_add && p.can_edit && p.can_approve),
+  'system admin has every permission on all 12 pages')
+for (const role of ['موظف عمليات', 'خدمة عملاء']) {
+  const pages = (await rows(`select rp.page from role_permissions rp join roles r on r.id = rp.role_id
+    where r.name = '${role}' and rp.can_view`)).map((r) => r.page)
+  ok(pages.every((p) => adminPerms.find((a) => a.page === p)?.can_view), `system admin sees every page of «${role}»`)
+}
+ok((await rows(`select public.has_permission('a_future_page', 'approve') as r`))[0].r === true,
+  'system admin also gets pages added in the future')
+
+// --- Day 4: products and images -------------------------------------------------
+console.log('Products')
+const devCat = (await rows(`select id from categories where slug = 'devices'`))[0].id
+const svc = await rows(`insert into products (sku, name_ar, type, category_id, price_before_vat, tracks_stock, reorder_level, installable_in_mecca)
+  values ('  svc-clean ', 'تنظيف خزان', 'service', '${devCat}', 50, true, 5, true) returning sku, tracks_stock, reorder_level, installable_in_mecca`)
+ok(svc[0].sku === 'SVC-CLEAN', 'SKU is trimmed and upper-cased')
+ok(svc[0].tracks_stock === false && svc[0].reorder_level === 0, 'a service carries no stock')
+ok(svc[0].installable_in_mecca === false, 'only devices/bundles can be installable')
+ok(await denied(`insert into products (sku, name_ar, type, category_id, price_before_vat) values ('svc-CLEAN', 'x', 'part', '${devCat}', 1)`),
+  'SKU must be unique (case-insensitive)')
+const pid = (await rows(`select id from products where sku = 'DEV-GH500'`))[0].id
+ok(await denied(`insert into product_images (product_id, storage_path) values ('${pid}', 'other-folder/x.webp')`),
+  'image path must be inside the product folder')
+for (let i = 0; i < 5; i++) await db.query(`insert into product_images (product_id, storage_path, sort_order) values ('${pid}', '${pid}/${i}.webp', ${i})`)
+ok((await errorOf(`insert into product_images (product_id, storage_path) values ('${pid}', '${pid}/6.webp')`))?.includes('too_many_images'),
+  'a product cannot have more than 5 images')
+await as('anon')
+ok((await count(`select 1 from product_images where product_id = '${pid}'`)) === 5, 'visitors see the images of a published product')
+await as('authenticated', OPS, String(now() + 10))
+ok(await denied(`insert into products (sku, name_ar, type, category_id, price_before_vat) values ('OPS-1', 'x', 'part', '${devCat}', 1)`),
+  'operations staff (catalog view only) cannot add products')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)
