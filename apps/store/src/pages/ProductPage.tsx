@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { PRODUCT_TYPE_LABELS, priceWithVat, productPath } from '@ghaith/shared'
 import { CatalogStatus } from '../components/CatalogStatus'
 import { PlaceholderArt, ProductCard } from '../components/ProductCard'
+import { QtyStepper } from '../components/QtyStepper'
+import { MAX_QTY, useCart } from '../lib/cart'
 import { bundleComponentsTotal, formatSar, imageUrls, type ProductWithCategory } from '../lib/catalog'
 import { useCatalog } from '../lib/useCatalog'
 
@@ -35,6 +37,42 @@ function Gallery({ product }: { product: ProductWithCategory }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function AddToCart({ product }: { product: ProductWithCategory }) {
+  const cart = useCart()
+  const [qty, setQty] = useState(1)
+  const [added, setAdded] = useState(false)
+  useEffect(() => {
+    setQty(1)
+    setAdded(false)
+  }, [product.id])
+  const inCart = cart.qtyOf(product.id)
+  const room = MAX_QTY - inCart
+  return (
+    <div className="buy">
+      <div className="row wrapr">
+        <QtyStepper value={Math.min(qty, Math.max(room, 1))} onChange={setQty} label="الكمية" />
+        <button
+          className="btn buy-btn"
+          disabled={room <= 0}
+          onClick={() => {
+            cart.add(product.id, Math.min(qty, room))
+            setAdded(true)
+          }}
+        >
+          أضف للسلة
+        </button>
+      </div>
+      <p className="muted" role="status">
+        {room <= 0
+          ? `وصلت للحد الأعلى (${MAX_QTY}) من هذا المنتج في السلة.`
+          : added || inCart
+            ? <>في سلتك {inCart} — <Link to="/cart" className="link">عرض السلة</Link></>
+            : ''}
+      </p>
     </div>
   )
 }
@@ -126,6 +164,8 @@ export function ProductPage() {
             السعر قبل الضريبة {formatSar(Number(product.price_before_vat))}
           </p>
           {saving > 0 && <span className="saving">وفّر {formatSar(saving)} مقارنة بشراء المكونات منفصلة</span>}
+
+          <AddToCart product={product} />
 
           {product.description_ar && <p className="pdp-desc">{product.description_ar}</p>}
 

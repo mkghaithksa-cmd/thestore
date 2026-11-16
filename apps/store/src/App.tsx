@@ -2,6 +2,8 @@ import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom'
 import { formatSaudiPhoneLocal } from '@ghaith/shared'
 import { RequireAuth } from './components/RequireAuth'
 import { AuthProvider, useAuth } from './lib/auth'
+import { CartProvider, useCart } from './lib/cart'
+import { Cart } from './pages/Cart'
 import { Account } from './pages/Account'
 import { Home } from './pages/Home'
 import { Login } from './pages/Login'
@@ -37,6 +39,20 @@ function AccountButton() {
   )
 }
 
+function CartButton() {
+  const { count } = useCart()
+  return (
+    <Link to="/cart" className="cart-btn" aria-label={count ? `السلة، فيها ${count}` : 'السلة'}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2" />
+        <circle cx="9.5" cy="20" r="1.3" />
+        <circle cx="17" cy="20" r="1.3" />
+      </svg>
+      {count > 0 && <span className="badge">{count > 99 ? '99+' : count}</span>}
+    </Link>
+  )
+}
+
 function Header() {
   return (
     <header className="hdr">
@@ -55,6 +71,7 @@ function Header() {
           <NavLink to="/orders">طلباتي</NavLink>
         </nav>
         <div className="hact">
+          <CartButton />
           <AccountButton />
         </div>
       </div>
@@ -76,6 +93,7 @@ function NotFound() {
 export default function App() {
   return (
     <AuthProvider>
+      <CartProvider>
       <BrowserRouter>
         <Header />
         <main className="wrap">
@@ -83,6 +101,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:key" element={<ProductPage />} />
+            <Route path="/cart" element={<Cart />} />
             <Route path="/login" element={<Login />} />
             <Route
               path="/account"
@@ -104,6 +123,7 @@ export default function App() {
           </Routes>
         </main>
       </BrowserRouter>
+      </CartProvider>
     </AuthProvider>
   )
 }
