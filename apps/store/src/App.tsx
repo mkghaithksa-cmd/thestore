@@ -11,6 +11,8 @@ import { Home } from './pages/Home'
 import { InfoPage } from './pages/InfoPage'
 import { Login } from './pages/Login'
 import { OrderPage, Orders } from './pages/Orders'
+import { Invoice } from './pages/Invoice'
+import { Devices } from './pages/Devices'
 import { Checkout } from './pages/Checkout'
 import { ProductPage } from './pages/ProductPage'
 import { Products } from './pages/Products'
@@ -194,6 +196,22 @@ export default function App() {
               element={
                 <RequireAuth>
                   <OrderPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/orders/:id/invoice"
+              element={
+                <RequireAuth>
+                  <Invoice />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/devices"
+              element={
+                <RequireAuth>
+                  <Devices />
                 </RequireAuth>
               }
             />

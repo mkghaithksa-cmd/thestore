@@ -79,6 +79,8 @@ export interface StoreSettings {
   charge_inspection_if_absent: boolean
   maintenance_alert_days: number
   technician_link_hours: number
+  /** Seller VAT number (15 digits, starts and ends with 3) for the invoice QR. */
+  seller_vat_number: string | null
   updated_at: string
 }
 

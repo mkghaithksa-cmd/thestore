@@ -118,6 +118,10 @@ export function Account() {
         <b>طلباتي</b>
         <span className="link">←</span>
       </Link>
+      <Link to="/devices" className="card row between">
+        <b>أجهزتي</b>
+        <span className="link">←</span>
+      </Link>
     </div>
   )
 }

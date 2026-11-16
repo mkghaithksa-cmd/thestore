@@ -1,4 +1,4 @@
-import type { Fulfillment, Order, OrderItem } from '@ghaith/shared'
+import type { Fulfillment, Order, OrderEvent, OrderItem } from '@ghaith/shared'
 import { supabase } from './supabase'
 
 export interface Neighborhood {
@@ -116,4 +116,56 @@ export function formatDate(iso: string, withTime = false): string {
     ...(withTime ? { hour: 'numeric', minute: '2-digit' } : {}),
     timeZone: 'Asia/Riyadh',
   })
+}
+
+export async function fetchOrderEvents(orderId: string): Promise<OrderEvent[]> {
+  const { data, error } = await supabase.from('order_events').select('*').eq('order_id', orderId).order('id')
+  if (error) throw error
+  return (data ?? []) as OrderEvent[]
+}
+
+/** The customer cancels before preparing starts (the server checks again). */
+export async function cancelMyOrder(orderId: string): Promise<void> {
+  const { error } = await supabase.rpc('order_cancel_mine', { p_order_id: orderId })
+  if (error) throw new Error(error.message)
+}
+
+export interface MyReview {
+  product_id: string
+  rating: number
+  body: string
+  status: 'pending' | 'approved' | 'rejected'
+}
+
+export async function fetchMyReviews(): Promise<MyReview[]> {
+  const { data: u } = await supabase.auth.getUser()
+  if (!u.user) return []
+  const { data, error } = await supabase.from('reviews').select('product_id, rating, body, status').eq('customer_id', u.user.id)
+  if (error) throw error
+  return (data ?? []) as MyReview[]
+}
+
+export async function submitReview(productId: string, rating: number, body: string): Promise<void> {
+  const { error } = await supabase.rpc('review_submit', { p_product_id: productId, p_rating: rating, p_body: body })
+  if (error) throw new Error(error.message)
+}
+
+export interface MyDevice {
+  id: string
+  name_ar: string
+  installed: boolean
+  started_on: string
+  warranty_until: string | null
+  order_id: string | null
+  product: { sku: string } | null
+}
+
+export async function fetchMyDevices(): Promise<MyDevice[]> {
+  const { data, error } = await supabase
+    .from('customer_devices')
+    .select('id, name_ar, installed, started_on, warranty_until, order_id, product:products(sku)')
+    .eq('is_active', true)
+    .order('started_on', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as MyDevice[]
 }

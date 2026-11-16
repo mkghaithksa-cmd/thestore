@@ -32,6 +32,41 @@ export interface Order {
   cancelled_at: string | null
   cancel_reason: string | null
   created_at: string
+  tracking_number: string | null
+  shipping_carrier: string | null
+  preparing_at: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  completed_at: string | null
+  stock_issued_at: string | null
+  refund_status: 'none' | 'due' | 'done'
+}
+
+export interface OrderEvent {
+  id: number
+  order_id: string
+  status: OrderStatus
+  note: string | null
+  created_at: string
+}
+
+/** The stages an order goes through for its kind of delivery (after payment). */
+export function orderStages(f: Fulfillment): OrderStatus[] {
+  if (f === 'shipping') return ['pending_payment', 'paid', 'preparing', 'shipped', 'delivered', 'completed']
+  if (f === 'delivery_install') return ['pending_payment', 'paid', 'preparing', 'installing', 'completed']
+  return ['pending_payment', 'paid', 'preparing', 'delivered', 'completed']
+}
+
+/** The next stage staff can move an order to, or null. */
+export function nextStage(o: Pick<Order, 'status' | 'fulfillment'>): OrderStatus | null {
+  if (o.status === 'pending_payment' || o.status === 'cancelled' || o.status === 'completed') return null
+  const s = orderStages(o.fulfillment)
+  return s[s.indexOf(o.status) + 1] ?? null
+}
+
+/** Which tab of «طلباتي» an order belongs to. */
+export function orderGroup(status: OrderStatus): 'active' | 'done' | 'cancelled' {
+  return status === 'cancelled' ? 'cancelled' : status === 'completed' || status === 'delivered' ? 'done' : 'active'
 }
 
 export interface OrderItem {
@@ -91,9 +126,26 @@ export const ORDER_ERRORS: Record<string, string> = {
   nothing_to_install: 'ما في سلتك جهاز يحتاج تركيب. اختر التوصيل فقط.',
   visit_date_required: 'اختر اليوم المناسب للزيارة.',
   invalid_visit_date: 'اليوم المختار غير متاح. اختر يوم عمل من بكرة إلى 30 يوم.',
+  // Day 7: stages, cancelling, payments, stock, reviews
+  not_allowed: 'ما عندك صلاحية لهذا الإجراء.',
+  order_not_found: 'ما لقينا الطلب.',
+  invalid_transition: 'حالة الطلب تغيّرت. حدّث الصفحة.',
+  tracking_required: 'اكتب رقم التتبع (3 أحرف على الأقل).',
+  invalid_note: 'الملاحظة طويلة (300 حرف بالكثير).',
+  reason_required: 'اكتب سبب الإلغاء.',
+  cannot_cancel: 'ما يمكن إلغاء الطلب في هذه المرحلة.',
+  invalid_method: 'اختر طريقة الدفع.',
+  reference_required: 'اكتب رقم المرجع.',
+  not_pending: 'الطلب مو بانتظار الدفع.',
+  no_refund_due: 'ما في استرداد مستحق لهذا الطلب.',
+  not_stocked: 'هذا المنتج ما له مخزون (خدمة أو باقة).',
+  note_required: 'اكتب سبب التعديل.',
+  invalid_rating: 'اختر من 1 إلى 5 نجوم.',
+  review_too_long: 'التقييم طويل (1000 حرف بالكثير).',
+  not_purchased: 'تقدر تقيّم المنتج بعد ما يوصلك.',
 }
 
 export function orderErrorMessage(message: string | undefined | null): string {
   const code = Object.keys(ORDER_ERRORS).find((k) => message?.includes(k))
-  return code ? ORDER_ERRORS[code] : 'تعذّر إنشاء الطلب. حاول مرة ثانية.'
+  return code ? ORDER_ERRORS[code] : 'تعذّر تنفيذ الطلب. حاول مرة ثانية.'
 }

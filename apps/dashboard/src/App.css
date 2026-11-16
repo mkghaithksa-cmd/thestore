@@ -195,3 +195,17 @@ tr.detail td{background:var(--n50,transparent)}
 .order-detail{display:flex;flex-direction:column;gap:6px;padding:4px 0}
 .order-detail ul{margin:0;padding-inline-start:18px}
 .order-detail p{margin:0}
+
+/* Day 7: order stages, stock */
+.b-info{background:var(--primary-50);color:var(--primary-700)}
+.badge + .badge{margin-inline-start:4px}
+.timeline{list-style:none;margin:4px 0;padding:0 0 0 0;border-inline-start:2px solid var(--n200);display:flex;flex-direction:column;gap:6px}
+.timeline li{padding-inline-start:12px;position:relative;font-size:13.5px}
+.timeline li::before{content:'';position:absolute;inset-inline-start:-6px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--primary-600)}
+.act{display:flex;flex-direction:column;gap:8px;max-width:760px}
+.act .input.sm{min-width:140px}
+.btn.danger{color:var(--bad-700);border-color:var(--bad-700)}
+.low{color:var(--bad-700);font-weight:600}
+.notice.warn{border-color:var(--warn-500, #d97706);background:var(--warn-50)}
+.linkbtn{background:none;border:0;padding:0;color:var(--primary-700);font-weight:600;cursor:pointer;text-decoration:underline}
+.input.sm.bad{border-color:var(--bad-700)}

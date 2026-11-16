@@ -39,6 +39,7 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
   const [shipping, setShipping] = useState(String(settings.shipping_fee))
   const [chargeAbsent, setChargeAbsent] = useState(settings.charge_inspection_if_absent)
   const [alertDays, setAlertDays] = useState(String(settings.maintenance_alert_days))
+  const [vatNo, setVatNo] = useState(settings.seller_vat_number ?? '')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -50,6 +51,7 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
     if (!(v >= 0 && v < 100)) return setMsg({ ok: false, text: 'نسبة الضريبة بين 0 و 99.' })
     if (fees.some((f) => !(f >= 0))) return setMsg({ ok: false, text: 'الرسوم أرقام صفر أو أكثر.' })
     if (!Number.isInteger(days) || days < 0) return setMsg({ ok: false, text: 'أيام التنبيه رقم صحيح.' })
+    if (vatNo && !/^3d{13}3$/.test(vatNo)) return setMsg({ ok: false, text: 'الرقم الضريبي 15 رقم، يبدأ وينتهي بـ 3.' })
     setBusy(true)
     setMsg(null)
     const { error } = await supabase
@@ -61,6 +63,7 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
         shipping_fee: fees[2],
         charge_inspection_if_absent: chargeAbsent,
         maintenance_alert_days: days,
+        seller_vat_number: vatNo || null,
       })
       .eq('id', 1)
     setBusy(false)
@@ -86,6 +89,11 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
           {money('install', 'رسوم التركيب (ر.س، قبل الضريبة)', install, setInstall, 'داخل مكة فقط')}
           {money('inspection', 'رسوم الفحص (ر.س، قبل الضريبة)', inspection, setInspection, 'للبلاغ الطارئ')}
           {money('shipping', 'رسوم الشحن (ر.س، قبل الضريبة)', shipping, setShipping, 'لخارج مكة')}
+          <div className="field">
+            <label htmlFor="vatno">الرقم الضريبي للمؤسسة</label>
+            <input id="vatno" className="input num" inputMode="numeric" dir="ltr" maxLength={15} value={vatNo} onChange={(e) => setVatNo(e.target.value.replace(/D/g, ''))} />
+            <span className="muted">يظهر في فاتورة العميل مع رمز QR حسب هيئة الزكاة. اتركه فاضي إذا ما عندكم.</span>
+          </div>
           <div className="field">
             <label htmlFor="alert">تنبيه الصيانة قبل الموعد بـ (يوم)</label>
             <input id="alert" className="input num" inputMode="numeric" dir="ltr" value={alertDays} onChange={(e) => setAlertDays(e.target.value.replace(/\D/g, ''))} />
