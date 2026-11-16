@@ -343,3 +343,32 @@ a.announce-in:hover{filter:brightness(.98)}
 .pdp-rating{display:inline-flex;align-items:center;gap:8px;color:var(--n700);font-size:14px;align-self:flex-start}
 .pdp-rating:hover{color:var(--primary-700)}
 @media (max-width:640px){.cat-tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.cat-tile{padding:6px;gap:6px;border-radius:12px}.cat-tile b{font-size:13px}.cat-img svg{width:52%;height:52%}}
+/* Checkout and orders */
+.co-step{display:flex;flex-direction:column;gap:6px}
+.co-step .field{margin-block:8px}
+.co-step p{margin:0}
+.co-n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:99px;background:var(--primary-50);color:var(--primary-700);font-size:14px;margin-inline-end:6px}
+.co-options{border:0;margin:6px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.co-options label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--n300);border-radius:12px;padding:12px;cursor:pointer}
+.co-options label.on{border-color:var(--primary-700);background:var(--primary-50)}
+.co-options input{margin-top:4px;accent-color:var(--primary-700)}
+.co-options span{display:flex;flex-direction:column;gap:2px}
+.co-options small{color:var(--n500);font-size:12.5px}
+.co-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.co-items li{display:flex;justify-content:space-between;gap:12px}
+.co-items li>span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
+.input.area{height:auto;padding:10px 14px;resize:vertical;font:inherit}
+.sum{margin:12px 0 0;display:flex;flex-direction:column;gap:8px}
+.sum div{display:flex;justify-content:space-between;gap:12px}
+.sum dt{color:var(--n500)}
+.sum dd{margin:0;text-align:end}
+.sum .grand{border-top:1px solid var(--n200);padding-top:10px;font-weight:700;font-size:17px}
+.sum .grand dt{color:inherit}
+.order-row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.order-row:hover{border-color:var(--primary-300,var(--primary-600))}
+.stack-sm{display:flex;flex-direction:column;gap:4px}
+.stack-sm.end{align-items:flex-end}
+.between{justify-content:space-between}
+.tag.warn{background:var(--warn-50);color:var(--warn-700);font-weight:600}
+.tag.off{background:var(--n100);color:var(--n500)}
+@media (max-width:520px){.co-options{grid-template-columns:1fr}}

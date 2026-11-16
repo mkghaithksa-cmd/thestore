@@ -10,7 +10,8 @@ import { Account } from './pages/Account'
 import { Home } from './pages/Home'
 import { InfoPage } from './pages/InfoPage'
 import { Login } from './pages/Login'
-import { Orders } from './pages/Orders'
+import { OrderPage, Orders } from './pages/Orders'
+import { Checkout } from './pages/Checkout'
 import { ProductPage } from './pages/ProductPage'
 import { Products } from './pages/Products'
 import './App.css'
@@ -180,6 +181,22 @@ export default function App() {
             <Route path="/products" element={<Products />} />
             <Route path="/products/:key" element={<ProductPage />} />
             <Route path="/cart" element={<Cart />} />
+            <Route
+              path="/checkout"
+              element={
+                <RequireAuth>
+                  <Checkout />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/orders/:id"
+              element={
+                <RequireAuth>
+                  <OrderPage />
+                </RequireAuth>
+              }
+            />
             <Route path="/pages/:slug" element={<InfoPage />} />
             <Route path="/login" element={<Login />} />
             <Route

@@ -316,5 +316,88 @@ ok((await count(`update work_days set is_working = true returning day_of_week`))
 await as('anon')
 ok((await rows(`select shipping_fee from settings`))[0].shipping_fee == 40, 'the store reads the new shipping fee at once')
 
+// --- Day 6: orders ------------------------------------------------------------------
+console.log('Orders')
+await as('owner')
+await db.exec(`
+  update products set installable_in_mecca = true where sku = 'DEV-GH500';
+  insert into products (sku, name_ar, type, category_id, price_before_vat, status)
+    select 'SRV-VISIT', 'زيارة صيانة', 'service', id, 100, 'published' from categories where slug = 'parts';
+  insert into products (sku, name_ar, type, category_id, price_before_vat, status)
+    select 'DEV-DRAFT', 'جهاز مسودة', 'device', id, 500, 'draft' from categories where slug = 'devices';
+`)
+const skuId = async (sku) => (await rows(`select id from products where sku = '${sku}'`))[0].id
+const GH500 = await skuId('DEV-GH500'), FLT = await skuId('FLT-SET5'), SRV = await skuId('SRV-VISIT'), DRAFT = await skuId('DEV-DRAFT')
+const HOOD = (await rows(`select id from service_neighborhoods where is_active order by sort_order limit 1`))[0].id
+const dayIso = async (sql) => (await rows(sql))[0].d
+const WORKDAY = await dayIso(`select to_char(d, 'YYYY-MM-DD') d from generate_series(current_date + 2, current_date + 20, interval '1 day') d
+  join work_days w on w.day_of_week = extract(dow from d) and w.is_working limit 1`)
+const FRIDAY = await dayIso(`select to_char(d, 'YYYY-MM-DD') d from generate_series(current_date + 2, current_date + 20, interval '1 day') d
+  where extract(dow from d) = 5 limit 1`)
+const MECCA = { lat: 21.4225, lng: 39.8262 }, JEDDAH = { lat: 21.5433, lng: 39.1728 }
+const q = (v) => (v === null || v === undefined ? 'null' : typeof v === 'string' ? `'${v.replace(/'/g, "''")}'` : String(v))
+const order = ({ items, fulfillment = 'delivery', at = MECCA, hood = HOOD, name = 'عميل تجربة', date = null, privacy = true, city = null }) =>
+  `select public.create_order(items => '${JSON.stringify(items)}'::jsonb, fulfillment => ${q(fulfillment)},
+     lat => ${at.lat}, lng => ${at.lng}, neighborhood_id => ${hood ? `'${hood}'::uuid` : 'null'}, street => 'شارع 1', contact_name => ${q(name)},
+     preferred_visit_date => ${date ? `'${date}'::date` : 'null'}, privacy_accepted => ${privacy}, city => ${q(city)}) as r`
+const place = async (args) => (await rows(order(args)))[0].r
+
+await as('anon')
+ok(await denied(order({ items: [{ product_id: FLT, qty: 1 }] })), 'visitors cannot place orders')
+await as('authenticated', A)
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], name: null })))?.includes('name_required'), 'the first order needs a name')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], privacy: false })))?.includes('privacy_required'), 'the first order needs privacy consent')
+const o1 = await place({ items: [{ product_id: GH500, qty: 2, price: 1 }, { product_id: FLT, qty: 1 }], fulfillment: 'delivery_install', date: WORKDAY })
+ok(o1.order_number === 'GH-10234', `order numbers start at GH-10234 (${o1.order_number})`)
+const r1 = (await rows(`select * from orders where id = '${o1.id}'`))[0]
+const fee = Number((await rows('select install_fee from settings'))[0].install_fee)
+const exp1 = Math.round((3080 + 2 * fee) * 1.15 * 100) / 100
+ok(Number(r1.subtotal) === 3080 && Number(r1.install_fee) === 2 * fee && Number(r1.total) === exp1,
+  `server prices the order from the catalog, ignoring any price sent (${r1.subtotal} + ${r1.install_fee} + ${r1.vat_amount} = ${r1.total})`)
+ok(r1.status === 'pending_payment' && r1.zone === 'mecca' && !!r1.neighborhood_name, 'new order waits for payment, inside Mecca, with its neighbourhood')
+ok((await rows(`select amount_halalas from payment_requests where order_id = '${o1.id}'`))[0]?.amount_halalas === Math.round(exp1 * 100), 'one payment request for the exact total (halalas)')
+ok((await count(`select 1 from order_items where order_id = '${o1.id}'`)) === 2, 'customer sees the order items')
+ok((await rows(`select privacy_accepted_at from customers where id = '${A}'`))[0].privacy_accepted_at !== null, 'name and consent saved on the customer')
+ok((await count(`select 1 from addresses where customer_id = '${A}' and in_service_area`)) >= 1 && !!r1.address_id, 'the address is saved for next time')
+const o1b = await place({ items: [{ product_id: FLT, qty: 1 }], name: null })
+ok(o1b.order_number === 'GH-10235', 'the next order reuses the saved name and gets the next number')
+ok((await rows(`select count(distinct address_id) n from orders where id in ('${o1.id}', '${o1b.id}')`))[0].n == 1, 'same pin, same saved address')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], fulfillment: 'shipping' })))?.includes('invalid_fulfillment'), 'inside Mecca the order is delivered, not shipped')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], hood: null })))?.includes('neighborhood_required'), 'inside Mecca the neighbourhood is required')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], fulfillment: 'delivery_install', date: WORKDAY })))?.includes('nothing_to_install'),
+  'installation needs an installable device')
+ok((await errorOf(order({ items: [{ product_id: GH500, qty: 1 }], fulfillment: 'delivery_install' })))?.includes('visit_date_required'), 'installation needs a preferred day')
+ok((await errorOf(order({ items: [{ product_id: GH500, qty: 1 }], fulfillment: 'delivery_install', date: FRIDAY })))?.includes('invalid_visit_date'),
+  'the preferred day must be a working day')
+ok((await errorOf(order({ items: [{ product_id: SRV, qty: 1 }], at: JEDDAH, fulfillment: 'shipping' })))?.includes('service_outside_area'), 'services are for Mecca only')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], at: { lat: 15.5, lng: 32.5 }, fulfillment: 'shipping' })))?.includes('outside_ksa'),
+  'a pin outside Saudi Arabia is refused')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 21 }] })))?.includes('invalid_qty'), 'at most 20 of a product')
+ok((await errorOf(order({ items: [{ product_id: DRAFT, qty: 1 }] })))?.includes('product_unavailable'), 'draft products cannot be ordered')
+ok((await errorOf(order({ items: [] })))?.includes('empty_cart'), 'an empty cart cannot be ordered')
+const o2 = await place({ items: [{ product_id: GH500, qty: 1 }], at: JEDDAH, fulfillment: 'shipping', city: 'جدة' })
+const r2 = (await rows(`select * from orders where id = '${o2.id}'`))[0]
+ok(r2.zone === 'outside' && r2.city === 'جدة' && Number(r2.shipping_fee) === 40 && Number(r2.total) === 1713.5,
+  `outside Mecca: shipping fee from settings, VAT on it too (${r2.total})`)
+ok(await denied(`insert into orders (customer_id, fulfillment, zone, city, lat, lng, contact_name, contact_phone, vat_rate, subtotal, vat_amount, total)
+  values ('${A}', 'delivery', 'mecca', 'x', 1, 1, 'xx', 'x', 0, 1, 0, 1)`), 'customers cannot write orders directly')
+ok(await denied(`update orders set total = 1`), 'customers cannot change an order')
+await place({ items: [{ product_id: FLT, qty: 1 }] })
+await place({ items: [{ product_id: FLT, qty: 1 }] })
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }] })))?.includes('too_many_pending'), 'at most 5 unpaid orders at a time')
+await as('authenticated', B)
+ok((await count('select 1 from orders')) === 0 && (await count('select 1 from order_items')) === 0, "another customer cannot see A's orders")
+await as('authenticated', ADMIN, String(now() + 10))
+ok((await count('select 1 from orders')) === 5, 'staff with the orders page see all orders')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }] })))?.includes('not_a_customer'), 'staff accounts cannot place orders')
+ok(await denied(`insert into payments (order_id, provider_payment_id, amount_halalas, status) values ('${o1.id}', 'x', 1, 'paid')`),
+  'nobody can record a payment through the API')
+await as('owner')
+await db.exec(`update orders set expires_at = now() - interval '1 minute' where id = '${o1b.id}'`)
+ok((await rows('select public.expire_unpaid_orders() as n'))[0].n === 1, 'unpaid orders past 24 hours are cancelled')
+ok((await rows(`select o.status, r.status as req from orders o join payment_requests r on r.order_id = o.id where o.id = '${o1b.id}'`))
+  .every((x) => x.status === 'cancelled' && x.req === 'expired'), 'its payment request expires with it')
+ok((await count(`select 1 from audit_log where entity = 'orders'`)) >= 5, 'orders are audited')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

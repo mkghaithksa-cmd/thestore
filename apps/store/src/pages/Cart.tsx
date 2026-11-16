@@ -155,9 +155,15 @@ export function Cart() {
               {location ? 'تغيير الموقع' : 'حدد موقعك'}
             </button>
           </div>
-          <button className="btn block" disabled title="يُفعَّل مع صفحة الدفع">
-            إتمام الطلب (قريباً)
-          </button>
+          {available.length > 0 ? (
+            <Link to="/checkout" className="btn block">
+              إتمام الطلب
+            </Link>
+          ) : (
+            <button className="btn block" disabled>
+              إتمام الطلب
+            </button>
+          )}
           <Link to="/products" className="link center">
             متابعة التسوق
           </Link>
