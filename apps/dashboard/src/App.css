@@ -126,3 +126,7 @@ tr.dim td{opacity:.6}
 .banner-thumb{width:180px;aspect-ratio:3/1;object-fit:cover;border-radius:8px;background:var(--n100)}
 .banner-thumb.m{width:56px;aspect-ratio:4/5}
 .banner-thumb.none{display:grid;place-items:center;font-size:10px;color:var(--n500);text-align:center;padding:4px}
+.check.tight{margin:0}
+.nh-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.nh{display:flex;gap:6px;align-items:center}
+.nh.off .input{opacity:.55;text-decoration:line-through}

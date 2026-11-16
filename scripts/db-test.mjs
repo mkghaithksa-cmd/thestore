@@ -295,5 +295,26 @@ ok(await denied(`delete from home_banners`) || (await count(`delete from home_ba
 await as('owner')
 ok((await count(`select 1 from audit_log where entity = 'home_banners'`)) >= 6, 'banner changes are audited')
 
+// --- Day 4: settings page ----------------------------------------------------------
+console.log('Settings')
+await as('authenticated', ADMIN, String(now() + 10))
+ok((await count(`update settings set vat_rate = 0.15, shipping_fee = 40, maintenance_alert_days = 20 where id = 1 returning id`)) === 1,
+  'admin edits VAT, fees and the maintenance alert')
+ok(await denied(`update settings set id = 2`), 'the settings row id cannot change')
+const off = await rows(`update work_days set is_working = false where day_of_week = 4 returning start_time, end_time`)
+ok(off[0].start_time === null && off[0].end_time === null, 'a day off clears its hours')
+ok(await denied(`update work_days set is_working = true, start_time = '18:00', end_time = '09:00' where day_of_week = 4`),
+  'working hours must end after they start')
+ok(await denied(`update work_days set name_ar = 'x' where day_of_week = 0`), 'day names cannot be renamed')
+const hood = await rows(`insert into service_neighborhoods (name_ar) values ('  حي   الروضة ') returning name_ar`)
+ok(hood[0].name_ar === 'حي الروضة', 'neighbourhood names are tidied')
+ok(await denied(`insert into service_neighborhoods (name_ar) values ('حي الروضة')`), 'no duplicate neighbourhoods')
+ok(await denied(`delete from service_neighborhoods`), 'neighbourhoods are stopped, never deleted')
+await as('authenticated', OPS, String(now() + 10))
+ok((await count(`update settings set shipping_fee = 1 returning id`)) === 0, 'operations staff cannot change settings')
+ok((await count(`update work_days set is_working = true returning day_of_week`)) === 0, 'operations staff cannot change work days')
+await as('anon')
+ok((await rows(`select shipping_fee from settings`))[0].shipping_fee == 40, 'the store reads the new shipping fee at once')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)
