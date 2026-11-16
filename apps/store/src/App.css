@@ -254,24 +254,19 @@ a{color:inherit;text-decoration:none}
 .loc-error{color:var(--bad-700);font-size:13px;margin:6px 0 0;flex-basis:100%}
 .loc-dialog{border:0;border-radius:16px;padding:0;width:min(440px,calc(100vw - 32px));background:var(--surface);color:var(--n900);box-shadow:0 20px 60px rgba(4,22,40,.35)}
 .loc-dialog::backdrop{background:rgba(4,22,40,.55)}
-.loc-dialog form{display:flex;flex-direction:column;gap:12px;padding:20px}
+.loc-body{display:flex;flex-direction:column;gap:12px;padding:20px}
 .loc-head{display:flex;align-items:center;justify-content:space-between}
 .loc-x{border:0;background:none;font-size:26px;line-height:1;color:var(--n500);cursor:pointer;padding:0 4px}
-.loc-or{display:flex;align-items:center;gap:10px;color:var(--n500);font-size:13px}
-.loc-or::before,.loc-or::after{content:"";flex:1;border-top:1px solid var(--n200)}
-.loc-options{border:0;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.loc-options label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--n300);border-radius:12px;padding:12px;cursor:pointer}
-.loc-options label.on{border-color:var(--primary-700);background:var(--primary-50)}
-.loc-options input{margin-top:3px;accent-color:var(--primary-700)}
-.loc-options span{display:flex;flex-direction:column;gap:2px}
-.loc-options small{color:var(--n500);font-size:12px}
-.loc-options .field{margin:0}
+.loc-outcome{border:1px solid var(--n200);border-radius:12px;padding:14px 16px;background:var(--n100)}
+.loc-outcome.ok{border-color:var(--ok-500);background:var(--ok-50)}
+.loc-outcome b{display:block;font-size:15px;margin-bottom:6px}
+.loc-outcome ul{margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--n700)}
 .delivery{display:flex;flex-direction:column;gap:4px;border:1px solid var(--n200);border-radius:12px;padding:12px 14px;background:var(--n50);font-size:14px}
 .delivery b{font-weight:600}
 .delivery .linkbtn{align-self:flex-start;font-size:13px}
 .delivery.off{border-color:var(--warn-500);background:var(--warn-50);color:var(--warn-700)}
 .cart-line.unavailable{opacity:.7}
-@media (max-width:520px){.loc-label small{display:none}.loc-btn{max-width:120px}.loc-options{grid-template-columns:1fr}}
+@media (max-width:520px){.loc-label small{display:none}.loc-btn{max-width:120px}}
 /* Map pin */
 .loc-dialog.wide{width:min(720px,calc(100vw - 32px))}
 .map-picker{display:flex;flex-direction:column;gap:10px}

@@ -3,17 +3,17 @@ import { MECCA_CITY, nearestCity, OTHER_CITY, type ProductType, type Zone } from
 import { supabase } from './supabase'
 
 /**
- * The customer's location, kept in this browser only. It decides what the
- * store shows: inside Mecca installation and services are offered, anywhere
- * else the store ships only. The checkout asks for the full address and pin.
+ * The customer's location, kept in this browser only. The customer places a
+ * pin on their house; the server decides if it is inside the Mecca service
+ * area. Inside: delivery, installation and maintenance. Outside: shipping only.
  */
 export interface StoreLocation {
   zone: Zone
   city: string
-  source: 'gps' | 'manual' | 'pin'
-  /** From the map pin (about 1 m) or auto-detect (about 100 m); kept in this browser to prefill the checkout. */
-  lat?: number
-  lng?: number
+  /** Always the map pin: the customer places it on their house. */
+  source: 'pin'
+  lat: number
+  lng: number
   at: string
 }
 
@@ -23,7 +23,16 @@ const DISMISS_KEY = 'ghaith-location-prompt-dismissed'
 function read(): StoreLocation | null {
   try {
     const v = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')
-    if (v && (v.zone === 'mecca' || v.zone === 'outside') && typeof v.city === 'string') return v as StoreLocation
+    // Older choices (auto-detect, or a picked city with no pin) are dropped: the customer pins the house again.
+    if (
+      v &&
+      v.source === 'pin' &&
+      (v.zone === 'mecca' || v.zone === 'outside') &&
+      typeof v.city === 'string' &&
+      typeof v.lat === 'number' &&
+      typeof v.lng === 'number'
+    )
+      return v as StoreLocation
   } catch {
     // ignore
   }
@@ -39,80 +48,43 @@ function write(loc: StoreLocation | null) {
   }
 }
 
-export type DetectError = 'unsupported' | 'denied' | 'unavailable' | 'timeout' | 'check-failed'
+export const CHECK_FAILED = 'تعذّر التحقق من منطقة الخدمة. تأكد من الاتصال وحاول مرة ثانية.'
 
-export const DETECT_ERRORS: Record<DetectError, string> = {
-  unsupported: 'متصفحك لا يدعم تحديد الموقع. اختر يدوياً.',
-  denied: 'لم تسمح بالوصول لموقعك. تقدر تسمح من إعدادات المتصفح، أو تختار يدوياً.',
-  unavailable: 'تعذّر تحديد موقعك الآن. اختر يدوياً.',
-  timeout: 'أخذ تحديد الموقع وقتاً طويلاً. حاول مرة ثانية أو اختر يدوياً.',
-  'check-failed': 'تعذّر التحقق من منطقة الخدمة. حاول مرة ثانية أو اختر يدوياً.',
-}
-
-function getPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) return reject('unsupported' satisfies DetectError)
-    navigator.geolocation.getCurrentPosition(resolve, (e) => {
-      reject((e.code === e.PERMISSION_DENIED ? 'denied' : e.code === e.TIMEOUT ? 'timeout' : 'unavailable') satisfies DetectError)
-    }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 10 * 60 * 1000 })
-  })
-}
-
-/** Ask the browser for the position, then let the server decide if it is in the service area. */
-export async function detectLocation(): Promise<StoreLocation> {
-  const pos = await getPosition()
-  return checkPoint(pos.coords.latitude, pos.coords.longitude, 'gps')
-}
-
-/** The customer placed the pin on their house: same server check, finer precision. */
-export function pinnedLocation(lat: number, lng: number): Promise<StoreLocation> {
-  return checkPoint(lat, lng, 'pin')
-}
-
-async function checkPoint(rawLat: number, rawLng: number, source: 'gps' | 'pin'): Promise<StoreLocation> {
-  const f = source === 'pin' ? 100000 : 1000
-  const lat = Math.round(rawLat * f) / f
-  const lng = Math.round(rawLng * f) / f
+/** The customer placed the pin on their house: the server decides if it is inside the service area. */
+export async function pinnedLocation(rawLat: number, rawLng: number): Promise<StoreLocation> {
+  const lat = Math.round(rawLat * 100000) / 100000
+  const lng = Math.round(rawLng * 100000) / 100000
   const { data, error } = await supabase.rpc('is_in_service_area', { lat, lng })
-  if (error || typeof data !== 'boolean') throw 'check-failed' satisfies DetectError
+  if (error || typeof data !== 'boolean') throw new Error('check-failed')
   const near = nearestCity(lat, lng)
   return {
     zone: data ? 'mecca' : 'outside',
     city: data ? MECCA_CITY : near && near !== MECCA_CITY ? near : OTHER_CITY,
-    source,
+    source: 'pin',
     lat,
     lng,
     at: new Date().toISOString(),
   }
 }
 
-export function manualLocation(city: string): StoreLocation {
-  return { zone: city === MECCA_CITY ? 'mecca' : 'outside', city, source: 'manual', at: new Date().toISOString() }
-}
-
 interface LocationState {
   location: StoreLocation | null
-  /** Unknown counts as Mecca (the default shop), the checkout confirms it. */
+  /** Unknown counts as Mecca (the default shop) until the customer pins the house. */
   inMecca: boolean
   set: (loc: StoreLocation) => void
   clear: () => void
   promptDismissed: boolean
   dismissPrompt: () => void
   dialogOpen: boolean
-  /** Which screen the chooser opens on: the map pin, or the quick choice. */
-  dialogView: DialogView
-  openDialog: (view?: DialogView) => void
+  openDialog: () => void
   closeDialog: () => void
 }
-
-export type DialogView = 'map' | 'choose'
 
 const LocationContext = createContext<LocationState | null>(null)
 
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useState<StoreLocation | null>(read)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogView, setDialogView] = useState<DialogView>('choose')
   const [promptDismissed, setDismissed] = useState(() => {
     try {
       return sessionStorage.getItem(DISMISS_KEY) === '1'
@@ -153,14 +125,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         }
       },
       dialogOpen,
-      dialogView,
-      openDialog: (view = 'choose') => {
-        setDialogView(view)
-        setDialogOpen(true)
-      },
+      openDialog: () => setDialogOpen(true),
       closeDialog: () => setDialogOpen(false),
     }),
-    [location, set, promptDismissed, dialogOpen, dialogView],
+    [location, set, promptDismissed, dialogOpen],
   )
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>

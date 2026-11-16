@@ -10,13 +10,14 @@ export interface MapPickerProps {
   busy?: boolean
   onConfirm: (lat: number, lng: number) => void
   onCancel: () => void
+  cancelLabel?: string
 }
 
 /**
  * Full map with a fixed pin in the middle: the customer moves the map until
  * the pin sits on their house. Loaded only when opened (OpenStreetMap tiles).
  */
-export default function MapPicker({ initial, busy, onConfirm, onCancel }: MapPickerProps) {
+export default function MapPicker({ initial, busy, onConfirm, onCancel, cancelLabel = "رجوع" }: MapPickerProps) {
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const [locating, setLocating] = useState(false)
@@ -92,7 +93,7 @@ export default function MapPicker({ initial, busy, onConfirm, onCancel }: MapPic
           {busy ? 'جاري التحقق…' : 'تأكيد الموقع'}
         </button>
         <button type="button" className="btn ghost" onClick={onCancel}>
-          رجوع
+          {cancelLabel}
         </button>
       </div>
     </div>

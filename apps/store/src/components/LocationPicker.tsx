@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { MECCA_CITY, OTHER_CITY, SAUDI_CITIES } from '@ghaith/shared'
-import { DETECT_ERRORS, detectLocation, manualLocation, pinnedLocation, useLocationChoice, type DetectError, type StoreLocation } from '../lib/location'
+import { priceWithVat, type StoreSettings } from '@ghaith/shared'
+import { fetchSettings, formatSar } from '../lib/catalog'
+import { CHECK_FAILED, pinnedLocation, useLocationChoice, type StoreLocation } from '../lib/location'
 
 // The map library is only downloaded when the customer opens the map.
 const MapPicker = lazy(() => import('./MapPicker'))
@@ -28,122 +29,101 @@ export function LocationButton() {
   )
 }
 
-/** A detect hook shared by the prompt bar and the dialog. */
-function useDetect(onDone: (loc: StoreLocation) => void) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<DetectError | null>(null)
-  const run = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      onDone(await detectLocation())
-    } catch (e) {
-      setError(typeof e === 'string' && e in DETECT_ERRORS ? (e as DetectError) : 'unavailable')
-    } finally {
-      setBusy(false)
-    }
-  }
-  return { busy, error, run }
-}
-
-/** First-visit bar under the header until the customer picks a location. */
+/** First-visit bar under the header until the customer pins the house. */
 export function LocationPrompt() {
-  const { location, set, promptDismissed, dismissPrompt, openDialog } = useLocationChoice()
-  const { busy, error, run } = useDetect(set)
+  const { location, promptDismissed, dismissPrompt, openDialog } = useLocationChoice()
   if (location || promptDismissed) return null
   return (
-    <div className="loc-prompt" role="region" aria-label="اختيار الموقع">
+    <div className="loc-prompt" role="region" aria-label="تحديد الموقع">
       <div className="wrap">
         <p>
-          <b>وين موقعك؟</b> التركيب والصيانة داخل مكة المكرمة، والشحن لباقي المدن.
+          <b>وين بيتك؟</b> حدده على الخريطة ونقول لك وش الخدمات المتاحة لك.
         </p>
         <div className="loc-prompt-actions">
-          <button type="button" className="btn sm" onClick={() => openDialog('map')}>
+          <button type="button" className="btn sm" onClick={() => openDialog()}>
             حدد بيتك على الخريطة
-          </button>
-          <button type="button" className="btn sm ghost" onClick={run} disabled={busy}>
-            {busy ? 'جاري التحديد…' : 'تحديد تلقائي'}
-          </button>
-          <button type="button" className="btn sm ghost" onClick={() => set(manualLocation(MECCA_CITY))}>
-            داخل مكة
-          </button>
-          <button type="button" className="btn sm ghost" onClick={() => openDialog()}>
-            مدينة أخرى
           </button>
           <button type="button" className="linkbtn" onClick={dismissPrompt}>
             لاحقاً
           </button>
         </div>
-        {error && (
-          <p className="loc-error" role="alert">
-            {DETECT_ERRORS[error]}
-          </p>
-        )}
       </div>
     </div>
   )
 }
 
-/** The full chooser: detect automatically, or pick Mecca / another city. */
+/** What happens with orders at this pin: Mecca gets delivery, installation and maintenance; elsewhere ships only. */
+function Outcome({ location, settings }: { location: StoreLocation; settings: StoreSettings | null }) {
+  const fee = (n: number) => (settings ? formatSar(priceWithVat(n, settings.vat_rate)) : '…')
+  if (location.zone === 'mecca') {
+    return (
+      <div className="loc-outcome ok" role="status">
+        <b>بيتك داخل منطقة الخدمة في مكة المكرمة</b>
+        <ul>
+          <li>نوصّل طلبك لباب البيت.</li>
+          <li>نركّب الجهاز عندك برسوم {fee(settings?.install_fee ?? 0)} شامل الضريبة (تختاره عند إتمام الطلب).</li>
+          <li>خدمات الصيانة وتغيير الفلاتر والزيارات متاحة لك.</li>
+        </ul>
+      </div>
+    )
+  }
+  return (
+    <div className="loc-outcome" role="status">
+      <b>بيتك خارج منطقة الخدمة ({location.city})</b>
+      <ul>
+        <li>نشحن طلبك لك، ورسوم الشحن {fee(settings?.shipping_fee ?? 0)} للطلب شامل الضريبة.</li>
+        <li>التركيب والصيانة والزيارات متاحة داخل مكة المكرمة فقط، فما تظهر لك في المتجر.</li>
+      </ul>
+    </div>
+  )
+}
+
+/** The chooser: the customer pins the house on the map, then sees what that location gets. */
 export function LocationDialog() {
-  const { location, set, dialogOpen, dialogView, closeDialog } = useLocationChoice()
-  const [view, setView] = useState(dialogView)
-  const [pinBusy, setPinBusy] = useState(false)
-  const [pinError, setPinError] = useState('')
+  const { location, set, dialogOpen, closeDialog } = useLocationChoice()
+  const [view, setView] = useState<'map' | 'result'>('map')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [settings, setSettings] = useState<StoreSettings | null>(null)
   const ref = useRef<HTMLDialogElement>(null)
-  const [mode, setMode] = useState<'mecca' | 'outside'>('mecca')
-  const [city, setCity] = useState('')
-  const { busy, error, run } = useDetect((loc) => {
-    set(loc)
-    closeDialog()
-  })
 
   useEffect(() => {
     const d = ref.current
     if (!d) return
     if (dialogOpen && !d.open) {
-      setMode(location?.zone ?? 'mecca')
-      setCity(location?.zone === 'outside' ? location.city : '')
-      setView(dialogView)
-      setPinError('')
+      // A customer who already pinned the house sees what applies, with a way to move the pin.
+      setView(location ? 'result' : 'map')
+      setError('')
       d.showModal()
     } else if (!dialogOpen && d.open) d.close()
-  }, [dialogOpen, location, dialogView])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen])
 
-  const save = () => {
-    if (mode === 'mecca') set(manualLocation(MECCA_CITY))
-    else if (city) set(manualLocation(city))
-    else return
-    closeDialog()
-  }
+  useEffect(() => {
+    if (dialogOpen && !settings) fetchSettings().then(setSettings, () => {})
+  }, [dialogOpen, settings])
 
   const confirmPin = async (lat: number, lng: number) => {
-    setPinBusy(true)
-    setPinError('')
+    setBusy(true)
+    setError('')
     try {
       set(await pinnedLocation(lat, lng))
-      closeDialog()
+      setView('result')
     } catch {
-      setPinError(DETECT_ERRORS['check-failed'])
+      setError(CHECK_FAILED)
     } finally {
-      setPinBusy(false)
+      setBusy(false)
     }
   }
 
-  const initialPin = location?.lat != null && location.lng != null ? { lat: location.lat, lng: location.lng } : null
+  const initialPin = location ? { lat: location.lat, lng: location.lng } : null
 
   return (
     <dialog ref={ref} className={view === 'map' ? 'loc-dialog wide' : 'loc-dialog'} aria-labelledby="loc-title" onClose={closeDialog} onCancel={closeDialog}>
-      <form
-        method="dialog"
-        onSubmit={(e) => {
-          e.preventDefault()
-          save()
-        }}
-      >
+      <div className="loc-body">
         <div className="loc-head">
           <h2 id="loc-title" className="h3">
-            وين موقعك؟
+            {view === 'map' ? 'حدد بيتك على الخريطة' : 'موقعك'}
           </h2>
           <button type="button" className="loc-x" aria-label="إغلاق" onClick={closeDialog}>
             ×
@@ -152,82 +132,36 @@ export function LocationDialog() {
         {view === 'map' && dialogOpen ? (
           <>
             <Suspense fallback={<div className="map-loading">جاري تحميل الخريطة…</div>}>
-              <MapPicker initial={initialPin} busy={pinBusy} onConfirm={confirmPin} onCancel={() => setView('choose')} />
+              <MapPicker
+                initial={initialPin}
+                busy={busy}
+                onConfirm={confirmPin}
+                onCancel={() => (location ? setView('result') : closeDialog())}
+                cancelLabel={location ? 'رجوع' : 'لاحقاً'}
+              />
             </Suspense>
-            {pinError && (
+            {error && (
               <p className="loc-error" role="alert">
-                {pinError}
+                {error}
               </p>
             )}
           </>
         ) : (
-          <>
-        <p className="muted">التركيب والصيانة متاحة داخل مكة المكرمة فقط، وباقي المدن نشحن لها.</p>
-
-        <button type="button" className="btn block loc-detect" onClick={() => setView('map')}>
-          <PinIcon />
-          حدد بيتك على الخريطة
-        </button>
-
-        <button type="button" className="btn block ghost loc-detect" onClick={run} disabled={busy}>
-          <PinIcon />
-          {busy ? 'جاري تحديد موقعك…' : 'حدد موقعي تلقائياً'}
-        </button>
-        {error && (
-          <p className="loc-error" role="alert">
-            {DETECT_ERRORS[error]}
-          </p>
+          location && (
+            <>
+              <Outcome location={location} settings={settings} />
+              <button type="button" className="btn block" onClick={closeDialog}>
+                تمام، كمّل التسوق
+              </button>
+              <button type="button" className="btn block ghost loc-detect" onClick={() => setView('map')}>
+                <PinIcon />
+                تعديل مكان الدبوس
+              </button>
+              <p className="muted center">موقع بيتك محفوظ في جهازك فقط، ونستخدمه عند إتمام الطلب.</p>
+            </>
+          )
         )}
-
-        <div className="loc-or" aria-hidden="true">
-          <span>أو اختر</span>
-        </div>
-
-        <fieldset className="loc-options">
-          <legend className="sr-only">المنطقة</legend>
-          <label className={mode === 'mecca' ? 'on' : undefined}>
-            <input type="radio" name="zone" checked={mode === 'mecca'} onChange={() => setMode('mecca')} />
-            <span>
-              <b>داخل مكة المكرمة</b>
-              <small>توصيل، وتركيب، وصيانة</small>
-            </span>
-          </label>
-          <label className={mode === 'outside' ? 'on' : undefined}>
-            <input type="radio" name="zone" checked={mode === 'outside'} onChange={() => setMode('outside')} />
-            <span>
-              <b>مدينة أخرى</b>
-              <small>شحن فقط</small>
-            </span>
-          </label>
-        </fieldset>
-
-        {mode === 'outside' && (
-          <div className="field">
-            <label htmlFor="loc-city">المدينة</label>
-            <select id="loc-city" className="input" value={city} onChange={(e) => setCity(e.target.value)} required>
-              <option value="">اختر مدينتك</option>
-              {SAUDI_CITIES.filter((c) => c.name !== MECCA_CITY).map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-              <option value={OTHER_CITY}>{OTHER_CITY}</option>
-            </select>
-          </div>
-        )}
-
-        <button type="submit" className="btn block" disabled={mode === 'outside' && !city}>
-          حفظ
-        </button>
-        {location?.source === 'pin' && (
-          <p className="muted center">موقع بيتك محدد على الخريطة. يبقى محفوظاً في جهازك ونستخدمه عند إتمام الطلب.</p>
-        )}
-          </>
-        )}
-        {view !== 'map' && location?.source === 'gps' && (
-          <p className="muted center">تم التحديد تلقائياً. نستخدم موقعك فقط لمعرفة هل أنت داخل منطقة الخدمة، ويبقى محفوظاً في جهازك.</p>
-        )}
-      </form>
+      </div>
     </dialog>
   )
 }
