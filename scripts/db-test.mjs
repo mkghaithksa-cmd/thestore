@@ -272,5 +272,28 @@ await db.query(`insert into bundle_items (bundle_product_id, component_product_i
 await as('anon')
 ok((await count(`select 1 from bundle_items where bundle_product_id = '${bnd}'`)) >= 1, 'visitors see the contents of a published bundle')
 
+// --- Day 4: home banners ----------------------------------------------------------
+console.log('Banners')
+await as('authenticated', ADMIN, String(now() + 10))
+const banner = (i, extra = '') =>
+  `insert into home_banners (id, title, desktop_path ${extra ? ', ' + extra.split('=')[0] : ''})
+   values ('00000000-0000-0000-0000-0000000000b${i}', 'بنر ${i}', '00000000-0000-0000-0000-0000000000b${i}/d.webp' ${extra ? ', ' + extra.split('=')[1] : ''})`
+for (let i = 1; i <= 5; i++) await db.query(banner(i))
+ok((await errorOf(banner(6)))?.includes('too_many_banners'), 'at most 5 active banners')
+await db.query(banner(6, `is_active=false`))
+ok((await errorOf(`update home_banners set is_active = true where title = 'بنر 6'`))?.includes('too_many_banners'),
+  'cannot activate a 6th banner')
+ok(await denied(`insert into home_banners (title, desktop_path) values ('x', 'somewhere-else/d.webp')`), 'banner images live in the banner folder')
+ok(await denied(`update home_banners set link_kind = 'url', link_ref = 'javascript:alert(1)' where title = 'بنر 1'`), 'banner links must be https:// or a store path')
+await db.query(`update home_banners set starts_at = now() + interval '1 day' where title = 'بنر 2'`)
+await db.query(`update home_banners set ends_at = now() - interval '1 second', starts_at = now() - interval '1 day' where title = 'بنر 3'`)
+await as('anon')
+ok((await count('select 1 from home_banners')) === 3, 'visitors see only live banners (not stopped, scheduled or ended)')
+ok(await denied(`insert into home_banners (title, desktop_path) values ('x', 'x/d.webp')`), 'visitors cannot add banners')
+await as('authenticated', OPS, String(now() + 10))
+ok(await denied(`delete from home_banners`) || (await count(`delete from home_banners returning id`)) === 0, 'operations staff cannot delete banners')
+await as('owner')
+ok((await count(`select 1 from audit_log where entity = 'home_banners'`)) >= 6, 'banner changes are audited')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

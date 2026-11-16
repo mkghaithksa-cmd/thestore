@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ProductCard } from '../components/ProductCard'
 import { CatalogStatus } from '../components/CatalogStatus'
 import { useCatalog } from '../lib/useCatalog'
@@ -7,6 +7,7 @@ export function Products() {
   const { state, reload } = useCatalog()
   const [params, setParams] = useSearchParams()
   const active = params.get('cat') ?? 'all'
+  const productId = params.get('product')
 
   const setCat = (slug: string) => setParams(slug === 'all' ? {} : { cat: slug }, { replace: true })
 
@@ -21,7 +22,14 @@ export function Products() {
   }
 
   const { products, categories, settings } = state.data
-  const shown = active === 'all' ? products : products.filter((p) => p.category?.slug === active)
+  // A category includes its sub-categories.
+  const selected = categories.find((c) => c.slug === active)
+  const ids = new Set(selected ? [selected.id, ...categories.filter((c) => c.parent_id === selected.id).map((c) => c.id)] : [])
+  const shown = productId
+    ? products.filter((p) => p.id === productId)
+    : active === 'all'
+      ? products
+      : products.filter((p) => ids.has(p.category_id))
 
   return (
     <>
@@ -40,6 +48,14 @@ export function Products() {
           </button>
         ))}
       </div>
+
+      {productId && (
+        <p>
+          <Link to="/products" className="link">
+            ← عرض كل المنتجات
+          </Link>
+        </p>
+      )}
 
       {shown.length ? (
         <div className="grid">

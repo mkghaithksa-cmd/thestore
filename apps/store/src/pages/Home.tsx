@@ -1,14 +1,25 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import type { HomeBanner } from '@ghaith/shared'
+import { BannerSlider } from '../components/BannerSlider'
+import { fetchBanners } from '../lib/catalog'
 import { ProductCard } from '../components/ProductCard'
 import { CatalogStatus } from '../components/CatalogStatus'
 import { useCatalog } from '../lib/useCatalog'
 
 export function Home() {
   const { state, reload } = useCatalog()
+  const [banners, setBanners] = useState<HomeBanner[] | null>(null)
+  useEffect(() => {
+    // Banners are optional: without them (or on error) the default welcome shows.
+    fetchBanners().then(setBanners, () => setBanners([]))
+  }, [])
   const featured = state.status === 'success' ? state.data.products.filter((p) => p.is_featured) : []
 
   return (
     <>
+      {banners && banners.length > 0 && <BannerSlider banners={banners} />}
+      {banners && banners.length === 0 && (
       <section className="hero">
         <div>
           <h1>ماء نقي لبيتك</h1>
@@ -23,6 +34,7 @@ export function Home() {
           </svg>
         </div>
       </section>
+      )}
 
       <section>
         <div className="section-h">

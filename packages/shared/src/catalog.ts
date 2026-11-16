@@ -112,3 +112,47 @@ export function priceWithVat(priceBeforeVat: number, vatRate: number): number {
 export function publicStorageUrl(supabaseUrl: string, bucket: string, path: string): string {
   return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${path}`
 }
+
+// ---------------------------------------------------------------------------
+// Home page banners
+// ---------------------------------------------------------------------------
+export type BannerLinkKind = 'none' | 'product' | 'category' | 'url'
+
+export interface HomeBanner {
+  id: string
+  title: string
+  desktop_path: string
+  mobile_path: string | null
+  link_kind: BannerLinkKind
+  link_ref: string | null
+  sort_order: number
+  is_active: boolean
+  starts_at: string | null
+  ends_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const BANNERS_BUCKET = 'banners'
+export const MAX_ACTIVE_BANNERS = 5
+
+/** Recommended banner sizes (pixels). Keep text in the central safe area. */
+export const BANNER_SIZES = {
+  desktop: { width: 1920, height: 640, ratio: 3, label: 'لابتوب' },
+  mobile: { width: 1080, height: 1350, ratio: 0.8, label: 'جوال' },
+} as const
+
+/** Store link for a banner, or null when it does not link anywhere. */
+export function bannerHref(b: Pick<HomeBanner, 'link_kind' | 'link_ref'>): string | null {
+  if (!b.link_ref) return null
+  switch (b.link_kind) {
+    case 'category':
+      return `/products?cat=${encodeURIComponent(b.link_ref)}`
+    case 'product':
+      return `/products?product=${encodeURIComponent(b.link_ref)}`
+    case 'url':
+      return b.link_ref
+    default:
+      return null
+  }
+}

@@ -9,6 +9,7 @@ const NAV = STAFF_PAGES.flatMap((p): { to: string; page: StaffPage; label: strin
     ? [
         { to: '/catalog', page: p.key, label: 'المنتجات' },
         { to: '/catalog/categories', page: p.key, label: 'التصنيفات والشركات' },
+        { to: '/catalog/banners', page: p.key, label: 'بنرات الرئيسية' },
       ]
     : p.key === 'users_roles'
     ? [

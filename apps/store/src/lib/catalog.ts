@@ -1,4 +1,4 @@
-import { PRODUCT_IMAGES_BUCKET, publicStorageUrl, type Category, type Product, type ProductImage, type StoreSettings } from '@ghaith/shared'
+import { PRODUCT_IMAGES_BUCKET, publicStorageUrl, type Category, type HomeBanner, type Product, type ProductImage, type StoreSettings } from '@ghaith/shared'
 import { isSupabaseConfigured, supabase } from './supabase'
 
 export type ProductWithCategory = Product & {
@@ -63,3 +63,11 @@ export const formatSar = (n: number) =>
     minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
     maximumFractionDigits: 2,
   })} ر.س`
+
+/** Banners that are live now (RLS hides inactive and out-of-date ones). */
+export async function fetchBanners(): Promise<HomeBanner[]> {
+  assertConfigured()
+  const { data, error } = await supabase.from('home_banners').select('*').order('sort_order')
+  if (error) throw error
+  return (data ?? []) as HomeBanner[]
+}
