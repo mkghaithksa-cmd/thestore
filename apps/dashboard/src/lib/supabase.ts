@@ -16,4 +16,7 @@ if (!isSupabaseConfigured) {
 export const supabase = createClient(
   url || 'http://localhost:54321',
   anonKey || 'public-anon-key-missing',
+  // The store and the dashboard share one origin in production: keep the
+  // staff session apart from a customer session.
+  { auth: { storageKey: 'ghaith-staff-auth' } },
 )

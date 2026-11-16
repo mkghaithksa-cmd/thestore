@@ -85,3 +85,10 @@ export function generateStaffCode(): string {
   const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000
   return String(n).padStart(STAFF_CODE_LENGTH, '0')
 }
+
+/**
+ * The dashboard is published inside the store site under this hard-to-guess
+ * path. It is not a security measure on its own: access is protected by the
+ * staff code and by permission checks in the database.
+ */
+export const DASHBOARD_BASE_PATH = '/gh-ops-7k2/'
