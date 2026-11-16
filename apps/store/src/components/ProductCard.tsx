@@ -1,7 +1,8 @@
-import { PRODUCT_TYPE_LABELS, priceWithVat } from '@ghaith/shared'
+import { Link } from 'react-router-dom'
+import { PRODUCT_TYPE_LABELS, priceWithVat, productPath } from '@ghaith/shared'
 import { bundleComponentsTotal, formatSar, mainImageUrl, type ProductWithCategory } from '../lib/catalog'
 
-function PlaceholderArt({ type }: { type: ProductWithCategory['type'] }) {
+export function PlaceholderArt({ type }: { type: ProductWithCategory['type'] }) {
   // Water drop for devices/bundles, box for everything else.
   return type === 'device' || type === 'bundle' ? (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -21,7 +22,7 @@ export function ProductCard({ product, vatRate }: { product: ProductWithCategory
   const saving = separate !== null && separate > product.price_before_vat ? priceWithVat(separate - product.price_before_vat, vatRate) : 0
   const parts = product.type === 'bundle' ? product.components.filter((c) => c.product) : []
   return (
-    <article className="prod">
+    <Link to={productPath(product)} className="prod">
       <div className="prod-img">
         {img ? (
           <img src={img} alt={product.name_ar} loading="lazy" />
@@ -62,6 +63,6 @@ export function ProductCard({ product, vatRate }: { product: ProductWithCategory
         {formatSar(total)} <small>شامل الضريبة</small>
       </div>
       {saving > 0 && <span className="saving">وفّر {formatSar(saving)}</span>}
-    </article>
+    </Link>
   )
 }

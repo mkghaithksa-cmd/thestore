@@ -149,10 +149,15 @@ export function bannerHref(b: Pick<HomeBanner, 'link_kind' | 'link_ref'>): strin
     case 'category':
       return `/products?cat=${encodeURIComponent(b.link_ref)}`
     case 'product':
-      return `/products?product=${encodeURIComponent(b.link_ref)}`
+      return `/products/${encodeURIComponent(b.link_ref)}`
     case 'url':
       return b.link_ref
     default:
       return null
   }
+}
+
+/** Store path of a product page (by its SKU, lower-cased). */
+export function productPath(p: Pick<Product, 'sku'>): string {
+  return `/products/${encodeURIComponent(p.sku.toLowerCase())}`
 }

@@ -6,6 +6,7 @@ import { Account } from './pages/Account'
 import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 import { Orders } from './pages/Orders'
+import { ProductPage } from './pages/ProductPage'
 import { Products } from './pages/Products'
 import './App.css'
 
@@ -81,6 +82,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/products/:key" element={<ProductPage />} />
             <Route path="/login" element={<Login />} />
             <Route
               path="/account"

@@ -5,10 +5,20 @@ export type ProductWithCategory = Product & {
   category: Pick<Category, 'name_ar' | 'slug'> | null
   images: Pick<ProductImage, 'storage_path' | 'sort_order'>[]
   /** Bundle contents; a component is null when it is not published. */
-  components: { qty: number; product: Pick<Product, 'id' | 'name_ar' | 'price_before_vat'> | null }[]
+  components: { qty: number; product: Pick<Product, 'id' | 'name_ar' | 'price_before_vat' | 'sku'> | null }[]
+  manufacturer: { name: string } | null
+  compat: { device_model: string; stage_number: number | null; lifetime_months: number }[]
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? ''
+
+/** Public URLs of all the product's images, main image first. */
+export function imageUrls(p: ProductWithCategory): string[] {
+  const urls = [...(p.images ?? [])]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((i) => publicStorageUrl(SUPABASE_URL, PRODUCT_IMAGES_BUCKET, i.storage_path))
+  return urls.length ? urls : p.image_url ? [p.image_url] : []
+}
 
 /** URL of the product's main (first) image, if any. */
 export function mainImageUrl(p: ProductWithCategory): string | null {
@@ -28,7 +38,8 @@ export async function fetchProducts(): Promise<ProductWithCategory[]> {
   const { data, error } = await supabase
     .from('products')
     .select('*, category:categories(name_ar, slug), images:product_images(storage_path, sort_order), ' +
-        'components:bundle_items!bundle_items_bundle_product_id_fkey(qty, product:products!bundle_items_component_product_id_fkey(id, name_ar, price_before_vat))')
+        'components:bundle_items!bundle_items_bundle_product_id_fkey(qty, product:products!bundle_items_component_product_id_fkey(id, sku, name_ar, price_before_vat)), ' +
+        'manufacturer:manufacturers(name), compat:filter_compatibility(device_model, stage_number, lifetime_months)')
     .eq('status', 'published')
     .order('created_at', { ascending: true })
   if (error) throw error
