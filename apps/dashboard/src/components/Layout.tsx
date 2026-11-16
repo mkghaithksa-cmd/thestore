@@ -1,3 +1,4 @@
+import { BrandMark } from './BrandMark'
 import { useState } from 'react'
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { STAFF_PAGES, formatSaudiPhoneLocal, type StaffPage } from '@ghaith/shared'
@@ -32,12 +33,7 @@ export function Layout() {
   return (
     <div className="shell">
       <aside className={`side${open ? ' open' : ''}`} aria-label="القائمة">
-        <div className="brand">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" />
-          </svg>
-          لوحة غيث
-        </div>
+        <BrandMark />
         <nav className="side-nav" onClick={() => setOpen(false)}>
           {NAV.filter((n) => can(n.page, 'view')).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/' || n.to === '/catalog'} className="nv">

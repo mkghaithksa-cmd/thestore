@@ -31,6 +31,7 @@ export function ProductCard({ product, vatRate }: { product: ProductWithCategory
         )}
       </div>
       <div className="tags">
+        {product.is_featured && <span className="tag gold">مميز</span>}
         {product.type === 'bundle' ? (
           <span className="tag bundle">باقة</span>
         ) : (

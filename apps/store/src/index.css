@@ -1,27 +1,34 @@
-/* Color tokens copied from docs/prototype/customer-site.html */
+/* Ghaith brand identity (docs/brand/ghaith-identity-draft.pdf): royal blue #0B5CAD,
+   navy #0A2A4F, sky #4DC3F0, gold #C9A24B, light #F5F8FB. Layout follows docs/prototype/customer-site.html */
 :root{
-  --primary-50:#f0f9ff;--primary-100:#e0f2fe;--primary-500:#38bdf8;--primary-600:#0ea5e9;--primary-700:#0369a1;
-  --n50:#f8fafc;--n100:#f1f5f9;--n200:#e2e8f0;--n300:#cbd5e1;--n400:#94a3b8;--n500:#566377;--n700:#334155;--n900:#0f172a;
+  --primary-50:#eef5fc;--primary-100:#d9e8f7;--primary-500:#4dc3f0;--primary-600:#1e7bc8;--primary-700:#0b5cad;
+  --navy:#0a2a4f;--sky:#4dc3f0;--gold:#c9a24b;--gold-50:#faf4e4;--gold-700:#8a6a1f;
+  --n50:#f5f8fb;--n100:#eef2f7;--n200:#dde5ee;--n300:#c3cfdc;--n400:#8fa0b4;--n500:#526479;--n700:#2c4361;--n900:#0a2a4f;
   --surface:#ffffff;
   --ok-50:#f0fdf4;--ok-500:#22c55e;--ok-700:#15803d;
   --warn-50:#fffbeb;--warn-500:#f59e0b;--warn-700:#b45309;
   --bad-50:#fef2f2;--bad-500:#ef4444;--bad-700:#b91c1c;
-  --btn-text:#ffffff;--hero-a:#0369a1;--hero-b:#0ea5e9;
-  --font:"IBM Plex Sans Arabic","Tajawal",system-ui,sans-serif;
+  --btn-text:#ffffff;--hero-a:#0a2a4f;--hero-b:#0b5cad;
+  --font:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font-head:"IBM Plex Sans Arabic","Tajawal",system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
-  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
-  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
-  --btn-text:#06202f;--hero-a:#0c4a6e;--hero-b:#0369a1;color-scheme:dark}}
+  --primary-50:#0e3157;--primary-100:#134070;--primary-500:#4dc3f0;--primary-700:#4dc3f0;--primary-600:#7ad3f4;
+  --navy:#041628;--gold:#d9b45e;--gold-50:#2e2611;--gold-700:#e6c77d;
+  --n50:#061a31;--n100:#12325a;--n200:#1c406b;--n300:#2a527f;--n400:#7f95ae;--n500:#9fb2c8;--n700:#c9d6e4;--n900:#eef4fa;
+  --surface:#0c2747;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --btn-text:#06203d;--hero-a:#0a2a4f;--hero-b:#0b5cad;color-scheme:dark}}
 :root[data-theme="dark"]{
-  --primary-50:#0b2a3d;--primary-100:#0c3a55;--primary-700:#7dd3fc;--primary-600:#38bdf8;
-  --n50:#0b1220;--n100:#1e293b;--n200:#334155;--n300:#475569;--n400:#94a3b8;--n500:#a3b1c4;--n700:#cbd5e1;--n900:#f1f5f9;
-  --surface:#131c2e;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
-  --btn-text:#06202f;--hero-a:#0c4a6e;--hero-b:#0369a1;color-scheme:dark}
+  --primary-50:#0e3157;--primary-100:#134070;--primary-500:#4dc3f0;--primary-700:#4dc3f0;--primary-600:#7ad3f4;
+  --navy:#041628;--gold:#d9b45e;--gold-50:#2e2611;--gold-700:#e6c77d;
+  --n50:#061a31;--n100:#12325a;--n200:#1c406b;--n300:#2a527f;--n400:#7f95ae;--n500:#9fb2c8;--n700:#c9d6e4;--n900:#eef4fa;
+  --surface:#0c2747;--ok-50:#0e2a1a;--ok-700:#4ade80;--warn-50:#2e2208;--warn-700:#fbbf24;--bad-50:#321416;--bad-700:#f87171;
+  --btn-text:#06203d;--hero-a:#0a2a4f;--hero-b:#0b5cad;color-scheme:dark}
 
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--n50);color:var(--n900);font-family:var(--font);line-height:1.7;min-height:100vh}
+body{background:var(--n50);color:var(--n900);font-family:var(--font);line-height:1.7;font-size:16px;min-height:100vh}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--primary-600);outline-offset:2px}
+
+h1,h2,h3,h4,.page-h,.h2,.h3,.logo,.brand,.btn{font-family:var(--font-head)}

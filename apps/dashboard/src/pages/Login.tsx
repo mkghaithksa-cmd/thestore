@@ -1,3 +1,4 @@
+import { BrandMark } from '../components/BrandMark'
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { STAFF_CODE_LENGTH, normalizeSaudiPhone, staffErrorMessage, toAsciiDigits } from '@ghaith/shared'
@@ -47,12 +48,7 @@ export function Login() {
   return (
     <div className="login-page">
       <form className="card login-card" onSubmit={onSubmit} noValidate>
-        <div className="brand">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" />
-          </svg>
-          لوحة غيث
-        </div>
+        <BrandMark />
         <h1 className="h2">دخول الموظفين</h1>
         <p className="muted">بجوالك والرمز المكوّن من {STAFF_CODE_LENGTH} أرقام الذي أعطاك إياه المدير.</p>
 

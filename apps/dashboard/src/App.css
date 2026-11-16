@@ -4,8 +4,12 @@ body{font-size:14px;line-height:1.65}
 
 .shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
 .side{background:var(--surface);border-inline-end:1px solid var(--n200);padding:16px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto}
-.brand{display:flex;gap:8px;align-items:center;font-weight:700;font-size:20px;color:var(--primary-700);padding:4px 10px 14px}
-.brand svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7}
+.brand{display:flex;gap:10px;align-items:center;font-weight:600;font-size:14px;color:var(--n500);padding:4px 10px 14px}
+.brand img{height:40px;width:auto;display:block}
+.logo-white{display:none !important}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .logo-color{display:none !important}:root:not([data-theme="light"]) .logo-white{display:block !important}}
+:root[data-theme="dark"] .logo-color{display:none !important}
+:root[data-theme="dark"] .logo-white{display:block !important}
 .side-nav{display:flex;flex-direction:column;gap:2px}
 .nv{display:block;padding:10px 12px;border-radius:8px;color:var(--n700);font-weight:500;text-decoration:none}
 .nv:hover{background:var(--n100)}

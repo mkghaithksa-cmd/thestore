@@ -34,15 +34,18 @@ fs.cpSync(dashDist, target, { recursive: true })
 // Cloudflare Pages: deep links inside the dashboard load its own index.html.
 // - Rewrite to the folder, not to ".../index.html" (Pages ignores that).
 // - A splat rule would also catch real files, so the dashboard's files are
-//   passed through first (top-level files, then the assets folder).
+//   passed through first (top-level files, then each sub-folder).
 // - Without a top-level 404.html, every other path falls back to the store.
-const topFiles = fs
-  .readdirSync(target, { withFileTypes: true })
+const entries = fs.readdirSync(target, { withFileTypes: true })
+const topFiles = entries
   .filter((e) => e.isFile() && e.name !== 'index.html')
   .map((e) => `/${BASE}/${e.name} /${BASE}/${e.name} 200`)
+const folders = entries
+  .filter((e) => e.isDirectory())
+  .map((e) => `/${BASE}/${e.name}/* /${BASE}/${e.name}/:splat 200`)
 fs.writeFileSync(
   path.join(storeDist, '_redirects'),
-  [...topFiles, `/${BASE}/assets/* /${BASE}/assets/:splat 200`, `/${BASE}/* /${BASE}/ 200`, ''].join('\n'),
+  [...topFiles, ...folders, `/${BASE}/* /${BASE}/ 200`, ''].join('\n'),
 )
 
 // Not indexed, never framed, no referrer leaking the path. These files are

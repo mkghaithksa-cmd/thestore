@@ -1,5 +1,5 @@
 import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom'
-import { formatSaudiPhoneLocal } from '@ghaith/shared'
+import { BUSINESS, formatSaudiPhoneLocal, telHref } from '@ghaith/shared'
 import { RequireAuth } from './components/RequireAuth'
 import { AuthProvider, useAuth } from './lib/auth'
 import { CartProvider, useCart } from './lib/cart'
@@ -53,15 +53,77 @@ function CartButton() {
   )
 }
 
+/** Coloured logo on light backgrounds, white logo on dark (brand guide). */
+function Logo({ onDark = false }: { onDark?: boolean }) {
+  return (
+    <span className={`logo-img${onDark ? ' on-dark' : ''}`}>
+      <img src="/brand/logo-color.png" className="logo-color" alt={BUSINESS.shortName} width="400" height="222" />
+      <img src="/brand/logo-white.png" className="logo-white" alt="" aria-hidden="true" width="400" height="217" />
+    </span>
+  )
+}
+
+function TopBar() {
+  return (
+    <div className="topbar">
+      <div className="wrap">
+        <span>{BUSINESS.city}</span>
+        <span className="topbar-phones">
+          {BUSINESS.phones.map((p) => (
+            <a key={p} href={telHref(p)} dir="ltr">
+              {p}
+            </a>
+          ))}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function Footer() {
+  return (
+    <footer className="ftr">
+      <div className="wrap ftr-grid">
+        <div className="ftr-about">
+          <Logo onDark />
+          <p>{BUSINESS.tagline}</p>
+        </div>
+        <nav aria-label="روابط المتجر">
+          <h2>المتجر</h2>
+          <Link to="/products">المنتجات</Link>
+          <Link to="/cart">السلة</Link>
+          <Link to="/orders">طلباتي</Link>
+          <Link to="/account">حسابي</Link>
+        </nav>
+        <div>
+          <h2>تواصل معنا</h2>
+          {BUSINESS.phones.map((p) => (
+            <a key={p} href={telHref(p)} dir="ltr" className="ftr-ltr">
+              {p}
+            </a>
+          ))}
+          <a href={`mailto:${BUSINESS.email}`} dir="ltr" className="ftr-ltr">
+            {BUSINESS.email}
+          </a>
+          <span>{BUSINESS.address}</span>
+        </div>
+      </div>
+      <div className="wrap ftr-legal">
+        <span>
+          © {new Date().getFullYear()} {BUSINESS.legalName}
+        </span>
+        <span>السجل التجاري: {BUSINESS.commercialRegister}</span>
+      </div>
+    </footer>
+  )
+}
+
 function Header() {
   return (
     <header className="hdr">
       <div className="wrap">
-        <Link to="/" className="logo">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" />
-          </svg>
-          غيث
+        <Link to="/" className="logo" aria-label={`${BUSINESS.shortName} — الرئيسية`}>
+          <Logo />
         </Link>
         <nav className="nav">
           <NavLink to="/" end>
@@ -95,6 +157,7 @@ export default function App() {
     <AuthProvider>
       <CartProvider>
       <BrowserRouter>
+        <TopBar />
         <Header />
         <main className="wrap">
           <Routes>
@@ -122,6 +185,7 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
+        <Footer />
       </BrowserRouter>
       </CartProvider>
     </AuthProvider>

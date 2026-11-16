@@ -22,16 +22,14 @@ export function Home() {
       {banners && banners.length === 0 && (
       <section className="hero">
         <div>
-          <h1>ماء نقي لبيتك</h1>
-          <p>أجهزة تنقية وفلاتر أصلية، مع التركيب والصيانة داخل مكة والشحن لباقي المدن.</p>
+          <h1>ماء نقي لبيتك ومطعمك</h1>
+          <p>أجهزة تحلية وفلاتر أصلية للبيوت والمطاعم، مع التركيب والصيانة داخل مكة والشحن لباقي المدن. ماء صافٍ كل يوم، وقوارير بلاستيك أقل.</p>
           <Link to="/products" className="btn hero-btn">
             تصفح المنتجات
           </Link>
         </div>
         <div className="art" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" />
-          </svg>
+          <img src="/brand/logo-white.png" alt="" width="400" height="217" />
         </div>
       </section>
       )}
