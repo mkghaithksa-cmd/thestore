@@ -426,3 +426,9 @@ verify_jwt = false
 
 [functions.admin-users]
 verify_jwt = false
+
+[functions.moyasar-verify]
+verify_jwt = false
+
+[functions.moyasar-webhook]
+verify_jwt = false

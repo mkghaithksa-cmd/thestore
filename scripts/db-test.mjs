@@ -543,5 +543,40 @@ await asAdmin()
 ok((await count(`select 1 from audit_log where entity = 'stock_movements'`)) >= 4, 'stock movements are audited')
 
 
+// --- Online payment (Moyasar) ------------------------------------------------------
+console.log('Online payment')
+await as('authenticated', B)
+const o7 = await place({ items: [{ product_id: FLT, qty: 1 }] })
+const req7 = (await rows(`select amount_halalas from payment_requests where order_id = '${o7.id}'`))[0].amount_halalas
+const confirm = (id, amount, cur = 'SAR') => `select public.payment_confirm('${o7.id}', '${id}', ${amount}, '${cur}', 'mada') as r`
+ok(await denied(confirm('pay_test_00001', req7)), 'a customer cannot confirm a payment')
+await asAdmin()
+ok(await denied(confirm('pay_test_00001', req7)), 'staff cannot confirm an online payment either')
+await as('service_role')
+ok((await errorOf(confirm('pay_test_00001', req7 - 1)))?.includes('amount_mismatch'), 'a payment for a different amount is refused')
+ok((await errorOf(confirm('pay_test_00001', req7, 'USD')))?.includes('amount_mismatch'), 'a payment in another currency is refused')
+ok((await rows(confirm('pay_test_00001', req7)))[0].r === 'paid', 'the verified payment marks the order paid')
+ok((await rows(confirm('pay_test_00001', req7)))[0].r === 'already_recorded', 'the same payment twice is recorded once')
+const r7 = await st(o7.id)
+ok(r7.status === 'paid' && (await count(`select 1 from payments where order_id = '${o7.id}'`)) === 1, 'one payment row, order paid')
+await as('authenticated', B)
+const o8 = await place({ items: [{ product_id: FLT, qty: 1 }] })
+const req8 = (await rows(`select amount_halalas from payment_requests where order_id = '${o8.id}'`))[0].amount_halalas
+await as('owner')
+await db.exec(`update orders set expires_at = now() - interval '1 minute' where id = '${o8.id}'`)
+await rows('select public.expire_unpaid_orders()')
+await as('service_role')
+await rows(`select public.payment_confirm('${o8.id}', 'pay_test_00008', ${req8}, 'SAR', 'visa')`)
+ok((await st(o8.id)).status === 'paid', 'paid just after the 24 hours: the order goes ahead')
+await as('authenticated', B)
+const o9 = await place({ items: [{ product_id: FLT, qty: 1 }] })
+const req9 = (await rows(`select amount_halalas from payment_requests where order_id = '${o9.id}'`))[0].amount_halalas
+await rows(`select public.order_cancel_mine('${o9.id}')`)
+await as('service_role')
+ok((await rows(`select public.payment_confirm('${o9.id}', 'pay_test_00009', ${req9}, 'SAR', 'mada') as r`))[0].r === 'refund_due',
+  'paid after the customer cancelled: the money is marked for refund')
+ok((await st(o9.id)).status === 'cancelled' && (await st(o9.id)).refund_status === 'due', 'the cancelled order stays cancelled')
+
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

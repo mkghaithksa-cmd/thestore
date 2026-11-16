@@ -102,6 +102,7 @@ export function OrderPage() {
   const { id = '' } = useParams()
   const [params] = useSearchParams()
   const isNew = params.get('new') === '1'
+  const justPaid = params.get('paid') === '1'
   const { state, reload } = useAsync(() => loadOrder(id), [id])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -154,10 +155,24 @@ export function OrderPage() {
       {isNew && status === 'pending_payment' && (
         <div className="notice ok" role="status">
           <b>تم استلام طلبك رقم {o.order_number}.</b>
-          <span>
-            طلبك محجوز لك وبانتظار الدفع لين {formatDate(o.expires_at, true)}. الدفع الإلكتروني (مدى والبطاقات) يتفعّل قريباً، وبنتواصل معك على جوالك
-            لتأكيد الطلب.
-          </span>
+          <span>طلبك محجوز لك لين {formatDate(o.expires_at, true)}. ادفع الحين عشان نبدأ تجهيزه.</span>
+        </div>
+      )}
+      {justPaid && o.paid_at && (
+        <div className="notice ok" role="status">
+          <b>تم الدفع ✓ شكراً لك.</b>
+          <span>بنبدأ تجهيز طلبك، وتقدر تتابعه من هنا.</span>
+        </div>
+      )}
+      {status === 'pending_payment' && (
+        <div className="card stack-sm">
+          <div className="row between wrapr">
+            <b>المبلغ المطلوب: {formatSar(Number(o.total))}</b>
+            <Link to={`/orders/${o.id}/pay`} className="btn">
+              ادفع الآن
+            </Link>
+          </div>
+          <span className="muted">مدى، فيزا، ماستركارد. الطلب ينلغي إذا ما اندفع قبل {formatDate(o.expires_at, true)}.</span>
         </div>
       )}
 

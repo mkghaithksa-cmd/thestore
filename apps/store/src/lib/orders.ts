@@ -169,3 +169,28 @@ export async function fetchMyDevices(): Promise<MyDevice[]> {
   if (error) throw error
   return (data ?? []) as unknown as MyDevice[]
 }
+
+export interface PaymentRequest {
+  id: string
+  amount_halalas: number
+  status: 'initiated' | 'paid' | 'failed' | 'expired'
+}
+
+export async function fetchPaymentRequest(orderId: string): Promise<PaymentRequest | null> {
+  const { data, error } = await supabase
+    .from('payment_requests')
+    .select('id, amount_halalas, status')
+    .eq('order_id', orderId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data as PaymentRequest | null
+}
+
+/** Asks the server to check a Moyasar payment with Moyasar and record it. */
+export async function verifyPayment(orderId: string, paymentId: string): Promise<{ status: string; message?: string | null; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('moyasar-verify', { body: { order_id: orderId, payment_id: paymentId } })
+  if (error) return { status: 'pending', error: 'network' }
+  return data as { status: string; message?: string | null; error?: string }
+}

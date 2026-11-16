@@ -403,3 +403,5 @@ a.announce-in:hover{filter:brightness(.98)}
   body{background:#fff}
   .invoice .card{border:0;padding:0}
 }
+.pay-box{padding:20px}
+.pay-box .mysr-form{max-width:420px;margin-inline:auto}

@@ -12,6 +12,7 @@ import { InfoPage } from './pages/InfoPage'
 import { Login } from './pages/Login'
 import { OrderPage, Orders } from './pages/Orders'
 import { Invoice } from './pages/Invoice'
+import { PaidPage, PayPage } from './pages/Pay'
 import { Devices } from './pages/Devices'
 import { Checkout } from './pages/Checkout'
 import { ProductPage } from './pages/ProductPage'
@@ -196,6 +197,22 @@ export default function App() {
               element={
                 <RequireAuth>
                   <OrderPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/orders/:id/pay"
+              element={
+                <RequireAuth>
+                  <PayPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/orders/:id/paid"
+              element={
+                <RequireAuth>
+                  <PaidPage />
                 </RequireAuth>
               }
             />
