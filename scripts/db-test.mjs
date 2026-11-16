@@ -336,10 +336,10 @@ const FRIDAY = await dayIso(`select to_char(d, 'YYYY-MM-DD') d from generate_ser
   where extract(dow from d) = 5 limit 1`)
 const MECCA = { lat: 21.4225, lng: 39.8262 }, JEDDAH = { lat: 21.5433, lng: 39.1728 }
 const q = (v) => (v === null || v === undefined ? 'null' : typeof v === 'string' ? `'${v.replace(/'/g, "''")}'` : String(v))
-const order = ({ items, fulfillment = 'delivery', at = MECCA, hood = HOOD, name = 'عميل تجربة', date = null, privacy = true, city = null }) =>
+const order = ({ items, fulfillment = 'delivery', at = MECCA, hood = HOOD, hoodName = null, name = 'عميل تجربة', date = null, privacy = true, city = null }) =>
   `select public.create_order(items => '${JSON.stringify(items)}'::jsonb, fulfillment => ${q(fulfillment)},
      lat => ${at.lat}, lng => ${at.lng}, neighborhood_id => ${hood ? `'${hood}'::uuid` : 'null'}, street => 'شارع 1', contact_name => ${q(name)},
-     preferred_visit_date => ${date ? `'${date}'::date` : 'null'}, privacy_accepted => ${privacy}, city => ${q(city)}) as r`
+     preferred_visit_date => ${date ? `'${date}'::date` : 'null'}, privacy_accepted => ${privacy}, city => ${q(city)}, neighborhood_name => ${q(hoodName)}) as r`
 const place = async (args) => (await rows(order(args)))[0].r
 
 await as('anon')
@@ -364,6 +364,17 @@ ok(o1b.order_number === 'GH-10235', 'the next order reuses the saved name and ge
 ok((await rows(`select count(distinct address_id) n from orders where id in ('${o1.id}', '${o1b.id}')`))[0].n == 1, 'same pin, same saved address')
 ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], fulfillment: 'shipping' })))?.includes('invalid_fulfillment'), 'inside Mecca the order is delivered, not shipped')
 ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], hood: null })))?.includes('neighborhood_required'), 'inside Mecca the neighbourhood is required')
+const oMap = await place({ items: [{ product_id: FLT, qty: 1 }], hood: null, hoodName: '  حي   السنابل ' })
+const rMap = (await rows(`select neighborhood_id, neighborhood_name from orders where id = '${oMap.id}'`))[0]
+ok(rMap.neighborhood_id === null && rMap.neighborhood_name === 'حي السنابل', 'a neighbourhood from the map that is not on the list is accepted as typed')
+const AZIZ = (await rows(`select id from service_neighborhoods where name_ar = 'العزيزية'`))[0].id
+const oLink = await place({ items: [{ product_id: FLT, qty: 1 }], hood: null, hoodName: 'حي عزيزيه' })
+const rLink = (await rows(`select neighborhood_id, neighborhood_name from orders where id = '${oLink.id}'`))[0]
+ok(rLink.neighborhood_id === AZIZ && rLink.neighborhood_name === 'العزيزية', 'a map name matching the list is linked to it (حي عزيزيه = العزيزية)')
+ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], hood: null, hoodName: 'x'.repeat(81) })))?.includes('invalid_neighborhood'), 'neighbourhood names are at most 80 letters')
+await as('owner')
+await db.exec(`update orders set status = 'cancelled' where id in ('${oMap.id}', '${oLink.id}')`)
+await as('authenticated', A)
 ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }], fulfillment: 'delivery_install', date: WORKDAY })))?.includes('nothing_to_install'),
   'installation needs an installable device')
 ok((await errorOf(order({ items: [{ product_id: GH500, qty: 1 }], fulfillment: 'delivery_install' })))?.includes('visit_date_required'), 'installation needs a preferred day')
@@ -388,7 +399,7 @@ ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }] })))?.includes('t
 await as('authenticated', B)
 ok((await count('select 1 from orders')) === 0 && (await count('select 1 from order_items')) === 0, "another customer cannot see A's orders")
 await as('authenticated', ADMIN, String(now() + 10))
-ok((await count('select 1 from orders')) === 5, 'staff with the orders page see all orders')
+ok((await count('select 1 from orders')) === 7, 'staff with the orders page see all orders')
 ok((await errorOf(order({ items: [{ product_id: FLT, qty: 1 }] })))?.includes('not_a_customer'), 'staff accounts cannot place orders')
 ok(await denied(`insert into payments (order_id, provider_payment_id, amount_halalas, status) values ('${o1.id}', 'x', 1, 'paid')`),
   'nobody can record a payment through the API')

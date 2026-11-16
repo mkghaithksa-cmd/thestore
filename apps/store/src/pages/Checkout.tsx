@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { orderErrorMessage, type Fulfillment } from '@ghaith/shared'
 import { CatalogStatus } from '../components/CatalogStatus'
 import { useCart } from '../lib/cart'
 import { formatSar } from '../lib/catalog'
 import { fetchMyCustomer } from '../lib/customer'
+import { addressFromPin } from '../lib/geocode'
 import { availableHere, useLocationChoice } from '../lib/location'
-import { fetchNeighborhoods, fetchWorkDays, placeOrder, visitDays } from '../lib/orders'
+import { fetchNeighborhoods, fetchWorkDays, hoodKey, placeOrder, visitDays } from '../lib/orders'
 import { usePageMeta } from '../lib/seo'
 import { useAsync } from '../lib/useAsync'
 import { useCatalog } from '../lib/useCatalog'
@@ -37,11 +38,46 @@ export function Checkout() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (extra.state.status === 'success') setName((n) => n || extra.state.data.customer?.full_name || '')
+    if (extra.state.status !== 'success') return
+    const saved = extra.state.data.customer?.full_name ?? ''
+    setName((n) => n || saved)
   }, [extra.state])
   useEffect(() => {
     if (location?.zone === 'outside') setCity((c) => c || (location.city !== 'مدينة أخرى' ? location.city : ''))
   }, [location])
+
+  // Fill the neighbourhood, street and city from the pin. A field the customer
+  // typed in is left alone; one we filled before is updated when the pin moves.
+  const auto = useRef({ hood: '', street: '', city: '' })
+  const [lookup, setLookup] = useState<'idle' | 'busy' | 'done' | 'none'>('idle')
+  const pinLat = location?.lat
+  const pinLng = location?.lng
+  const pinZone = location?.zone
+  useEffect(() => {
+    if (pinLat === undefined || pinLng === undefined) return
+    let live = true
+    setLookup('busy')
+    addressFromPin(pinLat, pinLng).then((a) => {
+      if (!live) return
+      if (!a || (!a.neighborhood && !a.street)) return setLookup('none')
+      const was = auto.current
+      const outside = pinZone === 'outside'
+      const next = {
+        hood: outside ? '' : (a.neighborhood ?? ''),
+        street: outside ? [a.neighborhood, a.street].filter(Boolean).join('، ') : (a.street ?? ''),
+        city: outside ? (a.city ?? '') : '',
+      }
+      const take = (cur: string, old: string, nu: string) => (!cur.trim() || cur === old ? nu || cur : cur)
+      setHood((v) => take(v, was.hood, next.hood))
+      setStreet((v) => take(v, was.street, next.street))
+      if (outside && next.city) setCity((v) => take(v, was.city, next.city))
+      auto.current = next
+      setLookup('done')
+    })
+    return () => {
+      live = false
+    }
+  }, [pinLat, pinLng, pinZone])
 
   const days = useMemo(() => (extra.state.status === 'success' ? visitDays(extra.state.data.days) : []), [extra.state])
 
@@ -118,7 +154,7 @@ export function Checkout() {
     e.preventDefault()
     setError(null)
     if (name.trim().length < 2) return setError('اكتب اسمك الكامل.')
-    if (inMecca && !hood) return setError('اختر الحي.')
+    if (inMecca && hood.trim().length < 2) return setError('اكتب اسم الحي.')
     if (!inMecca && city.trim().length < 2) return setError('اكتب اسم مدينتك.')
     if (!inMecca && street.trim().length < 5) return setError('اكتب عنوان الشحن (الحي والشارع).')
     if (needsVisit && !visit) return setError('اختر اليوم المناسب للزيارة.')
@@ -132,7 +168,8 @@ export function Checkout() {
         lat: location!.lat,
         lng: location!.lng,
         city: inMecca ? null : city.trim(),
-        neighborhood_id: inMecca ? hood : null,
+        neighborhood_id: inMecca ? (hoods.find((h) => hoodKey(h.name_ar) === hoodKey(hood))?.id ?? null) : null,
+        neighborhood_name: inMecca ? hood.trim() : null,
         street: street.trim() || null,
         address_notes: notes.trim() || null,
         contact_name: name.trim(),
@@ -186,14 +223,21 @@ export function Checkout() {
             {inMecca ? (
               <div className="field">
                 <label htmlFor="co-hood">الحي</label>
-                <select id="co-hood" className="input" value={hood} onChange={(e) => setHood(e.target.value)}>
-                  <option value="">اختر الحي</option>
+                <input
+                  id="co-hood"
+                  className="input"
+                  list="co-hoods"
+                  autoComplete="address-level3"
+                  value={hood}
+                  onChange={(e) => setHood(e.target.value)}
+                  maxLength={80}
+                  placeholder={lookup === 'busy' ? 'نقرأ الحي من الخريطة…' : 'اسم الحي'}
+                />
+                <datalist id="co-hoods">
                   {hoods.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name_ar}
-                    </option>
+                    <option key={h.id} value={h.name_ar} />
                   ))}
-                </select>
+                </datalist>
               </div>
             ) : (
               <div className="field">
@@ -213,6 +257,8 @@ export function Checkout() {
               </label>
               <input id="co-notes" className="input" placeholder="مثال: عمارة بيضاء، الدور الثاني" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
             </div>
+            {lookup === 'done' && <p className="muted">عبّينا العنوان من مكان الدبوس، عدّله إذا فيه شي غلط.</p>}
+            {lookup === 'none' && <p className="muted">ما قدرنا نقرأ العنوان من الخريطة، اكتبه بنفسك.</p>}
             <p className="muted">نتواصل معك على جوالك {customer.phone.replace('+966', '0')} لتأكيد الطلب.</p>
           </section>
 

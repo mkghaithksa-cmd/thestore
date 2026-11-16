@@ -24,6 +24,20 @@ export async function fetchWorkDays(): Promise<WorkDay[]> {
   return data ?? []
 }
 
+/** Same rule as the database's hood_key(): "حي الزاهر" = "الزاهر" = "زاهر". */
+export function hoodKey(name: string): string {
+  return name
+    .replace(/s+/g, ' ')
+    .trim()
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/ـ/g, '')
+    .replace(/^حي /, '')
+    .replace(/(^| )ال/g, '$1')
+    .trim()
+}
+
 export interface VisitDay {
   /** YYYY-MM-DD */
   date: string
@@ -54,6 +68,7 @@ export interface PlaceOrderInput {
   lng: number
   city: string | null
   neighborhood_id: string | null
+  neighborhood_name: string | null
   street: string | null
   address_notes: string | null
   contact_name: string | null
