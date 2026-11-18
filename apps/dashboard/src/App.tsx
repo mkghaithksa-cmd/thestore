@@ -6,6 +6,8 @@ import { HomeBuilder } from './pages/HomeBuilder'
 import { Reviews } from './pages/Reviews'
 import { Orders } from './pages/Orders'
 import { Inventory } from './pages/Inventory'
+import { Appointments } from './pages/Appointments'
+import { Customers } from './pages/Customers'
 import { Categories } from './pages/Categories'
 import { Login } from './pages/Login'
 import { ProductForm } from './pages/ProductForm'
@@ -37,6 +39,8 @@ export default function App() {
             <Route path="/catalog/:id" element={<ProductForm key="edit" />} />
             <Route path="/p/orders" element={<Orders />} />
             <Route path="/p/inventory" element={<Inventory />} />
+            <Route path="/p/appointments" element={<Appointments />} />
+            <Route path="/p/customers" element={<Customers />} />
             <Route path="/p/:page" element={<ComingSoon />} />
             <Route path="*" element={<div className="notice">الصفحة غير موجودة.</div>} />
           </Route>

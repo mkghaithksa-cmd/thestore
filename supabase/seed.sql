@@ -75,3 +75,6 @@ from (values ('BND-500', 'DEV-GH500', 1), ('BND-500', 'FLT-SET5', 1)) as v(bundl
 join public.products b on b.sku = v.bundle
 join public.products c on c.sku = v.component
 on conflict do nothing;
+
+-- Day 8: default filter life (months) for the sample filters.
+update public.products set filter_life_months = 6 where type = 'filter' and filter_life_months is null;

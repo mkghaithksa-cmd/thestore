@@ -405,3 +405,16 @@ a.announce-in:hover{filter:brightness(.98)}
 }
 .pay-box{padding:20px}
 .pay-box .mysr-form{max-width:420px;margin-inline:auto}
+
+/* Day 8: devices, filters and service requests */
+.fbars{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
+.fbar{display:flex;flex-direction:column;gap:4px}
+.fbar-track{height:8px;border-radius:99px;background:var(--n100);overflow:hidden}
+.fbar-track span{display:block;height:100%;border-radius:inherit;background:var(--ok-500)}
+.fbar-track.warn span{background:var(--warn-500,#d99a00)}
+.fbar-track.bad span{background:var(--bad-500)}
+.fbar-due.warn{color:var(--warn-700);font-weight:600}
+.fbar-due.bad{color:var(--bad-700);font-weight:600}
+.co-options.one{grid-template-columns:1fr}
+textarea.input{height:auto;padding-block:10px;resize:vertical;font:inherit}
+select.input{background:var(--surface)}

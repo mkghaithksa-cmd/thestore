@@ -578,5 +578,193 @@ ok((await rows(`select public.payment_confirm('${o9.id}', 'pay_test_00009', ${re
 ok((await st(o9.id)).status === 'cancelled' && (await st(o9.id)).refund_status === 'due', 'the cancelled order stays cancelled')
 
 
+// --- Day 8: maintenance and appointments ------------------------------------------
+console.log('Maintenance and appointments')
+const CS = '00000000-0000-0000-0000-0000000000c4'
+const GH300 = await skuId('DEV-GH300')
+await as('owner')
+await db.exec(`
+  insert into auth.users (id) values ('${CS}');
+  insert into public.staff_profiles (user_id, full_name, phone, role_id)
+    select '${CS}', 'خدمة عملاء', '+966544444444', id from public.roles where name = 'خدمة عملاء';
+`)
+const asCs = () => as('authenticated', CS, String(now() + 10))
+const TODAY = `((now() at time zone 'Asia/Riyadh')::date)`
+const workDay = (await rows(`select d::date::text as d from generate_series(${TODAY} + 1, ${TODAY} + 14, interval '1 day') d
+  where extract(dow from d) in (select day_of_week from work_days where is_working) order by d limit 1`))[0].d
+const offDay = (await rows(`select d::date::text as d from generate_series(${TODAY} + 1, ${TODAY} + 14, interval '1 day') d
+  where extract(dow from d) in (select day_of_week from work_days where not is_working) order by d limit 1`))[0].d
+const todayStr = (await rows(`select ${TODAY}::text as d`))[0].d
+
+ok((await rows(`select filter_life_months from products where sku = 'FLT-CAR'`))[0].filter_life_months === 6, 'filter products get a default life of 6 months')
+const ordered = await rows(`select d.id, count(f.*)::int as n from customer_devices d left join device_filters f on f.device_id = d.id
+  where d.model = 'GH-500' group by d.id`)
+ok(ordered.length > 0 && ordered.every((d) => d.n === 2), 'devices bought online get their filters (GH-500 → 2 filters)')
+
+// Staff add an old device by phone.
+await as('authenticated', A)
+ok((await errorOf(`select public.device_add_staff('0500000001', '${GH500}')`))?.includes('not_allowed'), 'a customer cannot add devices from the staff side')
+await asCs()
+ok((await errorOf(`select public.device_add_staff('12345', '${GH500}')`))?.includes('invalid_phone'), 'a wrong phone number is refused')
+ok((await errorOf(`select public.device_add_staff('0500000001', '${FLT}')`))?.includes('product_not_found'), 'only devices can be added as devices')
+const old = (await rows(`select public.device_add_staff('0500000001', '${GH500}', ${TODAY} - 200) as id`))[0].id
+const dOld = (await rows(`select customer_id, owner_phone, date_uncertain, warranty_until from customer_devices where id = '${old}'`))[0]
+ok(dOld.customer_id === A && dOld.owner_phone === null && dOld.date_uncertain === false, 'a device added by phone joins the existing customer')
+const unsure = (await rows(`select public.device_add_staff('+966 50 000 0001', '${GH300}') as id`))[0].id
+ok((await rows(`select date_uncertain, warranty_until from customer_devices where id = '${unsure}'`))[0].date_uncertain === true,
+  'no install date → «تاريخ غير مؤكد»')
+const ghost = (await rows(`select public.device_add_staff('0577777777', '${GH500}', ${TODAY} - 190) as id`))[0].id
+ok((await rows(`select owner_phone from customer_devices where id = '${ghost}'`))[0].owner_phone === '+966577777777',
+  'a phone with no account keeps the device under that phone')
+const filters = await rows(`select id, life_months, last_changed_on::text, next_due_on::text from device_filters where device_id = '${old}' order by name_ar`)
+ok(filters.length === 2 && filters.every((f) => f.life_months === 6), 'the old device gets its filters with their life')
+
+// The customer sees their devices and filters, not someone else's.
+await as('authenticated', A)
+ok((await count(`select 1 from customer_devices where id = '${old}'`)) === 1, 'the customer sees the device staff added')
+ok((await count(`select 1 from device_filters where device_id = '${old}'`)) === 2, 'the customer sees its filters')
+ok((await count(`select 1 from customer_devices where id = '${ghost}'`)) === 0, 'cannot see devices of another phone')
+ok(await denied(`update device_filters set life_months = 1`), 'cannot edit filters directly')
+
+// Due list (old device: filters changed 200 days ago, life 6 months → overdue).
+await asCs()
+const due = await rows(`select * from public.maintenance_due()`)
+ok(due.some((d) => d.device_id === old) && due.some((d) => d.device_id === ghost), 'overdue devices appear in the due-maintenance list')
+ok(!due.some((d) => d.device_id === unsure), 'a device installed today is not due yet')
+ok(due.find((d) => d.device_id === ghost)?.phone === '+966577777777', 'the list shows the phone even without an account')
+await as('authenticated', A)
+ok(await denied(`select * from public.maintenance_due()`), 'a customer cannot read the due list')
+
+// Staff record the answer.
+await asCs()
+await rows(`select public.maintenance_log_contact('${ghost}', 'no_answer')`)
+ok((await rows(`select * from public.maintenance_due()`)).find((d) => d.device_id === ghost)?.no_answer_count === 1,
+  'no answer: stays on the list with the count')
+ok((await errorOf(`select public.maintenance_log_contact('${ghost}', 'postponed')`))?.includes('invalid_date'), 'postponing needs a date')
+await rows(`select public.maintenance_log_contact('${ghost}', 'postponed', ${TODAY} + 20)`)
+ok(!(await rows(`select * from public.maintenance_due()`)).some((d) => d.device_id === ghost), 'postponed: off the list until the new date')
+const agreed = (await rows(`select public.maintenance_log_contact('${old}', 'agreed', null, '${workDay}', 'morning') as r`))[0].r
+const mReq = (await rows(`select * from service_requests where id = '${agreed.request_id}'`))[0]
+ok(mReq.kind === 'maintenance' && mReq.status === 'new' && mReq.customer_id === A && mReq.preferred_period === 'morning',
+  'agreed: a maintenance request is created for the chosen day')
+ok(!(await rows(`select * from public.maintenance_due()`)).some((d) => d.device_id === old), 'a device with an open request leaves the due list')
+ok((await count(`select 1 from maintenance_contacts where device_id in ('${old}', '${ghost}')`)) === 3, 'every answer is logged')
+
+// The customer reports a fault from the site.
+await as('owner')
+const homeA = (await rows(`select id from addresses where customer_id = '${A}' and label = 'البيت'`))[0].id
+const jedA = (await rows(`select id from addresses where customer_id = '${A}' and label = 'جدة'`))[0].id
+await as('authenticated', A)
+const report = (args) => `select public.request_service(${args}) as r`
+ok((await errorOf(report(`'emergency', '${unsure}', '${jedA}', ${TODAY}, 'evening', 'تسريب ماء', 'تسريب من الخزان', null, 'عميل تجربة'`)))?.includes('outside_service_area'),
+  'a report outside Mecca is refused')
+ok((await errorOf(report(`'emergency', '${unsure}', '${homeA}', ${TODAY}, 'evening', 'شي ثاني', null, null, 'عميل تجربة'`)))?.includes('invalid_fault_type'),
+  'only fault types from settings are accepted')
+ok((await errorOf(report(`'emergency', '${ghost}', '${homeA}', ${TODAY}, 'evening', 'تسريب ماء', null, null, 'عميل تجربة'`)))?.includes('device_not_found'),
+  'cannot report on someone else’s device')
+ok((await errorOf(report(`'emergency', '${unsure}', '${homeA}', ${TODAY}, 'evening', 'تسريب ماء', null, '${B}/x.jpg', 'عميل تجربة'`)))?.includes('invalid_photo'),
+  'the photo must be in the customer’s own folder')
+ok((await errorOf(report(`'maintenance', '${unsure}', '${homeA}', ${TODAY}, 'morning', null, null, null, 'عميل تجربة'`)))?.includes('invalid_date'),
+  'a maintenance visit cannot be booked for today')
+if (offDay) {
+  ok((await errorOf(report(`'maintenance', '${unsure}', '${homeA}', '${offDay}', 'morning', null, null, null, 'عميل تجربة'`)))?.includes('day_off'),
+    'a maintenance visit cannot be booked on a day off')
+}
+const em = (await rows(report(`'emergency', '${unsure}', '${homeA}', ${TODAY}, 'evening', 'تسريب ماء', 'تسريب من تحت الجهاز', '${A}/leak.jpg', 'عميل تجربة'`)))[0].r
+const emRow = (await rows(`select * from service_requests where id = '${em.id}'`))[0]
+ok(em.request_number.startsWith('SR-') && emRow.source === 'web' && emRow.status === 'new', 'an emergency report is saved with a number')
+ok(Number(emRow.inspection_fee) === 60 && emRow.lat !== null && emRow.contact_phone === '+966500000001', 'it keeps the inspection fee and the address')
+ok((await errorOf(report(`'emergency', null, '${homeA}', ${TODAY}, 'morning', 'صوت مزعج', null, null, 'عميل تجربة'`)))?.includes('too_many_open'),
+  'at most 2 open requests from the site')
+ok((await count(`select 1 from service_requests`)) === 2, 'the customer sees only their own requests')
+await as('authenticated', B)
+ok((await count(`select 1 from service_requests`)) === 0, 'another customer sees none of them')
+ok((await errorOf(`select public.request_cancel_mine('${em.id}')`))?.includes('request_not_found'), 'cannot cancel someone else’s request')
+
+// Staff schedule it.
+await as('authenticated', A)
+ok(await denied(`select public.request_schedule('${em.id}', now() + interval '3 hours')`) ||
+  (await errorOf(`select public.request_schedule('${em.id}', now() + interval '3 hours')`))?.includes('not_allowed'), 'a customer cannot schedule')
+await asCs()
+const techs = await rows(`select * from public.technicians_list()`)
+ok(techs.length >= 3, 'staff can pick a technician from the list')
+await rows(`select public.request_schedule('${em.id}', now() + interval '3 hours', '${OPS2}')`)
+ok((await rows(`select status, technician_id from service_requests where id = '${em.id}'`))[0].technician_id === OPS2, 'scheduled with a technician')
+ok((await errorOf(`select public.request_schedule('${em.id}', now() + interval '5 hours', '${OPS2}')`))?.includes('reason_required'),
+  'changing the time needs a reason')
+await rows(`select public.request_schedule('${em.id}', now() + interval '5 hours', '${OPS2}', 'الفني تأخر في موعد قبله')`)
+ok((await count(`select 1 from service_request_events where request_id = '${em.id}'`)) === 3, 'every change is logged (new, scheduled, rescheduled)')
+await as('authenticated', A)
+ok((await count(`select 1 from service_request_events where request_id = '${em.id}'`)) === 3, 'the customer sees the history of their request')
+await asCs()
+ok((await errorOf(`select public.request_set_status('${em.id}', 'cancelled')`))?.includes('reason_required'), 'cancelling needs a reason')
+await rows(`select public.request_set_status('${em.id}', 'in_progress')`)
+await rows(`select public.request_set_status('${em.id}', 'done', 'تم تغيير الوصلة')`)
+ok((await rows(`select status from service_requests where id = '${em.id}'`))[0].status === 'done', 'the visit is marked done')
+ok((await errorOf(`select public.request_set_status('${em.id}', 'in_progress')`))?.includes('invalid_transition'), 'a finished request cannot go back')
+
+// Finishing a maintenance visit resets the due filters.
+await rows(`select public.request_schedule('${agreed.request_id}', now() + interval '1 day')`)
+await rows(`select public.request_set_status('${agreed.request_id}', 'done')`)
+ok((await rows(`select bool_and(last_changed_on = ${TODAY}) as ok from device_filters where device_id = '${old}'`))[0].ok === true,
+  'a finished maintenance marks the due filters as changed today')
+
+// Phone report for a caller with no account.
+const ph = (await rows(`select public.staff_request_service('0577777777', 'أبو محمد', 'emergency', ${TODAY}, 'morning', '${ghost}', 'ضعف في الضغط', null, null, 'العزيزية', 'شارع ١') as r`))[0].r
+const phRow = (await rows(`select * from service_requests where id = '${ph.id}'`))[0]
+ok(phRow.source === 'phone' && phRow.customer_id === null && phRow.neighborhood_name === 'العزيزية', 'staff log a phone report for a caller with no account')
+ok((await errorOf(`select public.staff_request_service('0577777777', 'أبو محمد', 'emergency', ${TODAY}, 'morning')`))?.includes('fault_type_required'),
+  'an emergency needs a fault type')
+ok((await errorOf(`select public.staff_request_service('0577777777', 'أبو محمد', 'maintenance', '${workDay}', 'morning', '${old}', null, null, null, 'العزيزية')`))?.includes('device_not_found'),
+  'staff cannot attach another customer’s device')
+
+// Staff edit filters; the customer snoozes.
+const f0 = filters[0].id
+ok((await errorOf(`select public.device_filter_update('${f0}', 0, ${TODAY})`))?.includes('invalid_life'), 'filter life must be 1–60 months')
+await rows(`select public.device_filter_update('${f0}', 12, ${TODAY} - 30)`)
+ok((await rows(`select life_months from device_filters where id = '${f0}'`))[0].life_months === 12, 'staff change a filter’s life for this device')
+await rows(`select public.device_update_staff('${unsure}', ${TODAY} - 10, false, 'تم التأكد من التاريخ')`)
+ok((await rows(`select date_uncertain from customer_devices where id = '${unsure}'`))[0].date_uncertain === false, 'staff confirm the install date')
+await as('authenticated', A)
+ok((await errorOf(`select public.device_snooze_mine('${ghost}', ${TODAY} + 10)`))?.includes('device_not_found'), 'cannot postpone someone else’s device')
+await rows(`select public.device_snooze_mine('${unsure}', ${TODAY} + 10)`)
+ok((await rows(`select next_contact_on::text as d from customer_devices where id = '${unsure}'`))[0].d !== null, 'the customer postpones the reminder')
+ok(await denied(`select public.request_set_status('${ph.id}', 'done')`) ||
+  (await errorOf(`select public.request_set_status('${ph.id}', 'done')`))?.includes('not_allowed'), 'a customer cannot close requests')
+
+// Fault types are editable; the caller who signs up later takes over their device and request.
+await asAdmin()
+await rows(`update settings set fault_types = array[' تسريب ماء ', 'تسريب ماء', 'تغيير فلاتر', 'غير ذلك'] where id = 1`)
+ok((await rows(`select fault_types from settings`))[0].fault_types.join('|') === 'تسريب ماء|تغيير فلاتر|غير ذلك', 'fault types are cleaned (trimmed, no duplicates)')
+ok(await denied(`update settings set fault_types = array['']::text[] where id = 1`), 'an empty fault list is refused')
+await asCs()
+ok(await denied(`update settings set fault_types = array['x y']::text[] where id = 1`) ||
+  (await count(`update settings set fault_types = array['x y']::text[] where id = 1 returning id`)) === 0, 'customer service cannot edit fault types')
+await as('owner')
+const NEWC = '00000000-0000-0000-0000-00000000000d'
+await db.exec(`insert into auth.users (id, phone) values ('${NEWC}', '966577777777')`)
+ok((await rows(`select customer_id, owner_phone from customer_devices where id = '${ghost}'`))[0].customer_id === NEWC,
+  'when the caller signs up, the device moves to their account')
+ok((await rows(`select customer_id from service_requests where id = '${ph.id}'`))[0].customer_id === NEWC, 'and so does their phone report')
+await as('authenticated', A)
+ok(await denied(`insert into storage.objects (bucket_id, name) values ('service-photos', '${B}/x.jpg')`), 'cannot upload a photo into another customer’s folder')
+await db.query(`insert into storage.objects (bucket_id, name) values ('service-photos', '${A}/leak.jpg')`)
+await as('authenticated', B)
+ok((await count(`select 1 from storage.objects where bucket_id = 'service-photos'`)) === 0, 'another customer cannot see the photo')
+await asCs()
+ok((await count(`select 1 from storage.objects where bucket_id = 'service-photos'`)) === 1, 'staff can see the photo')
+
+
+// Booking with the map pin instead of a saved address.
+await as('authenticated', NEWC)
+ok((await errorOf(`select public.request_service('emergency', null, null, ${TODAY}, 'morning', 'تسريب ماء', null, null, 'أبو محمد', 21.5433, 39.1728, 'الروضة')`))?.includes('outside_service_area'),
+  'a pin outside Mecca is refused')
+ok((await errorOf(`select public.request_service('emergency', null, null, ${TODAY}, 'morning', 'تسريب ماء', null, null, 'أبو محمد', 21.4225, 39.8262, '')`))?.includes('neighborhood_required'),
+  'the pin needs a neighbourhood')
+const pinReq = (await rows(`select public.request_service('emergency', null, null, ${TODAY}, 'morning', 'تسريب ماء', null, null, 'أبو محمد', 21.4225, 39.8262, 'حي العزيزية', 'شارع ٥') as r`))[0].r
+const pinRow = (await rows(`select r.neighborhood_name, a.neighborhood_id is not null as linked, a.in_service_area from service_requests r join addresses a on a.id = r.address_id where r.id = '${pinReq.id}'`))[0]
+ok(pinRow?.in_service_area === true && pinRow.neighborhood_name === 'حي العزيزية' && pinRow.linked, 'a pin in Mecca is saved as the customer’s address, linked to the neighbourhood')
+
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

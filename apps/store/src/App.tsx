@@ -14,6 +14,7 @@ import { OrderPage, Orders } from './pages/Orders'
 import { Invoice } from './pages/Invoice'
 import { PaidPage, PayPage } from './pages/Pay'
 import { Devices } from './pages/Devices'
+import { ServiceList, ServiceNew } from './pages/Service'
 import { Checkout } from './pages/Checkout'
 import { ProductPage } from './pages/ProductPage'
 import { Products } from './pages/Products'
@@ -229,6 +230,22 @@ export default function App() {
               element={
                 <RequireAuth>
                   <Devices />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/service/new"
+              element={
+                <RequireAuth>
+                  <ServiceNew />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/service"
+              element={
+                <RequireAuth>
+                  <ServiceList />
                 </RequireAuth>
               }
             />

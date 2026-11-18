@@ -254,6 +254,86 @@ function NeighborhoodsCard({ list, canAdd, canEdit, onSaved }: { list: Neighborh
   )
 }
 
+function FaultTypesCard({ list, canEdit, onSaved }: { list: string[]; canEdit: boolean; onSaved: () => void }) {
+  const [items, setItems] = useState(list)
+  const [name, setName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  useEffect(() => setItems(list), [list])
+  const dirty = items.join('|') !== list.join('|')
+
+  async function save() {
+    setError(null)
+    setSaved(false)
+    const { error: err } = await supabase.from('settings').update({ fault_types: items }).eq('id', 1)
+    if (err) return setError(err.message.includes('invalid_fault_types') ? 'كل نوع من 2 إلى 40 حرف، وخلّ نوع واحد على الأقل.' : errText(err.message))
+    setSaved(true)
+    onSaved()
+  }
+  const move = (i: number, by: number) => {
+    const next = [...items]
+    const [x] = next.splice(i, 1)
+    next.splice(i + by, 0, x)
+    setItems(next)
+  }
+
+  return (
+    <section className="card stack">
+      <h2 className="h3">أنواع الأعطال</h2>
+      <span className="muted">تظهر للعميل في نموذج «بلاغ عطل» وللموظف في البلاغ الهاتفي. البلاغات القديمة تحتفظ بنوعها حتى لو حذفته.</span>
+      <ol className="ft-list">
+        {items.map((t, i) => (
+          <li key={t} className="row">
+            <span className="grow">{t}</span>
+            {canEdit && (
+              <>
+                <button type="button" className="btn sm ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`رفع ${t}`}>
+                  ↑
+                </button>
+                <button type="button" className="btn sm ghost" disabled={i === items.length - 1} onClick={() => move(i, 1)} aria-label={`تنزيل ${t}`}>
+                  ↓
+                </button>
+                <button type="button" className="linkbtn" disabled={items.length === 1} onClick={() => setItems(items.filter((x) => x !== t))}>
+                  حذف
+                </button>
+              </>
+            )}
+          </li>
+        ))}
+      </ol>
+      {canEdit && (
+        <>
+          <form
+            className="row wrapr align-end"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const v = name.trim().replace(/\s+/g, ' ')
+              if (v.length < 2 || v.length > 40 || items.includes(v)) return
+              setItems([...items, v])
+              setName('')
+            }}
+          >
+            <div className="field grow">
+              <label htmlFor="ft">نوع عطل جديد</label>
+              <input id="ft" className="input" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <button className="btn sm ghost field-btn" disabled={name.trim().length < 2}>
+              إضافة للقائمة
+            </button>
+          </form>
+          <div className="row">
+            <button type="button" className="btn self-start" disabled={!dirty} onClick={save}>
+              حفظ أنواع الأعطال
+            </button>
+            {saved && !dirty && <span className="ok-text">تم الحفظ ✓</span>}
+          </div>
+        </>
+      )}
+      {error && <p className="form-error">{error}</p>}
+    </section>
+  )
+}
+
 export function Settings() {
   const { can } = useStaffAuth()
   const canEdit = can('settings', 'edit')
@@ -294,6 +374,7 @@ export function Settings() {
           <FeesCard settings={settings} canEdit={canEdit} onSaved={load} />
           <WorkDaysCard days={days} canEdit={canEdit} onSaved={load} />
           <NeighborhoodsCard list={hoods} canAdd={can('settings', 'add')} canEdit={canEdit} onSaved={load} />
+          <FaultTypesCard list={settings.fault_types ?? []} canEdit={canEdit} onSaved={load} />
         </>
       )}
     </RequirePage>

@@ -81,6 +81,8 @@ export interface StoreSettings {
   technician_link_hours: number
   /** Seller VAT number (15 digits, starts and ends with 3) for the invoice QR. */
   seller_vat_number: string | null
+  /** Fault types offered in the report form (editable from settings). */
+  fault_types: string[]
   updated_at: string
 }
 

@@ -209,3 +209,13 @@ tr.detail td{background:var(--n50,transparent)}
 .notice.warn{border-color:var(--warn-500, #d97706);background:var(--warn-50)}
 .linkbtn{background:none;border:0;padding:0;color:var(--primary-700);font-weight:600;cursor:pointer;text-decoration:underline}
 .input.sm.bad{border-color:var(--bad-700)}
+
+/* Day 8: appointments, devices, fault types */
+.b-bad{background:var(--bad-50);color:var(--bad-700);font-weight:600}
+.stack-sm{display:flex;flex-direction:column;gap:3px;min-width:0}
+tr.sel td{background:var(--primary-50)}
+.sr-photo{max-width:260px;max-height:200px;border-radius:10px;border:1px solid var(--n200);object-fit:cover;display:block}
+.ft-list{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:6px}
+.ft-list li{display:flex}
+section.off,tr.off td{opacity:.6}
+.btn.ghost.danger{color:var(--bad-700);border-color:var(--bad-500)}

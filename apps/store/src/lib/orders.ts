@@ -27,7 +27,7 @@ export async function fetchWorkDays(): Promise<WorkDay[]> {
 /** Same rule as the database's hood_key(): "حي الزاهر" = "الزاهر" = "زاهر". */
 export function hoodKey(name: string): string {
   return name
-    .replace(/s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
     .replace(/[أإآ]/g, 'ا')
     .replace(/ى/g, 'ي')
