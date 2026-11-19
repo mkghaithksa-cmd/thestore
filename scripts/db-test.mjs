@@ -40,7 +40,7 @@ await db.exec(`
     file_size_limit bigint, allowed_mime_types text[]);
   create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
   alter table storage.objects enable row level security;
-  grant all on storage.objects to authenticated;
+  grant all on storage.objects to anon, authenticated;
 `)
 
 for (const f of fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()) {
@@ -465,10 +465,17 @@ ok((await errorOf(`select public.stock_receive('${GH500}', 10, '')`))?.includes(
 ok((await errorOf(`select public.stock_receive('${SRV}', 10, 'INV-1')`))?.includes('not_stocked'), 'services carry no stock')
 ok((await rows(`select public.stock_receive('${GH500}', 10, 'INV-1') as n`))[0].n === gh0 - 2 + 10, 'receiving stock raises the balance')
 ok((await errorOf(`select public.stock_count('${GH500}', 3, '')`))?.includes('note_required'), 'a stock count needs a note')
-await rows(`select public.stock_count('${GH500}', 3, 'جرد افتتاحي')`)
-ok((await onHand(GH500)) === 3, 'a stock count sets the real balance')
+await rows(`select public.stock_count('${GH500}', 3, 'جرد')`)
+ok((await onHand(GH500)) === gh0 - 2 + 10, 'a later stock-count difference waits for approval')
+const stockOk = (await rows(`select id, qty from approvals where kind = 'stock_diff' and product_id = '${GH500}' and status = 'pending'`))[0]
+ok(stockOk?.qty === 3 - (gh0 - 2 + 10), 'the difference goes to the approvals list')
+ok((await errorOf(`select public.approval_decide('${stockOk.id}', true)`))?.includes('not_allowed'), 'staff without approve permission cannot approve')
+await asAdmin()
+await rows(`select public.approval_decide('${stockOk.id}', true)`)
+ok((await onHand(GH500)) === 3, 'approved: the stock count sets the real balance')
 ok((await rows(`select balance_after from stock_movements where product_id = '${GH500}' order by id desc limit 1`))[0].balance_after === 3,
   'each movement keeps the balance after it')
+await asOps()
 await rows(`select public.stock_set_reorder_level('${GH500}', 5)`)
 ok((await rows(`select reorder_level from products where id = '${GH500}'`))[0].reorder_level === 5, 'staff set the reorder level for the shortage alert')
 
@@ -685,14 +692,19 @@ ok((await errorOf(`select public.request_cancel_mine('${em.id}')`))?.includes('r
 await as('authenticated', A)
 ok(await denied(`select public.request_schedule('${em.id}', now() + interval '3 hours')`) ||
   (await errorOf(`select public.request_schedule('${em.id}', now() + interval '3 hours')`))?.includes('not_allowed'), 'a customer cannot schedule')
+await asAdmin()
+const T1 = (await rows(`select public.technician_save(null, ' فني   أول ', '0551110001') as id`))[0].id
+await rows(`select public.technician_save(null, 'فني ثاني', '551110002')`)
+ok((await rows(`select full_name, phone from technicians where id = '${T1}'`))[0].phone === '+966551110001', 'the admin adds technicians (name and phone)')
+ok((await errorOf(`select public.technician_save(null, 'مكرر', '0551110001')`))?.includes('phone_taken'), 'a phone is used by one technician only')
 await asCs()
 const techs = await rows(`select * from public.technicians_list()`)
-ok(techs.length >= 3, 'staff can pick a technician from the list')
-await rows(`select public.request_schedule('${em.id}', now() + interval '3 hours', '${OPS2}')`)
-ok((await rows(`select status, technician_id from service_requests where id = '${em.id}'`))[0].technician_id === OPS2, 'scheduled with a technician')
-ok((await errorOf(`select public.request_schedule('${em.id}', now() + interval '5 hours', '${OPS2}')`))?.includes('reason_required'),
+ok(techs.length === 2 && techs.every((t) => t.phone), 'staff pick a technician from the technicians list')
+await rows(`select public.request_schedule('${em.id}', now() + interval '3 hours', '${T1}')`)
+ok((await rows(`select status, technician_id from service_requests where id = '${em.id}'`))[0].technician_id === T1, 'scheduled with a technician')
+ok((await errorOf(`select public.request_schedule('${em.id}', now() + interval '5 hours', '${T1}')`))?.includes('reason_required'),
   'changing the time needs a reason')
-await rows(`select public.request_schedule('${em.id}', now() + interval '5 hours', '${OPS2}', 'الفني تأخر في موعد قبله')`)
+await rows(`select public.request_schedule('${em.id}', now() + interval '5 hours', '${T1}', 'الفني تأخر في موعد قبله')`)
 ok((await count(`select 1 from service_request_events where request_id = '${em.id}'`)) === 3, 'every change is logged (new, scheduled, rescheduled)')
 await as('authenticated', A)
 ok((await count(`select 1 from service_request_events where request_id = '${em.id}'`)) === 3, 'the customer sees the history of their request')
@@ -827,6 +839,140 @@ await asCs()
 ok((await rows(`select * from public.maintenance_due()`)).length === 0, 'reminders off → the due list is empty')
 await asAdmin()
 await rows(`update settings set maintenance_reminders_on = true, maintenance_overdue_days = 60, maintenance_decline_days = 90 where id = 1`)
+
+// --- Day 9: work orders, the technician link, custody, approvals --------------------
+console.log('Work orders and custody')
+await as('owner')
+const PART = await skuId('PRT-HOSE')
+const fltPrice = Number((await rows(`select price_before_vat p from products where id = '${FLT}'`))[0].p)
+const prtPrice = Number((await rows(`select price_before_vat p from products where id = '${PART}'`))[0].p)
+const vatRate = Number((await rows(`select vat_rate v from settings where id = 1`))[0].v)
+const fltStock0 = await onHand(FLT)
+const T2 = (await rows(`select id from technicians where phone = '+966551110002'`))[0].id
+
+// A phone report for customer A, scheduled with a technician.
+await asCs()
+const wr = (await rows(`select public.staff_request_service('0500000001', 'عميل تجربة', 'emergency', ${TODAY}, 'evening', null, 'تسريب ماء', null, '${homeA}') as r`))[0].r
+ok((await errorOf(`select public.wo_link_create('${wr.id}')`))?.includes('not_scheduled'), 'no technician link before the visit is scheduled')
+await rows(`select public.request_schedule('${wr.id}', now() + interval '2 hours')`)
+ok((await errorOf(`select public.wo_link_create('${wr.id}')`))?.includes('technician_required'), 'the link needs a technician')
+await rows(`select public.request_schedule('${wr.id}', now() + interval '2 hours', '${T1}', 'تحديد الفني')`)
+const link1 = (await rows(`select public.wo_link_create('${wr.id}') as l`))[0].l
+const link = (await rows(`select public.wo_link_create('${wr.id}') as l`))[0].l
+ok(link.work_order_id === link1.work_order_id && link.token !== link1.token, 'a new link keeps the same work order')
+ok(await denied(`select * from work_order_links`), 'nobody reads the stored link hashes')
+const WO = link.work_order_id
+ok((await rows(`select inspection_fee f from work_orders where id = '${WO}'`))[0].f == 60, 'the work order keeps the inspection fee')
+
+// The technician (no account) opens the link.
+await as('anon')
+ok((await errorOf(`select public.tech_job('${link1.token}')`))?.includes('link_invalid'), 'the old link stops working')
+ok((await errorOf(`select public.tech_job('${'x'.repeat(64)}')`))?.includes('link_invalid'), 'a made-up link does not work')
+const job = (await rows(`select public.tech_job('${link.token}') as j`))[0].j
+ok(job.contact_phone === '+966500000001' && job.fault_type === 'تسريب ماء' && job.catalog.length > 0, 'the technician sees the visit and the parts list')
+const keysOf = (v) => (v && typeof v === 'object' ? Object.entries(v).flatMap(([k, x]) => [k, ...keysOf(x)]) : [])
+ok(!keysOf(job).some((k) => /price|total|fee|inspection|amount|discount/i.test(k)), 'the technician sees no prices')
+ok(await denied(`select * from work_orders`) || (await count(`select 1 from work_orders`)) === 0, 'the technician cannot read work orders directly')
+ok(await denied(`insert into storage.objects (bucket_id, name) values ('work-order-photos', 'somewhere/x.jpg')`), 'no photo upload outside a live link folder')
+await db.query(`insert into storage.objects (bucket_id, name) values ('work-order-photos', '${job.folder}/1.jpg')`)
+await rows(`select public.tech_arrive('${link.token}')`)
+await as('authenticated', A)
+ok((await rows(`select status from service_requests where id = '${wr.id}'`))[0].status === 'in_progress', '«وصلت»: the customer sees the technician started')
+await as('anon')
+ok((await errorOf(`select public.tech_submit('${link.token}', false, '')`))?.includes('finding_required'), 'the report needs the inspection result')
+ok((await errorOf(`select public.tech_submit('${link.token}', false, 'تسريب', null, '[]', array['other/x.jpg'])`))?.includes('invalid_photo'),
+  'photos must be from this link')
+ok((await errorOf(`select public.tech_submit('${link.token}', false, 'تسريب', null, '[{"product_id":"${GH500}","qty":1}]')`))?.includes('invalid_parts'),
+  'only filters and parts can be listed')
+ok((await rows(`select public.tech_submit('${link.token}', false, 'تسريب من وصلة الخرطوم وفلتر منتهي', 'يحتاج تغيير', '[{"product_id":"${FLT}","qty":1},{"product_id":"${PART}","qty":2}]', array['${job.folder}/1.jpg']) as s`))[0].s === 'report',
+  'the technician sends the report')
+ok((await errorOf(`select public.tech_submit('${link.token}', true)`))?.includes('report_already_sent'), 'the report is locked after sending')
+ok(await denied(`insert into storage.objects (bucket_id, name) values ('work-order-photos', '${job.folder}/2.jpg')`), 'no more photos after sending')
+ok((await rows(`select public.tech_job('${link.token}') as j`))[0].j.catalog === null, 'after sending, the page is read-only')
+
+// Staff price it; a discount above the limit waits for the admin.
+await asCs()
+ok((await errorOf(`select public.wo_quote('${WO}', 100)`))?.includes('not_allowed'), 'customer service cannot price a work order')
+await asOps()
+ok((await errorOf(`select public.wo_quote('${WO}', 100, 20)`))?.includes('reason_required'), 'a discount needs a reason')
+ok((await rows(`select public.wo_quote('${WO}', 100, 20, 'عميل قديم') as s`))[0].s === 'approval', 'a discount above the limit waits for approval')
+const disc = (await rows(`select id from approvals where work_order_id = '${WO}' and kind = 'discount' and status = 'pending'`))[0]
+ok((await errorOf(`select public.approval_decide('${disc.id}', true)`))?.includes('not_allowed'), 'operations staff cannot approve')
+await as('authenticated', A)
+ok((await errorOf(`select public.wo_decide_mine('${WO}', 'approved')`))?.includes('invalid_transition'), 'the customer cannot answer before the quote is sent')
+await asAdmin()
+ok((await errorOf(`select public.approval_decide('${disc.id}', false)`))?.includes('reason_required'), 'rejecting needs a reason')
+await rows(`select public.approval_decide('${disc.id}', true, 'تمام')`)
+const wq = (await rows(`select status, subtotal, vat, total from work_orders where id = '${WO}'`))[0]
+const base = fltPrice + 2 * prtPrice + 100 + 60 - 20
+ok(wq.status === 'quote' && Number(wq.subtotal) === base && Number(wq.total) === Math.round((base + base * vatRate) * 100) / 100,
+  'approved: the quote (parts + labour + inspection − discount + VAT) goes to the customer')
+
+// The admin's own discount: someone else must approve it.
+await asCs()
+const wr2 = (await rows(`select public.staff_request_service('0566666666', 'أبو خالد', 'emergency', ${TODAY}, 'evening', null, 'غير ذلك', null, null, 'الشوقية') as r`))[0].r
+await rows(`select public.request_schedule('${wr2.id}', now() + interval '3 hours', '${T2}')`)
+const l2 = (await rows(`select public.wo_link_create('${wr2.id}') as l`))[0].l
+await asAdmin()
+await rows(`select public.wo_report_staff('${l2.work_order_id}', false, 'عطل في المضخة')`)
+ok((await rows(`select tech_note, report_by from work_orders where id = '${l2.work_order_id}'`))[0].tech_note.includes('نيابة'),
+  'staff can record the report for the technician')
+await rows(`select public.wo_quote('${l2.work_order_id}', 50, 10, 'خصم')`)
+const own = (await rows(`select id from approvals where work_order_id = '${l2.work_order_id}' and status = 'pending'`))[0]
+ok((await errorOf(`select public.approval_decide('${own.id}', true)`))?.includes('own_request'), 'nobody approves their own request')
+
+// The customer approves in the store and pays cash to the technician.
+await as('authenticated', B)
+ok((await errorOf(`select public.wo_decide_mine('${WO}', 'approved')`))?.includes('work_order_not_found'), 'another customer cannot answer')
+ok((await count(`select 1 from work_orders where id = '${WO}'`)) === 0, 'another customer cannot see the quote')
+await as('authenticated', A)
+ok((await count(`select 1 from work_order_parts where work_order_id = '${WO}' and unit_price is not null`)) === 2, 'the customer sees the quote with prices')
+ok((await rows(`select public.wo_decide_mine('${WO}', 'approved') as s`))[0].s === 'payment', 'the customer approves the quote')
+ok(Number((await rows(`select amount_due from work_orders where id = '${WO}'`))[0].amount_due) === Number(wq.total), 'approved: the full total is due')
+await asCs()
+ok((await errorOf(`select public.request_set_status('${wr.id}', 'cancelled', 'x')`))?.includes('work_order_open'), 'a request with a live work order cannot be cancelled by hand')
+await asOps()
+ok((await errorOf(`select public.wo_close('${WO}')`))?.includes('invalid_transition'), 'cannot close before payment')
+await rows(`select public.wo_pay_cash('${WO}')`)
+const cust = (await rows(`select id, amount, status, technician_id from custodies where work_order_id = '${WO}'`))[0]
+ok(cust && Number(cust.amount) === Number(wq.total) && cust.status === 'open' && cust.technician_id === T1, 'cash to the technician opens custody on them')
+await rows(`select public.wo_close('${WO}')`)
+ok((await onHand(FLT)) === fltStock0 - 1, 'closing issues the approved parts from stock')
+ok((await rows(`select status from service_requests where id = '${wr.id}'`))[0].status === 'done', 'closing finishes the request')
+
+// Staff receive the cash; a difference waits for the admin.
+await asOps()
+ok((await errorOf(`select public.custody_receive('${cust.id}', ${Number(cust.amount) - 10})`))?.includes('reason_required'), 'a short amount needs a note')
+ok((await rows(`select public.custody_receive('${cust.id}', ${Number(cust.amount) - 10}, 'نقص ١٠ ريال') as s`))[0].s === 'pending', 'a difference goes for approval')
+const cd = (await rows(`select id, amount from approvals where custody_id = '${cust.id}' and status = 'pending'`))[0]
+ok(Number(cd.amount) === -10, 'the approval shows the difference')
+await asAdmin()
+await rows(`select public.approval_decide('${cd.id}', false, 'أعد العد')`)
+ok((await rows(`select status from custodies where id = '${cust.id}'`))[0].status === 'open', 'rejected: the custody is open again')
+await asOps()
+ok((await rows(`select public.custody_receive('${cust.id}', ${Number(cust.amount)}) as s`))[0].s === 'settled', 'the right amount settles the custody')
+
+// The customer is not home: the inspection fee is due (setting on), then cash, then close.
+await asAdmin()
+await rows(`select public.wo_cancel('${l2.work_order_id}', 'إعادة الزيارة')`)
+ok((await rows(`select status from service_requests where id = '${wr2.id}'`))[0].status === 'scheduled', 'a cancelled work order frees the request')
+await asCs()
+const l3 = (await rows(`select public.wo_link_create('${wr2.id}') as l`))[0].l
+ok(l3.work_order_id !== l2.work_order_id, 'a new work order after a cancelled one')
+await as('anon')
+ok((await rows(`select public.tech_submit('${l3.token}', true, null, 'الباب مقفل') as s`))[0].s === 'payment', 'customer not home: the inspection fee is due')
+await as('owner')
+ok(Number((await rows(`select amount_due from work_orders where id = '${l3.work_order_id}'`))[0].amount_due) === Math.round((60 + 60 * vatRate) * 100) / 100,
+  'the fee includes VAT')
+await asOps()
+await rows(`select public.wo_pay_cash('${l3.work_order_id}')`)
+await rows(`select public.wo_close('${l3.work_order_id}')`)
+ok((await rows(`select status from service_requests where id = '${wr2.id}'`))[0].status === 'cancelled', 'customer not home: the request closes as cancelled')
+
+// Payments from Moyasar are recorded only by the server.
+ok(await denied(`select public.wo_payment_confirm('${WO}', 'pay_x', 100, 'SAR', '{}')`), 'nobody but the payment server confirms an online payment')
+await as('anon')
+ok(await denied(`select public.wo_payment_confirm('${WO}', 'pay_x', 100, 'SAR', '{}')`), 'not the technician either')
 
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)
