@@ -105,7 +105,7 @@ export function AuditLog() {
       .then(({ data }) => setNames(Object.fromEntries(((data ?? []) as { user_id: string; full_name: string }[]).map((x) => [x.user_id, x.full_name]))))
   }, [])
 
-  const who = (a: string | null) => (!a ? 'النظام' : names[a] ?? 'عميل')
+  const who = (a: string | null) => (!a ? 'النظام أو الفني' : names[a] ?? 'عميل')
 
   return (
     <RequirePage page="audit_log">
