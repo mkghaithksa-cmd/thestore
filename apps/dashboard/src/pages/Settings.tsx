@@ -584,22 +584,19 @@ function TechniciansCard({ canEdit }: { canEdit: boolean }) {
   )
 }
 
-/** Discount limit without approval, and how long a technician link lasts. */
+/** How long a technician link lasts. */
 function WorkOrderRulesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; canEdit: boolean; onSaved: () => void }) {
-  const [limit, setLimit] = useState(String(Number(settings.discount_approval_limit ?? 0)))
   const [hours, setHours] = useState(String(settings.technician_link_hours))
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function save(e: FormEvent) {
     e.preventDefault()
-    const l = parseAmount(limit)
     const h = Number(hours)
-    if (!(l >= 0)) return setMsg({ ok: false, text: 'حد الخصم رقم صفر أو أكثر.' })
     if (!Number.isInteger(h) || h < 1 || h > 168) return setMsg({ ok: false, text: 'مدة الرابط من 1 إلى 168 ساعة.' })
     setBusy(true)
     setMsg(null)
-    const { error } = await supabase.from('settings').update({ discount_approval_limit: l, technician_link_hours: h }).eq('id', 1)
+    const { error } = await supabase.from('settings').update({ technician_link_hours: h }).eq('id', 1)
     setBusy(false)
     if (error) return setMsg({ ok: false, text: errText(error.message) })
     setMsg({ ok: true, text: 'تم الحفظ ✓' })
@@ -612,17 +609,12 @@ function WorkOrderRulesCard({ settings, canEdit, onSaved }: { settings: StoreSet
       <fieldset className="plain" disabled={!canEdit || busy}>
         <div className="row wrapr align-end">
           <div className="field">
-            <label htmlFor="dlim">خصم يدوي بدون موافقة لين (ر.س)</label>
-            <input id="dlim" className="input num" inputMode="decimal" dir="ltr" style={{ width: 120 }} value={limit} onChange={(e) => { setMsg(null); setLimit(e.target.value) }} />
-            <span className="muted">0 = كل خصم يحتاج موافقة المدير.</span>
-          </div>
-          <div className="field">
             <label htmlFor="lhrs">رابط الفني صالح لمدة (ساعة)</label>
             <input id="lhrs" className="input num" inputMode="numeric" dir="ltr" style={{ width: 100 }} value={hours} onChange={(e) => { setMsg(null); setHours(e.target.value.replace(/[^0-9]/g, '')) }} />
           </div>
         </div>
       </fieldset>
-      <span className="muted">فرق العهدة وفرق الجرد يحتاجون موافقة المدير دائماً، وما أحد يعتمد طلبه بنفسه.</span>
+      <span className="muted">الخصم يطبّق مباشرة ويوصل للمدير تنبيه في سجل التدقيق. فرق العهدة وفرق الجرد يحتاجون موافقة المدير، وما أحد يعتمد طلبه بنفسه.</span>
       {msg && <p className={msg.ok ? 'ok-text' : 'form-error'}>{msg.text}</p>}
       {canEdit && (
         <button className="btn self-start" disabled={busy}>

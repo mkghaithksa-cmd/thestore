@@ -19,6 +19,8 @@ import { Users } from './pages/Users'
 import { WorkOrders } from './pages/WorkOrders'
 import { Payments } from './pages/Payments'
 import { Approvals } from './pages/Approvals'
+import { Reports } from './pages/Reports'
+import { AuditLog } from './pages/AuditLog'
 import './App.css'
 
 export default function App() {
@@ -47,6 +49,8 @@ export default function App() {
             <Route path="/p/work_orders" element={<WorkOrders />} />
             <Route path="/p/payments" element={<Payments />} />
             <Route path="/approvals" element={<Approvals />} />
+            <Route path="/p/reports" element={<Reports />} />
+            <Route path="/p/audit_log" element={<AuditLog />} />
             <Route path="/p/:page" element={<ComingSoon />} />
             <Route path="*" element={<div className="notice">الصفحة غير موجودة.</div>} />
           </Route>

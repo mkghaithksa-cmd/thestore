@@ -227,3 +227,17 @@ table.mini td:last-child,table.mini th:last-child{text-align:end;white-space:now
 .inset-box{background:var(--n100,rgba(127,127,127,.08));border-radius:10px;padding:10px 12px;margin:0}
 .sv-more summary{cursor:pointer;color:var(--n600,#6b7280);font-size:14px}
 .sv-more[open]{display:flex;flex-direction:column;gap:8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.kpi{display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:16px;color:inherit;text-decoration:none}
+.kpi:hover{border-color:var(--primary-700)}
+.kpi.warn{border-inline-start:4px solid #d9822b}
+.kpi span{color:var(--n500);font-size:13px}
+.kpi b{font-size:26px;line-height:1.2}
+.kpi small{color:var(--n500);font-size:12px}
+.two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start}
+.stack.dim{opacity:.6}
+.bar{height:8px;border-radius:4px;background:var(--n100,rgba(127,127,127,.15));overflow:hidden}
+.bar i{display:block;height:100%;background:var(--primary-700);border-radius:4px}
+.audit-json{margin:0;max-height:320px;overflow:auto;font-size:12px;background:var(--n50);padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-word}
+.audit-diff{max-width:none}
+.audit-diff td{word-break:break-word}

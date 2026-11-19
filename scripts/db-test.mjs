@@ -890,25 +890,27 @@ ok((await errorOf(`select public.tech_submit('${link.token}', true)`))?.includes
 ok(await denied(`insert into storage.objects (bucket_id, name) values ('work-order-photos', '${job.folder}/2.jpg')`), 'no more photos after sending')
 ok((await rows(`select public.tech_job('${link.token}') as j`))[0].j.catalog === null, 'after sending, the page is read-only')
 
-// Staff price it; a discount above the limit waits for the admin.
+// Staff price it; a discount applies at once and alerts the manager in the audit log.
 await asCs()
 ok((await errorOf(`select public.wo_quote('${WO}', 100)`))?.includes('not_allowed'), 'customer service cannot price a work order')
 await asOps()
 ok((await errorOf(`select public.wo_quote('${WO}', 100, 20)`))?.includes('reason_required'), 'a discount needs a reason')
-ok((await rows(`select public.wo_quote('${WO}', 100, 20, 'عميل قديم') as s`))[0].s === 'approval', 'a discount above the limit waits for approval')
-const disc = (await rows(`select id from approvals where work_order_id = '${WO}' and kind = 'discount' and status = 'pending'`))[0]
-ok((await errorOf(`select public.approval_decide('${disc.id}', true)`))?.includes('not_allowed'), 'operations staff cannot approve')
-await as('authenticated', A)
-ok((await errorOf(`select public.wo_decide_mine('${WO}', 'approved')`))?.includes('invalid_transition'), 'the customer cannot answer before the quote is sent')
-await asAdmin()
-ok((await errorOf(`select public.approval_decide('${disc.id}', false)`))?.includes('reason_required'), 'rejecting needs a reason')
-await rows(`select public.approval_decide('${disc.id}', true, 'تمام')`)
+ok((await rows(`select public.wo_quote('${WO}', 100, 20, 'عميل قديم') as s`))[0].s === 'quote', 'a discount goes to the customer without waiting for a manager')
+ok((await count(`select 1 from approvals where work_order_id = '${WO}'`)) === 0, 'no approval is created for a discount')
+await as('owner')
+const alert = (await rows(`select actor, after from audit_log where entity = 'discount' and entity_id = '${WO}'`))
+ok(alert.length === 1 && Number(alert[0].after.discount) === 20 && alert[0].after.reason === 'عميل قديم' && alert[0].actor === OPS2,
+  'the manager is alerted in the audit log: who, how much, why')
+await asOps()
+await rows(`select public.wo_quote('${WO}', 100, 20, 'عميل قديم')`)
+await as('owner')
+ok((await count(`select 1 from audit_log where entity = 'discount' and entity_id = '${WO}'`)) === 1, 're-saving the same discount does not alert twice')
 const wq = (await rows(`select status, subtotal, vat, total from work_orders where id = '${WO}'`))[0]
 const base = fltPrice + 2 * prtPrice + 100 + 60 - 20
 ok(wq.status === 'quote' && Number(wq.subtotal) === base && Number(wq.total) === Math.round((base + base * vatRate) * 100) / 100,
-  'approved: the quote (parts + labour + inspection − discount + VAT) goes to the customer')
+  'the quote (parts + labour + inspection − discount + VAT) goes to the customer')
 
-// The admin's own discount: someone else must approve it.
+// A second visit: staff record the report for the technician.
 await asCs()
 const wr2 = (await rows(`select public.staff_request_service('0566666666', 'أبو خالد', 'emergency', ${TODAY}, 'evening', null, 'غير ذلك', null, null, 'الشوقية') as r`))[0].r
 await rows(`select public.request_schedule('${wr2.id}', now() + interval '3 hours', '${T2}')`)
@@ -917,9 +919,6 @@ await asAdmin()
 await rows(`select public.wo_report_staff('${l2.work_order_id}', false, 'عطل في المضخة')`)
 ok((await rows(`select tech_note, report_by from work_orders where id = '${l2.work_order_id}'`))[0].tech_note.includes('نيابة'),
   'staff can record the report for the technician')
-await rows(`select public.wo_quote('${l2.work_order_id}', 50, 10, 'خصم')`)
-const own = (await rows(`select id from approvals where work_order_id = '${l2.work_order_id}' and status = 'pending'`))[0]
-ok((await errorOf(`select public.approval_decide('${own.id}', true)`))?.includes('own_request'), 'nobody approves their own request')
 
 // The customer approves in the store and pays cash to the technician.
 await as('authenticated', B)
@@ -973,6 +972,54 @@ ok((await rows(`select status from service_requests where id = '${wr2.id}'`))[0]
 ok(await denied(`select public.wo_payment_confirm('${WO}', 'pay_x', 100, 'SAR', '{}')`), 'nobody but the payment server confirms an online payment')
 await as('anon')
 ok(await denied(`select public.wo_payment_confirm('${WO}', 'pay_x', 100, 'SAR', '{}')`), 'not the technician either')
+
+// ---------------------------------------------------------------------------
+console.log('Reports: the morning numbers and the date-range report')
+await asAdmin()
+const dsum = (await rows(`select public.dashboard_summary() as s`))[0].s
+const collected = Number(wq.total) + Math.round((60 + 60 * vatRate) * 100) / 100
+ok(dsum.sales && Number(dsum.sales.service_today) === collected, 'the manager sees today\'s maintenance collections')
+ok(dsum.orders && dsum.visits && dsum.cash && dsum.stock, 'the manager sees every block')
+ok(dsum.discounts && dsum.discounts.week_count === 1 && Number(dsum.discounts.week_amount) === 20, 'the manager sees this week discounts')
+ok(dsum.discounts && dsum.discounts.week_count === 1 && Number(dsum.discounts.week_amount) === 20, 'the manager sees this week\x27s discounts')
+ok(Number(dsum.cash.custody_amount) === Math.round((60 + 60 * vatRate) * 100) / 100 && dsum.cash.custody_count === 1, 'only cash still with technicians counts (settled custody does not)')
+ok(Array.isArray(dsum.stock.items), 'low-stock list comes back as a list')
+await asCs()
+const csum = (await rows(`select public.dashboard_summary() as s`))[0].s
+ok(!csum.sales && !csum.cash && !csum.stock && !csum.discounts, 'customer service does not see money, cash or stock numbers')
+ok(await denied(`select public.report_summary(current_date, current_date)`), 'customer service cannot open reports')
+await as('authenticated', A)
+ok(await denied(`select public.dashboard_summary()`), 'a customer cannot read the numbers')
+await as('anon')
+ok(await denied(`select public.report_summary(current_date, current_date)`), 'anonymous cannot read reports')
+await asAdmin()
+ok((await errorOf(`select public.report_summary(current_date, current_date - 1)`))?.includes('invalid_range'), 'the end date cannot be before the start')
+ok((await errorOf(`select public.report_summary(current_date - 400, current_date)`))?.includes('range_too_long'), 'a year at most')
+const rep = (await rows(`select public.report_summary((now() at time zone 'Asia/Riyadh')::date - 6, (now() at time zone 'Asia/Riyadh')::date) as r`))[0].r
+ok(rep.daily.length === 7, 'one row per day in the range')
+ok(Number(rep.service.total) === collected && Number(rep.collections.service_cash) === collected, 'maintenance cash is in the report')
+ok(rep.service.closed_work_orders === 2 && rep.service.customer_absent === 1, 'closed work orders and «not home» visits are counted')
+ok(rep.parts_used.some((p) => p.qty >= 1), 'parts used on closed jobs are listed')
+const sumDaily = rep.daily.reduce((a, d) => a + Number(d.store), 0)
+ok(Math.abs(sumDaily - Number(rep.store.total)) < 0.01, 'daily store sales add up to the total')
+
+// ---------------------------------------------------------------------------
+console.log('Security review')
+await as('owner')
+const noRls2 = await rows(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname in ('public', 'private') and c.relkind = 'r' and not c.relrowsecurity`)
+ok(noRls2.length === 0, `row security is on for every table${noRls2.length ? ': missing ' + noRls2.map((r) => r.relname).join(', ') : ''}`)
+const anonWrites = await rows(`select table_name, privilege_type from information_schema.role_table_grants
+  where grantee = 'anon' and table_schema = 'public' and privilege_type in ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE')`)
+ok(anonWrites.length === 0, `anonymous visitors cannot write any table directly${anonWrites.length ? ': ' + anonWrites.map((r) => r.table_name + ' ' + r.privilege_type).join(', ') : ''}`)
+const privGrants = await rows(`select table_name from information_schema.role_table_grants
+  where grantee in ('anon', 'authenticated') and table_schema = 'private'`)
+ok(privGrants.length === 0, 'nobody outside the server reads the private schema')
+const anonFns = (await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')
+  order by 1`)).map((r) => r.proname)
+console.log('    anon can call:', anonFns.join(', ') || '(none)')
+ok(anonFns.join(',') === 'category_is_public,is_in_service_area,tech_arrive,tech_job,tech_submit,tech_upload_ok', 'anonymous visitors can call only the reviewed functions (store helpers + the technician link)')
 
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

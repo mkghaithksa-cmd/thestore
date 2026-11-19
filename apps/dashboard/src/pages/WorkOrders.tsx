@@ -23,7 +23,6 @@ type Tab = 'action' | WorkOrderStatus | 'done' | 'all'
 const TABS: { key: Tab; label: string; test: (s: WorkOrderStatus) => boolean }[] = [
   { key: 'action', label: 'تحتاج إجراء', test: (s) => ['report', 'payment', 'paid'].includes(s) },
   { key: 'visit', label: 'بانتظار الفني', test: (s) => s === 'visit' },
-  { key: 'approval', label: 'موافقة المدير', test: (s) => s === 'approval' },
   { key: 'quote', label: 'بانتظار العميل', test: (s) => s === 'quote' },
   { key: 'done', label: 'مغلقة', test: (s) => s === 'closed' || s === 'cancelled' },
   { key: 'all', label: 'الكل', test: () => true },
@@ -364,7 +363,7 @@ function QuoteSummary({ w }: { w: Row }) {
 /** Staff price the report. */
 function QuoteForm({ w, onDone }: { w: Row; onDone: () => void }) {
   const [prices, setPrices] = useState<Record<string, number>>({})
-  const [cfg, setCfg] = useState<{ vat_rate: number; discount_approval_limit: number } | null>(null)
+  const [cfg, setCfg] = useState<{ vat_rate: number } | null>(null)
   const [labor, setLabor] = useState(String(Number(w.labor_fee) || ''))
   const [discount, setDiscount] = useState(String(Number(w.discount) || ''))
   const [why, setWhy] = useState(w.discount_reason ?? '')
@@ -375,10 +374,10 @@ function QuoteForm({ w, onDone }: { w: Row; onDone: () => void }) {
     const ids = w.parts.map((p) => p.product_id)
     Promise.all([
       ids.length ? supabase.from('products').select('id, price_before_vat').in('id', ids) : Promise.resolve({ data: [] }),
-      supabase.from('settings').select('vat_rate, discount_approval_limit').eq('id', 1).maybeSingle(),
+      supabase.from('settings').select('vat_rate').eq('id', 1).maybeSingle(),
     ]).then(([p, s]) => {
       setPrices(Object.fromEntries(((p.data ?? []) as { id: string; price_before_vat: number }[]).map((x) => [x.id, Number(x.price_before_vat)])))
-      setCfg(s.data ? { vat_rate: Number(s.data.vat_rate), discount_approval_limit: Number(s.data.discount_approval_limit) } : null)
+      setCfg(s.data ? { vat_rate: Number(s.data.vat_rate) } : null)
     })
   }, [w.parts])
 
@@ -388,7 +387,6 @@ function QuoteForm({ w, onDone }: { w: Row; onDone: () => void }) {
     const vat = Math.round(base * (cfg?.vat_rate ?? 0) * 100) / 100
     return { parts, base, vat, total: base + vat }
   }, [w.parts, w.inspection_fee, prices, labor, discount, cfg])
-  const needsOk = cfg !== null && (Number(discount) || 0) > cfg.discount_approval_limit
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
@@ -445,10 +443,10 @@ function QuoteForm({ w, onDone }: { w: Row; onDone: () => void }) {
         {Number(w.inspection_fee) > 0 && <> + رسوم الفحص {sar(w.inspection_fee)}</>}
         {(Number(discount) || 0) > 0 && <> − خصم {sar(Number(discount))}</>} + الضريبة {sar(sum.vat)} = <b>{sar(sum.total)}</b>
       </p>
-      {needsOk && <span className="warn-text">الخصم فوق الحد ({sar(cfg!.discount_approval_limit)}): يروح لموافقة المدير قبل ما يوصل العميل.</span>}
+      {(Number(discount) || 0) > 0 && <span className="muted">الخصم يطبّق مباشرة، ويوصل للمدير تنبيه في سجل التدقيق باسمك والسبب.</span>}
       {error && <p className="form-error">{error}</p>}
       <button className="btn sm self-start" disabled={busy}>
-        {needsOk ? 'أرسل للمدير' : 'أرسل العرض للعميل'}
+        أرسل العرض للعميل
       </button>
     </form>
   )
