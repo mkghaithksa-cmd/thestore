@@ -45,7 +45,7 @@ fs.writeFileSync(
   JSON.stringify(
     {
       version: 1,
-      include: ['/', '/products', '/products/*', '/pages/*', '/cart', '/login', '/account', '/orders', '/sitemap.xml', '/robots.txt'],
+      include: ['/', '/products', '/products/*', '/pages/*', '/maintenance', '/cart', '/login', '/account', '/orders', '/sitemap.xml', '/robots.txt'],
       exclude: [],
     },
     null,

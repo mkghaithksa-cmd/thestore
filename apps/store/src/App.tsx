@@ -15,6 +15,7 @@ import { Invoice } from './pages/Invoice'
 import { PaidPage, PayPage } from './pages/Pay'
 import { Devices } from './pages/Devices'
 import { ServiceList, ServiceNew } from './pages/Service'
+import { Maintenance } from './pages/Maintenance'
 import { Checkout } from './pages/Checkout'
 import { ProductPage } from './pages/ProductPage'
 import { Products } from './pages/Products'
@@ -100,6 +101,8 @@ function Footer() {
           <h2>المتجر</h2>
           <Link to="/products">المنتجات</Link>
           <Link to="/cart">السلة</Link>
+          <Link to="/maintenance">الصيانة والبلاغات</Link>
+          <Link to="/devices">أجهزتي</Link>
           <Link to="/orders">طلباتي</Link>
           <Link to="/account">حسابي</Link>
         </nav>
@@ -146,6 +149,7 @@ function Header() {
             الرئيسية
           </NavLink>
           <NavLink to="/products">المنتجات</NavLink>
+          <NavLink to="/maintenance">الصيانة</NavLink>
           <NavLink to="/orders">طلباتي</NavLink>
         </nav>
         <div className="hact">
@@ -249,6 +253,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+            <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/pages/:slug" element={<InfoPage />} />
             <Route path="/login" element={<Login />} />
             <Route

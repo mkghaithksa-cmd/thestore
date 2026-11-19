@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { productPath, sectionShows, type HomeBanner, type HomeSection, type Review } from '@ghaith/shared'
 import { BannerSlider } from '../components/BannerSlider'
@@ -9,6 +9,7 @@ import { fetchBanners, type ProductWithCategory } from '../lib/catalog'
 import { fetchFeaturedReviews, fetchHomeSections, homeImageUrl } from '../lib/home'
 import { availableHere, useLocationChoice } from '../lib/location'
 import { useCatalog } from '../lib/useCatalog'
+import { ServiceLinks } from './Maintenance'
 
 /** Used until the sections table answers (or if it fails): the original home page. */
 const FALLBACK: HomeSection[] = [
@@ -254,16 +255,23 @@ export function Home() {
 
   if (!sections) return <div className="skeleton hero-skel" aria-hidden="true" />
 
+  // The maintenance strip sits right under the main banner (or first block).
+  const shown = sections.filter((s) => sectionShows(s, inMecca))
+  const stripAfter = shown.find((s) => s.key === 'hero')?.id ?? shown.find((s) => s.key !== 'announcement')?.id
+
   return (
     <div className="home">
-      {sections
-        .filter((s) => sectionShows(s, inMecca))
-        .map((s) => {
+      {shown.map((s) => {
           const node = render(s)
           return node ? (
-            <div key={s.id} className={`home-sec sec-${s.key}`}>
-              {node}
-            </div>
+            <Fragment key={s.id}>
+              <div className={`home-sec sec-${s.key}`}>{node}</div>
+              {s.id === stripAfter && inMecca && (
+                <section className="home-sec svc-strip" aria-label="الصيانة والبلاغات">
+                  <ServiceLinks compact />
+                </section>
+              )}
+            </Fragment>
           ) : null
         })}
     </div>

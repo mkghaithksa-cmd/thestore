@@ -164,6 +164,14 @@ async function metaFor(url) {
     }
   }
 
+  if (path === '/maintenance') {
+    return {
+      ...base,
+      title: `الصيانة والبلاغات | ${SITE}`,
+      description: clip('بلّغ عن عطل في جهاز تنقية المياه أو احجز تغيير الفلاتر داخل مكة المكرمة، ونتصل فيك نأكد الموعد. بدون دفع مسبق.'),
+    }
+  }
+
   const page = path.match(/^\/pages\/([a-z]+)$/)
   if (page && PAGES[page[1]]) {
     const [row] = await sb(`store_pages?select=title_ar,body&slug=eq.${page[1]}&is_published=eq.true&limit=1`)
@@ -211,6 +219,7 @@ async function sitemap(url) {
   const lines = [
     entry(`${origin}/`),
     entry(`${origin}/products`),
+    entry(`${origin}/maintenance`),
     ...categories.map((c) => entry(`${origin}/products?cat=${encodeURIComponent(c.slug)}`)),
     ...products.map((p) => entry(`${origin}/products/${encodeURIComponent(p.sku)}`, p.updated_at)),
     ...pages.map((p) => entry(`${origin}/pages/${p.slug}`, p.updated_at)),

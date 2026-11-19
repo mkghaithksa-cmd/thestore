@@ -4,6 +4,7 @@ import { formatSaudiPhoneLocal, type Customer } from '@ghaith/shared'
 import { useAuth } from '../lib/auth'
 import { completeMyProfile, fetchMyCustomer } from '../lib/customer'
 import { useAsync } from '../lib/useAsync'
+import { ServiceLinks } from './Maintenance'
 
 function CompleteProfileForm({ customer, onDone }: { customer: Customer; onDone: (c: Customer) => void }) {
   const [name, setName] = useState(customer.full_name ?? '')
@@ -90,6 +91,8 @@ export function Account() {
           تسجيل الخروج
         </button>
       </div>
+
+      <ServiceLinks compact />
 
       {state.status === 'loading' && <p className="muted">جاري التحميل…</p>}
       {state.status === 'error' && (
