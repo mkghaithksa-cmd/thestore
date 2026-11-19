@@ -790,7 +790,7 @@ ok((await errorOf(`select public.device_remove_mine('${inRow.device_id}')`))?.in
 await rows(`select public.device_remove_mine('${ext}')`)
 ok((await count(`select 1 from customer_devices where id = '${ext}' and is_active`)) === 0, 'the customer removes a device they added (archived)')
 await asCs()
-const sx = (await rows(`select public.device_add_staff_external('0566666666', 'cooler', 'كولر', null, ${TODAY} - 400) as id`))[0].id
+const sx = (await rows(`select public.device_add_staff_external('0566666666', 'cooler', 'كولر', null, ${TODAY} - 200) as id`))[0].id
 ok((await rows(`select owner_phone, date_uncertain from customer_devices where id = '${sx}'`))[0].owner_phone === '+966566666666', 'staff add another company’s device by phone')
 ok((await rows(`select * from public.maintenance_due()`)).some((d) => d.device_id === sx), 'other companies’ devices appear in the due-maintenance list')
 const sp = (await rows(`select public.staff_request_service('0566666666', 'أبو خالد', 'emergency', ${TODAY}, 'morning', null, 'غير ذلك', null, null, 'الشوقية', null, 'other', 'ماركة', null) as r`))[0].r
@@ -800,6 +800,33 @@ await as('authenticated', B)
 ok(await denied(`select public.device_add_staff_external('0566666666', 'cooler')`) ||
   (await errorOf(`select public.device_add_staff_external('0566666666', 'cooler')`))?.includes('not_allowed'), 'a customer cannot add devices for other phones')
 
+
+// --- Filter reminder settings ------------------------------------------------------
+console.log('Filter reminder settings')
+await asCs()
+const late = (await rows(`select public.device_add_staff_external('0577777777', 'under_sink', 'قديم', null, ${TODAY} - 400) as id`))[0].id
+ok(!(await rows(`select * from public.maintenance_due()`)).some((d) => d.device_id === late),
+  'a device overdue longer than the «ends after» days leaves the list (default 60)')
+ok(await denied(`update settings set maintenance_overdue_days = 0 where id = 1`) ||
+  (await count(`update settings set maintenance_overdue_days = 0 where id = 1 returning id`)) === 0, 'staff without settings permission cannot change reminders')
+await asAdmin()
+ok((await count(`update settings set maintenance_overdue_days = 0 where id = 1 returning id`)) === 1, 'the admin sets reminders to run until the filter is changed')
+await asCs()
+ok((await rows(`select * from public.maintenance_due()`)).some((d) => d.device_id === late), '«until changed»: the long-overdue device is back on the list')
+await asAdmin()
+ok(await denied(`update settings set maintenance_alert_days = 181 where id = 1`), 'reminder start is at most 180 days before')
+ok(await denied(`update settings set maintenance_decline_days = 3 where id = 1`), 'after a decline: at least 7 days')
+ok(await denied(`update settings set maintenance_wa_message = 'قصير' where id = 1`), 'the WhatsApp text needs at least 10 characters')
+await rows(`update settings set maintenance_decline_days = 30 where id = 1`)
+await asCs()
+await rows(`select public.maintenance_log_contact('${late}', 'declined')`)
+ok((await rows(`select next_contact_on - ${TODAY} as n from customer_devices where id = '${late}'`))[0].n === 30, 'a decline hides the device for the days set in settings')
+await asAdmin()
+await rows(`update settings set maintenance_reminders_on = false where id = 1`)
+await asCs()
+ok((await rows(`select * from public.maintenance_due()`)).length === 0, 'reminders off → the due list is empty')
+await asAdmin()
+await rows(`update settings set maintenance_reminders_on = true, maintenance_overdue_days = 60, maintenance_decline_days = 90 where id = 1`)
 
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

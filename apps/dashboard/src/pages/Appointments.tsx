@@ -1,10 +1,12 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   DEVICE_KIND_LABELS,
   OUTCOME_LABELS,
   PERIOD_LABELS,
   SERVICE_KIND_LABELS,
   SERVICE_STATUS_LABELS,
+  fillReminder,
   serviceErrorMessage,
   type ContactOutcome,
   type DeviceKind,
@@ -13,6 +15,7 @@ import {
   type ServiceRequest,
   type ServiceRequestEvent,
   type ServiceStatus,
+  type StoreSettings,
 } from '@ghaith/shared'
 import { RequirePage } from '../components/Layout'
 import {
@@ -427,14 +430,17 @@ function DueList() {
   const [rows, setRows] = useState<Due[] | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [alertDays, setAlertDays] = useState<number | null>(null)
+  const [cfg, setCfg] = useState<Pick<StoreSettings, 'maintenance_alert_days' | 'maintenance_overdue_days' | 'maintenance_reminders_on' | 'maintenance_wa_message' | 'maintenance_decline_days'> | null>(null)
 
   const reload = useCallback(() => {
     setError(null)
-    Promise.all([supabase.rpc('maintenance_due'), supabase.from('settings').select('maintenance_alert_days').eq('id', 1).maybeSingle()]).then(([d, s]) => {
+    Promise.all([
+      supabase.rpc('maintenance_due'),
+      supabase.from('settings').select('maintenance_alert_days, maintenance_overdue_days, maintenance_reminders_on, maintenance_wa_message, maintenance_decline_days').eq('id', 1).maybeSingle(),
+    ]).then(([d, s]) => {
       if (d.error) return setError('تعذّر تحميل القائمة.')
       setRows((d.data ?? []) as Due[])
-      setAlertDays((s.data?.maintenance_alert_days as number | undefined) ?? null)
+      setCfg(s.data as typeof cfg)
     })
   }, [])
   useEffect(reload, [reload])
@@ -444,8 +450,13 @@ function DueList() {
     <>
       <div className="row between wrapr">
         <p className="muted">
-          الأجهزة اللي موعد تغيير فلاترها خلال {alertDays ?? '…'} يوم أو فات. أرسل للعميل واتساب أو اتصل، وسجّل رده. اللي عليه طلب مفتوح أو مؤجَّل ما
-          يظهر هنا.
+          الأجهزة اللي موعد تغيير فلاترها خلال {cfg?.maintenance_alert_days ?? '…'} يوم
+          {cfg && cfg.maintenance_overdue_days > 0 ? `، أو فات من أقل من ${cfg.maintenance_overdue_days} يوم` : ' أو فات'}. أرسل للعميل واتساب أو اتصل،
+          وسجّل رده. اللي عليه طلب مفتوح أو مؤجَّل ما يظهر هنا. تغيّر المدة والرسالة من{' '}
+          <Link to="/settings" className="link">
+            الإعدادات
+          </Link>
+          .
         </p>
         <button className="btn ghost sm" onClick={reload}>
           تحديث
@@ -454,6 +465,10 @@ function DueList() {
       {error && <p className="form-error">{error}</p>}
       {!rows ? (
         !error && <p className="muted">جاري التحميل…</p>
+      ) : cfg && !cfg.maintenance_reminders_on ? (
+        <div className="notice warn">
+          <b>تذكير الفلاتر موقّف من الإعدادات.</b>
+        </div>
       ) : rows.length === 0 ? (
         <div className="notice ok">
           <b>ما في صيانة مستحقة الحين.</b>
@@ -474,7 +489,12 @@ function DueList() {
             <tbody>
               {rows.map((d) => {
                 const late = d.next_due_on < today
-                const text = `السلام عليكم${d.customer_name ? ` ${d.customer_name}` : ''}، معك تنقية غيث. حان موعد تغيير فلاتر جهازك (${d.device_name}). متى يناسبك نزورك؟ الصباح أو المساء؟`
+                const text = fillReminder(cfg?.maintenance_wa_message ?? '', {
+                  name: d.customer_name,
+                  device: d.device_name,
+                  filters: d.due_filters ?? [],
+                  due: d.next_due_on,
+                })
                 return (
                   <Fragment key={d.device_id}>
                     <tr>
@@ -519,6 +539,7 @@ function DueList() {
                         <td colSpan={6}>
                           <OutcomeForm
                             due={d}
+                            declineDays={cfg?.maintenance_decline_days ?? 90}
                             onDone={() => {
                               setOpen(null)
                               reload()
@@ -538,7 +559,7 @@ function DueList() {
   )
 }
 
-function OutcomeForm({ due, onDone }: { due: Due; onDone: () => void }) {
+function OutcomeForm({ due, declineDays, onDone }: { due: Due; declineDays: number; onDone: () => void }) {
   const { can } = useStaffAuth()
   const [outcome, setOutcome] = useState<ContactOutcome>('agreed')
   const [day, setDay] = useState(riyadhDate(1))
@@ -613,7 +634,7 @@ function OutcomeForm({ due, onDone }: { due: Due; onDone: () => void }) {
           <input id={`u-${due.device_id}`} type="date" className="input" min={riyadhDate(1)} max={riyadhDate(180)} value={until} onChange={(e) => setUntil(e.target.value)} />
         </div>
       )}
-      {outcome === 'declined' && <p className="muted">ينشال من القائمة 90 يوم.</p>}
+      {outcome === 'declined' && <p className="muted">ينشال من القائمة {declineDays} يوم.</p>}
       {outcome === 'no_answer' && <p className="muted">يبقى في القائمة، وينحسب عدد مرات عدم الرد.</p>}
       <div className="field">
         <label htmlFor={`n-${due.device_id}`}>ملاحظة (اختياري)</label>

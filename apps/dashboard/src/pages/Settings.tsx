@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import type { StoreSettings } from '@ghaith/shared'
+import { fillReminder, type StoreSettings } from '@ghaith/shared'
+import { riyadhDate } from '../lib/service'
 import { RequirePage } from '../components/Layout'
 import { fetchSettings } from '../lib/catalog'
 import { parseAmount } from '../lib/format'
@@ -38,7 +39,6 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
   const [inspection, setInspection] = useState(String(settings.inspection_fee))
   const [shipping, setShipping] = useState(String(settings.shipping_fee))
   const [chargeAbsent, setChargeAbsent] = useState(settings.charge_inspection_if_absent)
-  const [alertDays, setAlertDays] = useState(String(settings.maintenance_alert_days))
   const [vatNo, setVatNo] = useState(settings.seller_vat_number ?? '')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -47,11 +47,9 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
     e.preventDefault()
     const v = parseAmount(vat)
     const fees = [install, inspection, shipping].map(parseAmount)
-    const days = Number(alertDays)
     if (!(v >= 0 && v < 100)) return setMsg({ ok: false, text: 'نسبة الضريبة بين 0 و 99.' })
     if (fees.some((f) => !(f >= 0))) return setMsg({ ok: false, text: 'الرسوم أرقام صفر أو أكثر.' })
-    if (!Number.isInteger(days) || days < 0) return setMsg({ ok: false, text: 'أيام التنبيه رقم صحيح.' })
-    if (vatNo && !/^3d{13}3$/.test(vatNo)) return setMsg({ ok: false, text: 'الرقم الضريبي 15 رقم، يبدأ وينتهي بـ 3.' })
+    if (vatNo && !/^3\d{13}3$/.test(vatNo)) return setMsg({ ok: false, text: 'الرقم الضريبي 15 رقم، يبدأ وينتهي بـ 3.' })
     setBusy(true)
     setMsg(null)
     const { error } = await supabase
@@ -62,7 +60,6 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
         inspection_fee: fees[1],
         shipping_fee: fees[2],
         charge_inspection_if_absent: chargeAbsent,
-        maintenance_alert_days: days,
         seller_vat_number: vatNo || null,
       })
       .eq('id', 1)
@@ -91,12 +88,8 @@ function FeesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; can
           {money('shipping', 'رسوم الشحن (ر.س، قبل الضريبة)', shipping, setShipping, 'لخارج مكة')}
           <div className="field">
             <label htmlFor="vatno">الرقم الضريبي للمؤسسة</label>
-            <input id="vatno" className="input num" inputMode="numeric" dir="ltr" maxLength={15} value={vatNo} onChange={(e) => setVatNo(e.target.value.replace(/D/g, ''))} />
+            <input id="vatno" className="input num" inputMode="numeric" dir="ltr" maxLength={15} value={vatNo} onChange={(e) => setVatNo(e.target.value.replace(/\D/g, ''))} />
             <span className="muted">يظهر في فاتورة العميل مع رمز QR حسب هيئة الزكاة. اتركه فاضي إذا ما عندكم.</span>
-          </div>
-          <div className="field">
-            <label htmlFor="alert">تنبيه الصيانة قبل الموعد بـ (يوم)</label>
-            <input id="alert" className="input num" inputMode="numeric" dir="ltr" value={alertDays} onChange={(e) => setAlertDays(e.target.value.replace(/\D/g, ''))} />
           </div>
         </div>
         <label className="check">
@@ -375,6 +368,128 @@ function FilterLifeCard({ value, canEdit, onSaved }: { value: number; canEdit: b
   )
 }
 
+const REMINDER_TAGS = ['{الاسم}', '{الجهاز}', '{الفلاتر}', '{الموعد}']
+
+/** «تذكير الفلاتر»: on/off, the from–to window, after a decline, and the WhatsApp text. */
+function RemindersCard({ settings, canEdit, onSaved }: { settings: StoreSettings; canEdit: boolean; onSaved: () => void }) {
+  const [on, setOn] = useState(settings.maintenance_reminders_on ?? true)
+  const [before, setBefore] = useState(String(settings.maintenance_alert_days))
+  const [keepAfter, setKeepAfter] = useState((settings.maintenance_overdue_days ?? 60) > 0)
+  const [after, setAfter] = useState(String(settings.maintenance_overdue_days || 60))
+  const [decline, setDecline] = useState(String(settings.maintenance_decline_days ?? 90))
+  const [message, setMessage] = useState(settings.maintenance_wa_message ?? '')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const digits = (set: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMsg(null)
+    set(e.target.value.replace(/[^0-9]/g, ''))
+  }
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    const b = Number(before)
+    const a = keepAfter ? Number(after) : 0
+    const d = Number(decline)
+    if (!before || b > 180) return setMsg({ ok: false, text: 'بداية التذكير من 0 إلى 180 يوم قبل الموعد.' })
+    if (keepAfter && (!after || a < 1 || a > 365)) return setMsg({ ok: false, text: 'نهاية التذكير من 1 إلى 365 يوم بعد الموعد.' })
+    if (!decline || d < 7 || d > 365) return setMsg({ ok: false, text: 'بعد الرفض من 7 إلى 365 يوم.' })
+    if (message.trim().length < 10 || message.trim().length > 500) return setMsg({ ok: false, text: 'نص الرسالة من 10 إلى 500 حرف.' })
+    setBusy(true)
+    setMsg(null)
+    const { error } = await supabase
+      .from('settings')
+      .update({
+        maintenance_reminders_on: on,
+        maintenance_alert_days: b,
+        maintenance_overdue_days: a,
+        maintenance_decline_days: d,
+        maintenance_wa_message: message.trim(),
+      })
+      .eq('id', 1)
+    setBusy(false)
+    if (error) return setMsg({ ok: false, text: errText(error.message) })
+    setMsg({ ok: true, text: 'تم الحفظ ✓' })
+    onSaved()
+  }
+
+  const preview = fillReminder(message, { name: 'محمد', device: 'منقي تحت المغسلة', filters: ['طقم الفلاتر'], due: riyadhDate(5) })
+
+  return (
+    <form className="card stack" onSubmit={save}>
+      <h2 className="h3">تذكير الفلاتر</h2>
+      <span className="muted">
+        يحدد متى يظهر الجهاز في «الصيانة المستحقة» عند الموظفين، ومتى يشوف العميل تنبيه «حان وقت تغيير الفلاتر» في «أجهزتي».
+      </span>
+      <fieldset className="plain stack" disabled={!canEdit || busy}>
+        <label className="check">
+          <input type="checkbox" checked={on} onChange={(e) => { setMsg(null); setOn(e.target.checked) }} />
+          التذكير شغّال
+        </label>
+        {on && (
+          <>
+            <div className="row wrapr align-end">
+              <div className="field">
+                <label htmlFor="rem-from">يبدأ قبل موعد الفلتر بـ (يوم)</label>
+                <input id="rem-from" className="input num" inputMode="numeric" dir="ltr" style={{ width: 100 }} value={before} onChange={digits(setBefore)} />
+              </div>
+              <div className="field">
+                <span>وينتهي</span>
+                <div className="seg">
+                  <button type="button" className={!keepAfter ? 'on' : undefined} onClick={() => { setMsg(null); setKeepAfter(false) }}>
+                    لين يتغيّر الفلتر
+                  </button>
+                  <button type="button" className={keepAfter ? 'on' : undefined} onClick={() => { setMsg(null); setKeepAfter(true) }}>
+                    بعد عدد أيام
+                  </button>
+                </div>
+              </div>
+              {keepAfter && (
+                <div className="field">
+                  <label htmlFor="rem-to">بعد الموعد بـ (يوم)</label>
+                  <input id="rem-to" className="input num" inputMode="numeric" dir="ltr" style={{ width: 100 }} value={after} onChange={digits(setAfter)} />
+                </div>
+              )}
+            </div>
+            <p className="inset-box">
+              يعني: الجهاز يظهر للتذكير من <b>{before || '…'} يوم قبل</b> موعد تغيير الفلتر،{' '}
+              {keepAfter ? (
+                <>
+                  ويختفي إذا مرّ <b>{after || '…'} يوم بعد</b> الموعد وما تغيّر.
+                </>
+              ) : (
+                <>ويبقى لين يتغيّر الفلتر أو يتسجل رد العميل.</>
+              )}
+            </p>
+            <div className="field">
+              <label htmlFor="rem-dec">إذا رفض العميل، يرجع للقائمة بعد (يوم)</label>
+              <input id="rem-dec" className="input num" inputMode="numeric" dir="ltr" style={{ width: 100 }} value={decline} onChange={digits(setDecline)} />
+            </div>
+            <div className="field">
+              <label htmlFor="rem-msg">رسالة الواتساب</label>
+              <textarea id="rem-msg" className="input" rows={3} maxLength={500} value={message} onChange={(e) => { setMsg(null); setMessage(e.target.value) }} />
+              <span className="muted">
+                تقدر تحط:{' '}
+                {REMINDER_TAGS.map((t) => (
+                  <button key={t} type="button" className="linkbtn" onClick={() => setMessage((m) => `${m}${m.endsWith(' ') || !m ? '' : ' '}${t}`)}>
+                    {t}
+                  </button>
+                ))}
+              </span>
+              <span className="muted">مثال: {preview}</span>
+            </div>
+          </>
+        )}
+      </fieldset>
+      {msg && <p className={msg.ok ? 'ok-text' : 'form-error'}>{msg.text}</p>}
+      {canEdit && (
+        <button className="btn self-start" disabled={busy}>
+          {busy ? 'جاري الحفظ…' : 'حفظ'}
+        </button>
+      )}
+    </form>
+  )
+}
+
 export function Settings() {
   const { can } = useStaffAuth()
   const canEdit = can('settings', 'edit')
@@ -416,6 +531,7 @@ export function Settings() {
           <WorkDaysCard days={days} canEdit={canEdit} onSaved={load} />
           <NeighborhoodsCard list={hoods} canAdd={can('settings', 'add')} canEdit={canEdit} onSaved={load} />
           <FaultTypesCard list={settings.fault_types ?? []} canEdit={canEdit} onSaved={load} />
+          <RemindersCard key={settings.updated_at} settings={settings} canEdit={canEdit} onSaved={load} />
           <FilterLifeCard value={settings.default_filter_life_months ?? 6} canEdit={canEdit} onSaved={load} />
         </>
       )}

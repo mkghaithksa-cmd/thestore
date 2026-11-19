@@ -21,7 +21,16 @@ import { useAsync } from '../lib/useAsync'
 
 async function load() {
   const [devices, requests, settings] = await Promise.all([fetchMyDevicesFull(), fetchMyRequests(), fetchSettings()])
-  return { devices, requests, alertDays: settings.maintenance_alert_days }
+  return {
+    devices,
+    requests,
+    alertDays: settings.maintenance_alert_days,
+    // Reminder window from the dashboard settings: off, or until N days after the due date (0 = no end).
+    remind: (due: string) =>
+      settings.maintenance_reminders_on !== false &&
+      daysUntil(due) <= settings.maintenance_alert_days &&
+      (!settings.maintenance_overdue_days || daysUntil(due) >= -settings.maintenance_overdue_days),
+  }
 }
 
 function FilterBar({ f, alertDays }: { f: DeviceFilter; alertDays: number }) {
@@ -59,13 +68,25 @@ const SNOOZE = [
   { days: 60, label: 'شهرين' },
 ]
 
-function DeviceCard({ d, open, alertDays, onChange }: { d: MyDeviceFull; open: ServiceRequest | undefined; alertDays: number; onChange: () => void }) {
+function DeviceCard({
+  d,
+  open,
+  alertDays,
+  remind,
+  onChange,
+}: {
+  d: MyDeviceFull
+  open: ServiceRequest | undefined
+  alertDays: number
+  remind: (due: string) => boolean
+  onChange: () => void
+}) {
   const [snoozing, setSnoozing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const today = riyadhDate()
   const nextDue = d.filters[0]?.next_due_on
-  const dueSoon = nextDue !== undefined && daysUntil(nextDue) <= alertDays
+  const dueSoon = nextDue !== undefined && remind(nextDue)
   const snoozed = d.next_contact_on && d.next_contact_on > today
 
   async function remove() {
@@ -252,6 +273,7 @@ export function Devices() {
             key={d.id}
             d={d}
             alertDays={state.data.alertDays}
+            remind={state.data.remind}
             open={state.data.requests.find((r) => r.device_id === d.id && OPEN_SERVICE_STATUSES.includes(r.status))}
             onChange={reload}
           />

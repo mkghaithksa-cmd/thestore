@@ -150,3 +150,16 @@ export function serviceErrorMessage(message: string | undefined | null): string 
     .find((k) => message?.includes(k))
   return code ? SERVICE_ERRORS[code] : 'تعذّر تنفيذ الطلب. حاول مرة ثانية.'
 }
+
+/** Fill the WhatsApp reminder text from settings: {الاسم} {الجهاز} {الفلاتر} {الموعد}. */
+export function fillReminder(template: string, v: { name: string | null; device: string; filters: string[]; due: string }): string {
+  const due = new Date(v.due + 'T12:00:00Z').toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', timeZone: 'Asia/Riyadh' })
+  return template
+    .split('{الاسم}').join(v.name ?? '')
+    .split('{الجهاز}').join(v.device)
+    .split('{الفلاتر}').join(v.filters.join('، '))
+    .split('{الموعد}').join(due)
+    .replace(/ +([،,.؟])/g, '$1')
+    .replace(/ {2,}/g, ' ')
+    .trim()
+}

@@ -85,6 +85,14 @@ export interface StoreSettings {
   fault_types: string[]
   /** Default filter life (months) for devices with no known filters, e.g. other companies. */
   default_filter_life_months: number
+  /** Filter reminders on/off (staff due list and the customer's «أجهزتي» notice). */
+  maintenance_reminders_on: boolean
+  /** Stop listing a device this many days after it became overdue (0 = keep listing). */
+  maintenance_overdue_days: number
+  /** After the customer declines, list the device again after this many days. */
+  maintenance_decline_days: number
+  /** WhatsApp reminder text; {الاسم} {الجهاز} {الفلاتر} {الموعد} are filled in. */
+  maintenance_wa_message: string
   updated_at: string
 }
 
