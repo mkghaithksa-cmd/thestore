@@ -32,8 +32,20 @@ export async function fetchPayment(id: string): Promise<MoyasarPayment | null> {
   return (await res.json()) as MoyasarPayment
 }
 
-/** Records a paid Moyasar payment against its order (amount checked in the database). */
+/** Records a paid Moyasar payment against its order or work order (amount checked in the database). */
 export async function confirmPaid(p: MoyasarPayment): Promise<string> {
+  const workOrderId = p.metadata?.work_order_id
+  if (workOrderId) {
+    const { data, error } = await adminClient().rpc('wo_payment_confirm', {
+      p_work_order_id: workOrderId,
+      p_provider_payment_id: p.id,
+      p_amount_halalas: p.amount,
+      p_currency: p.currency,
+      p_raw: { id: p.id, status: p.status, amount: p.amount, currency: p.currency, source: { type: p.source?.type, company: p.source?.company } },
+    })
+    if (error) throw new Error(error.message)
+    return data as string
+  }
   const orderId = p.metadata?.order_id
   if (!orderId) throw new Error('no_order')
   const method = p.source?.company ?? p.source?.type ?? null

@@ -12,7 +12,7 @@ import { InfoPage } from './pages/InfoPage'
 import { Login } from './pages/Login'
 import { OrderPage, Orders } from './pages/Orders'
 import { Invoice } from './pages/Invoice'
-import { PaidPage, PayPage } from './pages/Pay'
+import { PaidPage, PayPage, ServicePaidPage, ServicePayPage } from './pages/Pay'
 import { Devices } from './pages/Devices'
 import { ServiceList, ServiceNew } from './pages/Service'
 import { Maintenance } from './pages/Maintenance'
@@ -261,6 +261,22 @@ export default function App() {
               element={
                 <RequireAuth>
                   <ServiceList />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/service/pay/:id"
+              element={
+                <RequireAuth>
+                  <ServicePayPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/service/paid/:id"
+              element={
+                <RequireAuth>
+                  <ServicePaidPage />
                 </RequireAuth>
               }
             />

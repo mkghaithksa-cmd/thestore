@@ -452,3 +452,6 @@ select.input{background:var(--surface)}
 .btn.big{width:100%;padding:14px 18px;font-size:17px}
 .tech-parts{list-style:none;padding:0;margin:8px 0 0}
 .tech-parts li{border-bottom:1px solid var(--n200);padding:6px 0}
+table.mini{width:100%;max-width:420px;border-collapse:collapse;font-size:14px}
+table.mini td,table.mini th{padding:4px 6px;border-bottom:1px solid var(--n200);text-align:start}
+table.mini td:last-child,table.mini th:last-child{text-align:end;white-space:nowrap}

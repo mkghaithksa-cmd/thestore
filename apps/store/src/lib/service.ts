@@ -1,4 +1,4 @@
-import type { DeviceFilter, DeviceKind, ServiceKind, ServicePeriod, ServiceRequest, ServiceRequestEvent } from '@ghaith/shared'
+import type { DeviceFilter, DeviceKind, ServiceKind, ServicePeriod, ServiceRequest, ServiceRequestEvent, WorkOrder } from '@ghaith/shared'
 import { supabase } from './supabase'
 
 export interface MyDeviceFull {
@@ -147,4 +147,28 @@ export async function addMyDevice(input: { kind: DeviceKind; brand: string; stag
 export async function removeMyDevice(id: string): Promise<void> {
   const { error } = await supabase.rpc('device_remove_mine', { p_device_id: id })
   if (error) throw new Error(error.message)
+}
+
+/** Work orders (quotes) for the customer's requests. */
+export async function fetchMyWorkOrders(requestIds: string[]): Promise<WorkOrder[]> {
+  if (!requestIds.length) return []
+  const { data, error } = await supabase
+    .from('work_orders')
+    .select('*, parts:work_order_parts(*)')
+    .in('request_id', requestIds)
+    .neq('status', 'cancelled')
+  if (error) throw error
+  return (data ?? []) as WorkOrder[]
+}
+
+export async function decideMyQuote(workOrderId: string, decision: 'approved' | 'rejected'): Promise<void> {
+  const { error } = await supabase.rpc('wo_decide_mine', { p_work_order_id: workOrderId, p_decision: decision })
+  if (error) throw new Error(error.message)
+}
+
+/** Asks the server to check a Moyasar payment for a work order. */
+export async function verifyServicePayment(workOrderId: string, paymentId: string): Promise<{ status: string; message?: string | null; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('moyasar-verify', { body: { work_order_id: workOrderId, payment_id: paymentId } })
+  if (error) return { status: 'pending', error: 'request_failed' }
+  return data as { status: string; message?: string | null }
 }
