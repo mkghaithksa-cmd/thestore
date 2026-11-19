@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   DEVICE_KIND_LABELS,
   OUTCOME_LABELS,
@@ -80,7 +80,8 @@ function order(a: Row, b: Row): number {
 
 /** «المواعيد والبلاغات»: fault reports and maintenance visits, the due list, and phone reports. */
 export function Appointments() {
-  const [tab, setTab] = useState<Tab>('requests')
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() => (params.get('tab') === 'phone' ? 'phone' : params.get('tab') === 'due' ? 'due' : 'requests'))
   const { can } = useStaffAuth()
   return (
     <RequirePage page="appointments">
@@ -116,8 +117,9 @@ export function Appointments() {
 function Requests() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [techs, setTechs] = useState<Technician[]>([])
-  const [filter, setFilter] = useState<Filter>('open')
-  const [open, setOpen] = useState<string | null>(null)
+  const [params] = useSearchParams()
+  const [filter, setFilter] = useState<Filter>(() => (FILTERS.some((x) => x.key === params.get('f')) ? (params.get('f') as Filter) : params.get('sr') ? 'all' : 'open'))
+  const [open, setOpen] = useState<string | null>(() => params.get('sr'))
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {

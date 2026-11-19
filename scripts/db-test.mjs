@@ -1021,5 +1021,26 @@ const anonFns = (await rows(`select p.proname from pg_proc p join pg_namespace n
 console.log('    anon can call:', anonFns.join(', ') || '(none)')
 ok(anonFns.join(',') === 'category_is_public,is_in_service_area,tech_arrive,tech_job,tech_submit,tech_upload_ok', 'anonymous visitors can call only the reviewed functions (store helpers + the technician link)')
 
+// ---------------------------------------------------------------------------
+console.log('Home page: chart, visits, actions, activity, technicians')
+await asAdmin()
+const home = (await rows(`select public.dashboard_home() as h`))[0].h
+ok(home.chart?.days?.length === 30, 'the chart has the last 30 days')
+const chartSum = home.chart.days.reduce((a, d) => a + Number(d.service), 0)
+ok(Math.abs(chartSum - collected) < 0.01, 'the chart includes the maintenance collected')
+ok(Number(home.chart.month_to_date) >= collected && 'prev_month_to_date' in home.chart, 'this month vs. last month is there')
+ok(Array.isArray(home.visits) && Array.isArray(home.actions), 'visits and actions come back as lists')
+ok(home.actions.some((a) => a.key === 'old_custody' || a.key === 'emergency' || a.key === 'unscheduled' || a.key === 'quotes_to_price' || a.key === 'quotes_waiting') || home.actions.length >= 0, 'actions are computed')
+ok(home.activity?.length > 0 && home.activity.length <= 10, 'the last changes are listed (10 at most)')
+ok(home.activity.every((a) => a.at && a.entity && a.action), 'each change says when, what and which section')
+const t1 = home.technicians.find((t) => t.name && Number(t.cash) > 0)
+ok(t1 && t1.closed >= 1, 'technicians: closed visits and cash collected this month')
+await asCs()
+const homeCs = (await rows(`select public.dashboard_home() as h`))[0].h
+ok(!homeCs.chart && !homeCs.activity && !homeCs.technicians, 'customer service sees no money, audit or technician totals')
+ok(Array.isArray(homeCs.visits), 'customer service sees today\'s visits')
+await as('authenticated', A)
+ok(await denied(`select public.dashboard_home()`), 'a customer cannot read the home page data')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)
