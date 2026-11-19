@@ -9,7 +9,7 @@ export interface ChartDay {
 
 const W = 640
 const H = 200
-const PAD = { top: 12, right: 8, bottom: 26, left: 48 }
+const PAD = { top: 12, right: 28, bottom: 26, left: 48 }
 
 /** Round a max up to a tidy axis top (1, 2, 2.5, 5 × 10^n). */
 function niceTop(v: number): number {
