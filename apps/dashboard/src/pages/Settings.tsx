@@ -470,7 +470,7 @@ function RemindersCard({ settings, canEdit, onSaved }: { settings: StoreSettings
               <span className="muted">
                 تقدر تحط:{' '}
                 {REMINDER_TAGS.map((t) => (
-                  <button key={t} type="button" className="linkbtn" onClick={() => setMessage((m) => `${m}${m.endsWith(' ') || !m ? '' : ' '}${t}`)}>
+                  <button key={t} type="button" className="linkbtn" style={{ marginInlineEnd: 10 }} onClick={() => setMessage((m) => `${m}${m.endsWith(' ') || !m ? '' : ' '}${t}`)}>
                     {t}
                   </button>
                 ))}
@@ -531,7 +531,7 @@ export function Settings() {
           <WorkDaysCard days={days} canEdit={canEdit} onSaved={load} />
           <NeighborhoodsCard list={hoods} canAdd={can('settings', 'add')} canEdit={canEdit} onSaved={load} />
           <FaultTypesCard list={settings.fault_types ?? []} canEdit={canEdit} onSaved={load} />
-          <RemindersCard key={settings.updated_at} settings={settings} canEdit={canEdit} onSaved={load} />
+          <RemindersCard settings={settings} canEdit={canEdit} onSaved={load} />
           <FilterLifeCard value={settings.default_filter_life_months ?? 6} canEdit={canEdit} onSaved={load} />
         </>
       )}
