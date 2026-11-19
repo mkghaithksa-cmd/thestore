@@ -503,7 +503,7 @@ function StaffReport({ w, onDone }: { w: Row; onDone: () => void }) {
   return (
     <form className="act card inset stack-sm" onSubmit={save}>
       <b>تقرير الفحص (نيابة عن الفني)</b>
-      <div className="seg">
+      <div className="chips">
         <button type="button" className={!absent ? 'on' : undefined} onClick={() => setAbsent(false)}>
           فحص الجهاز
         </button>
