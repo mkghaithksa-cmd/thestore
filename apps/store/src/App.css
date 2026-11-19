@@ -452,6 +452,10 @@ select.input{background:var(--surface)}
 .btn.big{width:100%;padding:14px 18px;font-size:17px}
 .tech-parts{list-style:none;padding:0;margin:8px 0 0}
 .tech-parts li{border-bottom:1px solid var(--n200);padding:6px 0}
+.tech-photos{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.tech-photos div{position:relative}
+.tech-photos img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--n200);display:block}
+.tech-photos button{position:absolute;top:-6px;left:-6px;width:24px;height:24px;border-radius:50%;border:0;background:#c0392b;color:#fff;font-size:16px;line-height:1;cursor:pointer}
 table.mini{width:100%;max-width:420px;border-collapse:collapse;font-size:14px}
 table.mini td,table.mini th{padding:4px 6px;border-bottom:1px solid var(--n200);text-align:start}
 table.mini td:last-child,table.mini th:last-child{text-align:end;white-space:nowrap}

@@ -33,7 +33,7 @@ export function TechPage() {
   const [note, setNote] = useState('')
   const [lines, setLines] = useState<Line[]>([])
   const [pick, setPick] = useState('')
-  const [photos, setPhotos] = useState<string[]>([])
+  const [photos, setPhotos] = useState<{ path: string; url: string }[]>([])
   const [uploading, setUploading] = useState(false)
 
   const load = useCallback(async () => {
@@ -69,7 +69,7 @@ export function TechPage() {
       const path = `${job.folder}/${crypto.randomUUID()}.jpg`
       const { error: e } = await supabase.storage.from('work-order-photos').upload(path, blob, { contentType: 'image/jpeg', upsert: false })
       if (e) throw new Error('invalid_photo')
-      setPhotos((p) => [...p, path])
+      setPhotos((p) => [...p, { path, url: URL.createObjectURL(blob) }])
     } catch {
       setError('تعذّر رفع الصورة. حاول مرة ثانية.')
     } finally {
@@ -95,7 +95,7 @@ export function TechPage() {
       p_finding: absent ? null : finding.trim(),
       p_note: note.trim() || null,
       p_parts: absent ? [] : lines,
-      p_photos: photos,
+      p_photos: photos.map((p) => p.path),
     })
     setBusy(false)
     if (e) return setError(serviceErrorMessage(e.message))
@@ -238,6 +238,18 @@ export function TechPage() {
           </div>
           <div className="field">
             <span>صور ({photos.length}/4)</span>
+            {photos.length > 0 && (
+              <div className="tech-photos">
+                {photos.map((p, i) => (
+                  <div key={p.path}>
+                    <img src={p.url} alt={`صورة ${i + 1}`} />
+                    <button type="button" aria-label={`حذف الصورة ${i + 1}`} onClick={() => setPhotos((l) => l.filter((x) => x.path !== p.path))}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             {photos.length < 4 && (
               <label className="btn sm ghost self-start">
                 {uploading ? 'جاري الرفع…' : absent ? '+ صورة للمكان' : '+ صورة'}
