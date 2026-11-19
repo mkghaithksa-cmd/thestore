@@ -252,7 +252,8 @@ function RequestDetail({ r, techs, onChanged }: { r: Row; techs: Technician[]; o
       .order('created_at')
       .then(({ data }) => setEvents((data ?? []) as ServiceRequestEvent[]))
     if (r.photo_path) photoUrl(r.photo_path).then(setPhoto)
-  }, [r.id, r.photo_path])
+    // Re-read the history whenever the request changes (status, time or technician).
+  }, [r.id, r.photo_path, r.status, r.scheduled_at, r.technician_id])
 
   const editable = can('appointments', 'edit')
   const canSchedule = editable && (r.status === 'new' || r.status === 'scheduled')
@@ -264,6 +265,8 @@ function RequestDetail({ r, techs, onChanged }: { r: Row; techs: Technician[]; o
     const { error: e } = await fn()
     setBusy(false)
     if (e) return setError(serviceErrorMessage(e.message))
+    setReason('')
+    setNote('')
     onChanged()
   }
   const schedule = () =>

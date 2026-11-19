@@ -340,7 +340,8 @@ function DeviceBox({ d, filterProducts, onChanged }: { d: StaffDevice; filterPro
             {!d.is_active && <span className="badge b-gray ms">مؤرشف</span>}
           </b>
           <span className="muted">
-            {d.installed ? 'تركيب' : 'تسليم'} {when(d.started_on)}
+            {d.product_id ? (d.installed ? 'تركيب' : 'تسليم') : 'آخر تغيير فلاتر'} {when(d.started_on)}
+            {d.date_uncertain ? ' (غير مؤكد)' : ''}
             {d.order_id ? ' · من طلب في المتجر' : d.added_by && d.added_by !== d.customer_id ? ' · أضافه موظف' : ' · أضافه العميل'}
             {d.warranty_until ? ` · ضمان لين ${when(d.warranty_until)}` : ''}
           </span>
