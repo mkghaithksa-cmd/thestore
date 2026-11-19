@@ -20,6 +20,7 @@ import { Checkout } from './pages/Checkout'
 import { ProductPage } from './pages/ProductPage'
 import { Products } from './pages/Products'
 import './App.css'
+import { TechPage } from './pages/Tech'
 
 function AccountButton() {
   const { session, loading } = useAuth()
@@ -174,6 +175,16 @@ function NotFound() {
 }
 
 export default function App() {
+  // The technician page stands alone: no header, cart or location prompt.
+  if (window.location.pathname.startsWith('/t/')) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/t/:token" element={<TechPage />} />
+        </Routes>
+      </BrowserRouter>
+    )
+  }
   return (
     <AuthProvider>
       <CartProvider>

@@ -16,6 +16,9 @@ import { Roles } from './pages/Roles'
 import { Settings } from './pages/Settings'
 import { StorePages } from './pages/StorePages'
 import { Users } from './pages/Users'
+import { WorkOrders } from './pages/WorkOrders'
+import { Payments } from './pages/Payments'
+import { Approvals } from './pages/Approvals'
 import './App.css'
 
 export default function App() {
@@ -41,6 +44,9 @@ export default function App() {
             <Route path="/p/inventory" element={<Inventory />} />
             <Route path="/p/appointments" element={<Appointments />} />
             <Route path="/p/customers" element={<Customers />} />
+            <Route path="/p/work_orders" element={<WorkOrders />} />
+            <Route path="/p/payments" element={<Payments />} />
+            <Route path="/approvals" element={<Approvals />} />
             <Route path="/p/:page" element={<ComingSoon />} />
             <Route path="*" element={<div className="notice">الصفحة غير موجودة.</div>} />
           </Route>

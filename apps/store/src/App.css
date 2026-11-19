@@ -446,3 +446,9 @@ select.input{background:var(--surface)}
 .sv-more[open] summary{margin-bottom:10px}
 .center{text-align:center}
 @media (max-width:520px){.pick button{flex:1 1 calc(50% - 8px)}}
+
+/* Technician page (/t/:token): one column, big buttons for a phone. */
+.tech{max-width:560px;padding-top:16px;padding-bottom:40px}
+.btn.big{width:100%;padding:14px 18px;font-size:17px}
+.tech-parts{list-style:none;padding:0;margin:8px 0 0}
+.tech-parts li{border-bottom:1px solid var(--n200);padding:6px 0}

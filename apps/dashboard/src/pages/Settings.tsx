@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { fillReminder, type StoreSettings } from '@ghaith/shared'
+import { fillReminder, serviceErrorMessage, type StoreSettings } from '@ghaith/shared'
 import { riyadhDate } from '../lib/service'
 import { RequirePage } from '../components/Layout'
 import { fetchSettings } from '../lib/catalog'
@@ -490,6 +490,149 @@ function RemindersCard({ settings, canEdit, onSaved }: { settings: StoreSettings
   )
 }
 
+interface TechRow {
+  id: string
+  full_name: string
+  phone: string
+  is_active: boolean
+}
+
+/** «الفنيين»: name and phone. They have no account; each visit gets a link. */
+function TechniciansCard({ canEdit }: { canEdit: boolean }) {
+  const [rows, setRows] = useState<TechRow[]>([])
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(() => {
+    supabase
+      .from('technicians')
+      .select('id, full_name, phone, is_active')
+      .order('is_active', { ascending: false })
+      .order('full_name')
+      .then(({ data }) => setRows((data ?? []) as TechRow[]))
+  }, [])
+  useEffect(load, [load])
+
+  async function save(id: string | null, n: string, p: string, active: boolean) {
+    setBusy(true)
+    setError(null)
+    const { error: e } = await supabase.rpc('technician_save', { p_id: id, p_name: n, p_phone: p, p_active: active })
+    setBusy(false)
+    if (e) {
+      setError(serviceErrorMessage(e.message))
+      return false
+    }
+    load()
+    return true
+  }
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    if (await save(null, name, phone, true)) {
+      setName('')
+      setPhone('')
+    }
+  }
+
+  return (
+    <section className="card stack">
+      <h2 className="h3">الفنيين</h2>
+      <span className="muted">
+        الفني ما يحتاج حساب. لكل زيارة يوصله رابط واتساب يفتحه من جواله، وما يشوف فيه الأسعار. الفني الموقّف ما يظهر في اختيار الفني.
+      </span>
+      {rows.length === 0 ? (
+        <p className="notice warn">ما فيه فنيين. أضف فني عشان تقدر تحدد الزيارات وترسل الروابط.</p>
+      ) : (
+        <ul className="stack-sm ft-list">
+          {rows.map((t) => (
+            <li key={t.id} className="row between wrapr">
+              <span>
+                <b className={t.is_active ? undefined : 'muted'}>{t.full_name}</b>{' '}
+                <span className="muted" dir="ltr">
+                  {t.phone.replace(/^\+966/, '0')}
+                </span>
+                {!t.is_active && <span className="muted"> · موقّف</span>}
+              </span>
+              {canEdit && (
+                <button type="button" className="linkbtn" disabled={busy} onClick={() => save(t.id, t.full_name, t.phone, !t.is_active)}>
+                  {t.is_active ? 'إيقاف' : 'تفعيل'}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {canEdit && (
+        <form className="row wrapr align-end" onSubmit={add}>
+          <div className="field">
+            <label htmlFor="tn">اسم الفني</label>
+            <input id="tn" className="input" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="tp">جواله</label>
+            <input id="tp" className="input num" inputMode="tel" dir="ltr" placeholder="05xxxxxxxx" maxLength={14} value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <button className="btn field-btn" disabled={busy || !name.trim() || !phone.trim()}>
+            إضافة فني
+          </button>
+        </form>
+      )}
+      {error && <p className="form-error">{error}</p>}
+    </section>
+  )
+}
+
+/** Discount limit without approval, and how long a technician link lasts. */
+function WorkOrderRulesCard({ settings, canEdit, onSaved }: { settings: StoreSettings; canEdit: boolean; onSaved: () => void }) {
+  const [limit, setLimit] = useState(String(Number(settings.discount_approval_limit ?? 0)))
+  const [hours, setHours] = useState(String(settings.technician_link_hours))
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    const l = parseAmount(limit)
+    const h = Number(hours)
+    if (!(l >= 0)) return setMsg({ ok: false, text: 'حد الخصم رقم صفر أو أكثر.' })
+    if (!Number.isInteger(h) || h < 1 || h > 168) return setMsg({ ok: false, text: 'مدة الرابط من 1 إلى 168 ساعة.' })
+    setBusy(true)
+    setMsg(null)
+    const { error } = await supabase.from('settings').update({ discount_approval_limit: l, technician_link_hours: h }).eq('id', 1)
+    setBusy(false)
+    if (error) return setMsg({ ok: false, text: errText(error.message) })
+    setMsg({ ok: true, text: 'تم الحفظ ✓' })
+    onSaved()
+  }
+
+  return (
+    <form className="card stack" onSubmit={save}>
+      <h2 className="h3">أوامر العمل والموافقات</h2>
+      <fieldset className="plain" disabled={!canEdit || busy}>
+        <div className="row wrapr align-end">
+          <div className="field">
+            <label htmlFor="dlim">خصم يدوي بدون موافقة لين (ر.س)</label>
+            <input id="dlim" className="input num" inputMode="decimal" dir="ltr" style={{ width: 120 }} value={limit} onChange={(e) => { setMsg(null); setLimit(e.target.value) }} />
+            <span className="muted">0 = كل خصم يحتاج موافقة المدير.</span>
+          </div>
+          <div className="field">
+            <label htmlFor="lhrs">رابط الفني صالح لمدة (ساعة)</label>
+            <input id="lhrs" className="input num" inputMode="numeric" dir="ltr" style={{ width: 100 }} value={hours} onChange={(e) => { setMsg(null); setHours(e.target.value.replace(/[^0-9]/g, '')) }} />
+          </div>
+        </div>
+      </fieldset>
+      <span className="muted">فرق العهدة وفرق الجرد يحتاجون موافقة المدير دائماً، وما أحد يعتمد طلبه بنفسه.</span>
+      {msg && <p className={msg.ok ? 'ok-text' : 'form-error'}>{msg.text}</p>}
+      {canEdit && (
+        <button className="btn self-start" disabled={busy}>
+          حفظ
+        </button>
+      )}
+    </form>
+  )
+}
+
 export function Settings() {
   const { can } = useStaffAuth()
   const canEdit = can('settings', 'edit')
@@ -531,6 +674,8 @@ export function Settings() {
           <WorkDaysCard days={days} canEdit={canEdit} onSaved={load} />
           <NeighborhoodsCard list={hoods} canAdd={can('settings', 'add')} canEdit={canEdit} onSaved={load} />
           <FaultTypesCard list={settings.fault_types ?? []} canEdit={canEdit} onSaved={load} />
+          <TechniciansCard canEdit={canEdit} />
+          <WorkOrderRulesCard settings={settings} canEdit={canEdit} onSaved={load} />
           <RemindersCard settings={settings} canEdit={canEdit} onSaved={load} />
           <FilterLifeCard value={settings.default_filter_life_months ?? 6} canEdit={canEdit} onSaved={load} />
         </>

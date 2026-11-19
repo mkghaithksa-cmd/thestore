@@ -36,8 +36,9 @@ export const when = (iso: string, time = true) =>
   })
 
 export interface Technician {
-  user_id: string
+  id: string
   full_name: string
+  phone: string
 }
 
 export async function fetchTechnicians(): Promise<Technician[]> {
@@ -111,3 +112,16 @@ export async function lookupPhone(phone: string): Promise<PhoneLookup> {
   }))
   return { phone, customer, devices, addresses: (a.data ?? []) as unknown as PhoneLookup['addresses'] }
 }
+
+/** Where the store lives (the technician link and the customer payment link point there). */
+export const STORE_ORIGIN = import.meta.env.DEV ? 'http://localhost:5173' : window.location.origin
+
+export const techLink = (token: string) => `${STORE_ORIGIN}/t/${token}`
+
+export async function woPhotoUrl(path: string): Promise<string | null> {
+  const { data } = await supabase.storage.from('work-order-photos').createSignedUrl(path, 600)
+  return data?.signedUrl ?? null
+}
+
+export const sar = (n: number | string) =>
+  Number(n).toLocaleString('ar-SA-u-nu-latn', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ر.س'

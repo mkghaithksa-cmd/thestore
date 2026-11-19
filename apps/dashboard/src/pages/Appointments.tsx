@@ -6,6 +6,7 @@ import {
   PERIOD_LABELS,
   SERVICE_KIND_LABELS,
   SERVICE_STATUS_LABELS,
+  WO_STATUS_LABELS,
   fillReminder,
   serviceErrorMessage,
   type ContactOutcome,
@@ -16,6 +17,7 @@ import {
   type ServiceRequestEvent,
   type ServiceStatus,
   type StoreSettings,
+  type WorkOrderStatus,
 } from '@ghaith/shared'
 import { RequirePage } from '../components/Layout'
 import {
@@ -27,6 +29,7 @@ import {
   normalizePhone,
   photoUrl,
   riyadhDate,
+  techLink,
   toRiyadhInput,
   waLink,
   when,
@@ -134,7 +137,7 @@ function Requests() {
 
   const shown = (rows ?? []).filter((r) => matches(r, filter)).sort(order)
   const count = (f: Filter) => (rows ?? []).filter((r) => matches(r, f)).length
-  const techName = (id: string | null) => techs.find((t) => t.user_id === id)?.full_name
+  const techName = (id: string | null) => techs.find((t) => t.id === id)?.full_name
 
   return (
     <>
@@ -246,6 +249,7 @@ function RequestDetail({ r, techs, onChanged }: { r: Row; techs: Technician[]; o
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [liveWo, setLiveWo] = useState(false)
 
   useEffect(() => {
     supabase
@@ -343,7 +347,7 @@ function RequestDetail({ r, techs, onChanged }: { r: Row; techs: Technician[]; o
               <select id={`tech-${r.id}`} className="input" value={tech} onChange={(e) => setTech(e.target.value)}>
                 <option value="">بدون تحديد</option>
                 {techs.map((t) => (
-                  <option key={t.user_id} value={t.user_id}>
+                  <option key={t.id} value={t.id}>
                     {t.full_name}
                   </option>
                 ))}
@@ -363,7 +367,9 @@ function RequestDetail({ r, techs, onChanged }: { r: Row; techs: Technician[]; o
         </div>
       )}
 
-      {editable && OPEN.includes(r.status) && (
+      {(r.status === 'scheduled' || r.status === 'in_progress') && <TechLinkBox r={r} techs={techs} onWo={setLiveWo} />}
+
+      {editable && OPEN.includes(r.status) && !liveWo && (
         <div className="act card inset">
           <div className="field">
             <label htmlFor={`note-${r.id}`}>ملاحظة (مطلوبة للإلغاء)</label>
@@ -393,7 +399,11 @@ function RequestDetail({ r, techs, onChanged }: { r: Row; techs: Technician[]; o
           {events.map((e) => (
             <li key={e.id}>
               <b>
-                {e.from_status === 'scheduled' && e.to_status === 'scheduled' ? 'تغيّر الموعد' : SERVICE_STATUS_LABELS[e.to_status]}
+                {e.from_status === e.to_status && !e.scheduled_at
+                  ? 'تحديث'
+                  : e.from_status === 'scheduled' && e.to_status === 'scheduled'
+                    ? 'تغيّر الموعد'
+                    : SERVICE_STATUS_LABELS[e.to_status]}
                 {e.scheduled_at ? `: ${when(e.scheduled_at)}` : ''}
               </b>
               <span className="muted">
@@ -866,6 +876,94 @@ function PhoneReport({ onDone }: { onDone: () => void }) {
           </button>
         </form>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// The technician's link (Day 9)
+// ---------------------------------------------------------------------------
+function TechLinkBox({ r, techs, onWo }: { r: Row; techs: Technician[]; onWo: (live: boolean) => void }) {
+  const { can } = useStaffAuth()
+  const [wo, setWo] = useState<{ id: string; number: string; status: WorkOrderStatus } | null>(null)
+  const [sent, setSent] = useState<{ token: string; expires_at: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const tech = techs.find((t) => t.id === r.technician_id)
+
+  const load = useCallback(() => {
+    supabase
+      .from('work_orders')
+      .select('id, number, status')
+      .eq('request_id', r.id)
+      .neq('status', 'cancelled')
+      .maybeSingle()
+      .then(({ data }) => {
+        setWo(data as typeof wo)
+        onWo(!!data && data.status !== 'closed')
+      })
+  }, [r.id, onWo])
+  useEffect(load, [load])
+
+  async function create() {
+    setBusy(true)
+    setError(null)
+    setCopied(false)
+    const { data, error: e } = await supabase.rpc('wo_link_create', { p_request_id: r.id })
+    setBusy(false)
+    if (e) return setError(serviceErrorMessage(e.message))
+    setSent(data as { token: string; expires_at: string })
+    load()
+  }
+
+  if (!tech) return <p className="notice warn">اختر الفني واحفظ الموعد، بعدها ترسل له رابط الزيارة.</p>
+  const editable = can('appointments', 'edit') || can('work_orders', 'edit')
+  const url = sent ? techLink(sent.token) : ''
+  const text = sent
+    ? `السلام عليكم ${tech.full_name}، عندك زيارة ${r.kind === 'emergency' ? 'بلاغ عطل' : 'صيانة'} ${r.request_number}${r.scheduled_at ? ` ${when(r.scheduled_at)}` : ''}${r.neighborhood_name ? ` في ${r.neighborhood_name}` : ''}. افتح الرابط من جوالك وسجّل الفحص: ${url}`
+    : ''
+
+  return (
+    <div className="act card inset stack-sm">
+      <div className="row between wrapr">
+        <b>
+          الفني: {tech.full_name} <span className="muted" dir="ltr">{localPhone(tech.phone)}</span>
+        </b>
+        {wo && (
+          <Link to={`/p/work_orders?wo=${wo.id}`} className="link">
+            أمر العمل <span dir="ltr">{wo.number}</span>: {WO_STATUS_LABELS[wo.status]}
+          </Link>
+        )}
+      </div>
+      {sent ? (
+        <div className="stack-sm">
+          <span className="ok-text">الرابط جاهز، صالح لين {when(sent.expires_at)}. أرسله للفني الحين: ما يظهر مرة ثانية.</span>
+          <div className="row wrapr">
+            <a className="btn sm" href={waLink(tech.phone, text)} target="_blank" rel="noreferrer">
+              أرسل للفني واتساب
+            </a>
+            <button
+              type="button"
+              className="btn sm ghost"
+              onClick={() => navigator.clipboard?.writeText(url).then(() => setCopied(true))}
+            >
+              {copied ? 'تم النسخ ✓' : 'نسخ الرابط'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        editable &&
+        (!wo || wo.status === 'visit') && (
+          <div className="row wrapr">
+            <button className="btn sm" disabled={busy} onClick={create}>
+              {wo ? 'رابط جديد للفني (يوقف القديم)' : 'رابط الزيارة للفني'}
+            </button>
+            <span className="muted">رابط خاص بهذا البلاغ، يفتحه الفني من جواله بدون حساب، وما يشوف فيه الأسعار.</span>
+          </div>
+        )
+      )}
+      {error && <p className="form-error">{error}</p>}
     </div>
   )
 }

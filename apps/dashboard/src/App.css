@@ -219,3 +219,11 @@ tr.sel td{background:var(--primary-50)}
 .ft-list li{display:flex}
 section.off,tr.off td{opacity:.6}
 .btn.ghost.danger{color:var(--bad-700);border-color:var(--bad-500)}
+
+/* Day 9: work orders */
+table.mini{width:auto;min-width:280px;border-collapse:collapse;font-size:14px}
+table.mini td,table.mini th{padding:4px 10px;border-bottom:1px solid var(--n200);text-align:start}
+table.mini td:last-child,table.mini th:last-child{text-align:end;white-space:nowrap}
+.inset-box{background:var(--n100,rgba(127,127,127,.08));border-radius:10px;padding:10px 12px;margin:0}
+.sv-more summary{cursor:pointer;color:var(--n600,#6b7280);font-size:14px}
+.sv-more[open]{display:flex;flex-direction:column;gap:8px}

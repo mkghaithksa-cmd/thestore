@@ -5,7 +5,7 @@ import { STAFF_PAGES, formatSaudiPhoneLocal, type StaffPage } from '@ghaith/shar
 import { useStaffAuth } from '../lib/staffAuth'
 
 /** Sidebar links; users_roles has two screens. */
-const NAV = STAFF_PAGES.flatMap((p): { to: string; page: StaffPage; label: string }[] =>
+const NAV = STAFF_PAGES.flatMap((p): { to: string; page: StaffPage; label: string; approve?: boolean }[] =>
   p.key === 'catalog'
     ? [
         { to: '/catalog', page: p.key, label: 'المنتجات' },
@@ -17,6 +17,12 @@ const NAV = STAFF_PAGES.flatMap((p): { to: string; page: StaffPage; label: strin
     ? [
         { to: '/users', page: p.key, label: 'المستخدمون' },
         { to: '/roles', page: p.key, label: 'الأدوار والصلاحيات' },
+      ]
+    : p.key === 'payments'
+    ? [
+        { to: '/p/payments', page: p.key, label: p.label },
+        // Managers who approve payments or stock see the approvals page.
+        { to: '/approvals', page: p.key, label: 'الموافقات', approve: true },
       ]
     : p.key === 'settings'
       ? [
@@ -39,7 +45,7 @@ export function Layout() {
       <aside className={`side${open ? ' open' : ''}`} aria-label="القائمة">
         <BrandMark />
         <nav className="side-nav" onClick={() => setOpen(false)}>
-          {NAV.filter((n) => can(n.page, 'view')).map((n) => (
+          {NAV.filter((n) => (n.approve ? can('payments', 'approve') || can('inventory', 'approve') : can(n.page, 'view'))).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/' || n.to === '/catalog' || n.to === '/settings'} className="nv">
               {n.label}
             </NavLink>

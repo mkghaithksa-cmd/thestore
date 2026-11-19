@@ -142,6 +142,27 @@ export const SERVICE_ERRORS: Record<string, string> = {
   invalid_stages: 'عدد المراحل من 1 إلى 12.',
   too_many_devices: 'وصلت الحد الأعلى للأجهزة (20). تواصل معنا.',
   invalid_fault_types: 'كل نوع عطل من 2 إلى 40 حرف، وما تكون القائمة فاضية.',
+  // Day 9
+  invalid_name: 'الاسم من 2 إلى 60 حرف.',
+  phone_taken: 'هذا الرقم مسجل لفني ثاني.',
+  not_scheduled: 'حدد موعد الزيارة أول.',
+  technician_required: 'اختر الفني وحفظ الموعد أول.',
+  report_already_sent: 'انرسل تقرير الفحص، وما يتعدل.',
+  link_invalid: 'الرابط منتهي أو غير صحيح. اطلب رابط جديد من الموظف.',
+  finding_required: 'اكتب نتيجة الفحص.',
+  invalid_parts: 'اختر القطع من القائمة والكمية من 1 إلى 50.',
+  too_many_parts: 'القطع كثيرة (20 كحد أقصى).',
+  too_many_photos: 'الصور 4 كحد أقصى.',
+  work_order_not_found: 'أمر العمل غير موجود.',
+  invalid_amount: 'المبلغ غير صحيح.',
+  discount_too_big: 'الخصم أكبر من المبلغ.',
+  invalid_decision: 'اختر موافق أو رافض.',
+  work_order_open: 'عليه أمر عمل مفتوح. كمّله أو ألغه من «أوامر العمل».',
+  custody_not_found: 'العهدة غير موجودة.',
+  approval_not_found: 'الطلب غير موجود.',
+  already_decided: 'انحسم هذا الطلب من قبل.',
+  own_request: 'ما تقدر تعتمد طلبك بنفسك. يعتمده مدير ثاني.',
+  amount_mismatch: 'المبلغ ما يطابق.',
 }
 
 export function serviceErrorMessage(message: string | undefined | null): string {

@@ -245,12 +245,16 @@ function StockForm({ item, mode, onDone }: { item: Item; mode: 'receive' | 'coun
     if (!qty || !Number.isInteger(n) || n < (mode === 'receive' ? 1 : 0)) return setError('اكتب كمية صحيحة.')
     setBusy(true)
     setError(null)
-    const { error: err } =
+    const { data, error: err } =
       mode === 'receive'
         ? await supabase.rpc('stock_receive', { p_product_id: item.id, p_qty: n, p_reference: ref, p_note: note.trim() || null })
         : await supabase.rpc('stock_count', { p_product_id: item.id, p_on_hand: n, p_note: note })
     setBusy(false)
     if (err) return setError(orderErrorMessage(err.message))
+    // A later count with a difference waits for a manager (the balance stays until approved).
+    if (mode === 'count' && n !== item.on_hand && data === item.on_hand) {
+      window.alert('انحفظ الجرد. الفرق راح للمدير في «الموافقات»، والرصيد يتعدّل بعد موافقته.')
+    }
     onDone()
   }
 

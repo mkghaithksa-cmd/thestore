@@ -93,6 +93,8 @@ export interface StoreSettings {
   maintenance_decline_days: number
   /** WhatsApp reminder text; {الاسم} {الجهاز} {الفلاتر} {الموعد} are filled in. */
   maintenance_wa_message: string
+  /** A manual discount above this (SAR) waits for a manager. */
+  discount_approval_limit: number
   updated_at: string
 }
 

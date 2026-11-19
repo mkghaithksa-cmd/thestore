@@ -26,7 +26,7 @@ const PAGES = {
   privacy: 'سياسة الخصوصية',
   terms: 'الشروط والأحكام',
 }
-const PRIVATE = ['/cart', '/login', '/account', '/orders']
+const PRIVATE = ['/cart', '/login', '/account', '/orders', '/t/']
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function sb(path) {
