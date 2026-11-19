@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { orderErrorMessage, PRODUCT_TYPE_LABELS, type ProductType } from '@ghaith/shared'
 import { RequirePage } from '../components/Layout'
 import { useStaffAuth } from '../lib/staffAuth'
@@ -233,16 +234,19 @@ function ReorderLevel({ item, editable, onSaved }: { item: Item; editable: boole
 }
 
 function StockForm({ item, mode, onDone }: { item: Item; mode: 'receive' | 'count'; onDone: () => void }) {
+  const canApprove = useStaffAuth().can('inventory', 'approve')
   const [qty, setQty] = useState(mode === 'count' ? String(Math.max(item.on_hand, 0)) : '')
   const [ref, setRef] = useState('')
   const [note, setNote] = useState(mode === 'count' ? 'جرد' : '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const n = Number(qty)
     if (!qty || !Number.isInteger(n) || n < (mode === 'receive' ? 1 : 0)) return setError('اكتب كمية صحيحة.')
+    if (mode === 'count' && n === item.on_hand) return setError('ما فيه فرق: العدد نفس الرصيد الحالي، ما تغيّر شي.')
     setBusy(true)
     setError(null)
     const { data, error: err } =
@@ -251,9 +255,12 @@ function StockForm({ item, mode, onDone }: { item: Item; mode: 'receive' | 'coun
         : await supabase.rpc('stock_count', { p_product_id: item.id, p_on_hand: n, p_note: note })
     setBusy(false)
     if (err) return setError(orderErrorMessage(err.message))
-    // A later count with a difference waits for a manager (the balance stays until approved).
-    if (mode === 'count' && n !== item.on_hand && data === item.on_hand) {
-      window.alert('انحفظ الجرد. الفرق راح للمدير في «الموافقات»، والرصيد يتعدّل بعد موافقته.')
+    if (mode === 'count') {
+      // A later count with a difference waits in «الموافقات»; a first count applies at once.
+      if (data === item.on_hand) {
+        setPending(true)
+        return
+      }
     }
     onDone()
   }
@@ -288,6 +295,20 @@ function StockForm({ item, mode, onDone }: { item: Item; mode: 'receive' | 'coun
         <p className="form-error" role="alert">
           {error}
         </p>
+      )}
+      {pending && (
+        <div className="notice warn" role="status">
+          <b>انحفظ الجرد. الفرق ({Number(qty) - item.on_hand > 0 ? "+" : ""}
+          {Number(qty) - item.on_hand}) ينتظر موافقة في «الموافقات»، والرصيد يتعدّل بعد الموافقة.</b>
+          {canApprove && (
+            <Link to="/approvals" className="btn sm">
+              افتح الموافقات واعتمده
+            </Link>
+          )}
+          <button type="button" className="btn sm ghost" onClick={onDone}>
+            تم
+          </button>
+        </div>
       )}
     </form>
   )

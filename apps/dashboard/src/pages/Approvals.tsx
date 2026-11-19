@@ -21,9 +21,9 @@ interface Approval {
   product: { name_ar: string } | null
 }
 
-/** «الموافقات»: discounts, custody and stock-count differences. Nobody approves their own. */
+/** «الموافقات»: discounts, custody and stock-count differences. A manager may approve their own. */
 export function Approvals() {
-  const { can, me } = useStaffAuth()
+  const { can } = useStaffAuth()
   const [rows, setRows] = useState<Approval[] | null>(null)
   const [names, setNames] = useState<Record<string, string>>({})
   const [showDone, setShowDone] = useState(false)
@@ -62,7 +62,7 @@ export function Approvals() {
       <div className="ph">
         <div>
           <h1>الموافقات</h1>
-          <p>فرق عهدة وفرق جرد. (الخصومات ما تحتاج موافقة: تنبيهها في سجل التدقيق.) ما أحد يعتمد طلبه بنفسه، والرفض يحتاج سبب. كل قرار ينحفظ في سجل التدقيق.</p>
+          <p>فرق عهدة وفرق جرد. (الخصومات ما تحتاج موافقة: تنبيهها في سجل التدقيق.) أي مدير عنده صلاحية الموافقة يقدر يعتمد، حتى لو هو صاحب الطلب. الرفض يحتاج سبب. كل قرار ينحفظ في سجل التدقيق.</p>
         </div>
       </div>
       <div className="row between wrapr">
@@ -91,7 +91,6 @@ export function Approvals() {
             key={a.id}
             a={a}
             who={a.requested_by ? names[a.requested_by] ?? 'موظف' : '—'}
-            own={a.requested_by === me?.profile.user_id}
             canDecide={can(a.kind === 'stock_diff' ? 'inventory' : 'payments', 'approve')}
             onDone={reload}
           />
@@ -101,7 +100,7 @@ export function Approvals() {
   )
 }
 
-function ApprovalCard({ a, who, own, canDecide, onDone }: { a: Approval; who: string; own: boolean; canDecide: boolean; onDone: () => void }) {
+function ApprovalCard({ a, who, canDecide, onDone }: { a: Approval; who: string; canDecide: boolean; onDone: () => void }) {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -148,9 +147,7 @@ function ApprovalCard({ a, who, own, canDecide, onDone }: { a: Approval; who: st
       )}
       {a.note && <span className="muted">السبب: {a.note}</span>}
       {a.status === 'pending' ? (
-        own ? (
-          <span className="muted">هذا طلبك: يعتمده مدير ثاني.</span>
-        ) : canDecide ? (
+        canDecide ? (
           <div className="row wrapr align-end">
             <div className="field grow">
               <label htmlFor={`an-${a.id}`}>ملاحظة (مطلوبة للرفض)</label>

@@ -614,7 +614,7 @@ function WorkOrderRulesCard({ settings, canEdit, onSaved }: { settings: StoreSet
           </div>
         </div>
       </fieldset>
-      <span className="muted">الخصم يطبّق مباشرة ويوصل للمدير تنبيه في سجل التدقيق. فرق العهدة وفرق الجرد يحتاجون موافقة المدير، وما أحد يعتمد طلبه بنفسه.</span>
+      <span className="muted">الخصم يطبّق مباشرة ويوصل للمدير تنبيه في سجل التدقيق. فرق العهدة وفرق الجرد يحتاجون موافقة مدير (والمدير يقدر يعتمد طلبه بنفسه).</span>
       {msg && <p className={msg.ok ? 'ok-text' : 'form-error'}>{msg.text}</p>}
       {canEdit && (
         <button className="btn self-start" disabled={busy}>

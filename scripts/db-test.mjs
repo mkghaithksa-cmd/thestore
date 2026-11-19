@@ -1042,5 +1042,20 @@ ok(Array.isArray(homeCs.visits), 'customer service sees today\'s visits')
 await as('authenticated', A)
 ok(await denied(`select public.dashboard_home()`), 'a customer cannot read the home page data')
 
+console.log('Approvals: a manager may approve their own request')
+await asAdmin()
+await rows(`select public.stock_count('${GH500}', 4, 'جرد المدير')`)
+const ownOk = (await rows(`select id, qty from approvals where kind = 'stock_diff' and product_id = '${GH500}' and status = 'pending'`))[0]
+ok(ownOk?.qty === 4 - (await onHand(GH500)), 'the manager\'s own count still waits in approvals')
+await rows(`select public.approval_decide('${ownOk.id}', true)`)
+ok((await onHand(GH500)) === 4, 'the manager approves their own count and the balance updates')
+await asOps()
+await rows(`select public.stock_count('${GH500}', 6, 'جرد')`)
+const opsOwn = (await rows(`select id from approvals where kind = 'stock_diff' and product_id = '${GH500}' and status = 'pending'`))[0]
+ok((await errorOf(`select public.approval_decide('${opsOwn.id}', true)`))?.includes('not_allowed'), 'staff without approve permission still cannot approve their own')
+await asAdmin()
+await rows(`select public.approval_decide('${opsOwn.id}', false, 'أعد العد')`)
+ok((await onHand(GH500)) === 4, 'rejected count leaves the balance')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)
