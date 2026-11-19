@@ -1,10 +1,13 @@
-import type { DeviceFilter, ServiceKind, ServicePeriod, ServiceRequest, ServiceRequestEvent } from '@ghaith/shared'
+import type { DeviceFilter, DeviceKind, ServiceKind, ServicePeriod, ServiceRequest, ServiceRequestEvent } from '@ghaith/shared'
 import { supabase } from './supabase'
 
 export interface MyDeviceFull {
   id: string
   name_ar: string
   model: string | null
+  product_id: string | null
+  device_kind: DeviceKind | null
+  brand: string | null
   installed: boolean
   started_on: string
   date_uncertain: boolean
@@ -19,7 +22,7 @@ export async function fetchMyDevicesFull(): Promise<MyDeviceFull[]> {
   const { data, error } = await supabase
     .from('customer_devices')
     .select(
-      'id, name_ar, model, installed, started_on, date_uncertain, warranty_until, order_id, next_contact_on, product:products(sku), filters:device_filters(*)',
+      'id, name_ar, model, product_id, device_kind, brand, installed, started_on, date_uncertain, warranty_until, order_id, next_contact_on, product:products(sku), filters:device_filters(*)',
     )
     .eq('is_active', true)
     .order('started_on', { ascending: false })
@@ -79,6 +82,8 @@ export interface ServiceInput {
   contactName: string
   addressId: string | null
   pin: { lat: number; lng: number; neighborhood: string; street: string } | null
+  /** «جهاز ثاني»: a device not saved yet (any company). */
+  newDevice: { kind: DeviceKind; brand: string } | null
 }
 
 export async function requestService(input: ServiceInput): Promise<{ id: string; request_number: string }> {
@@ -96,6 +101,8 @@ export async function requestService(input: ServiceInput): Promise<{ id: string;
     p_lng: input.pin?.lng ?? null,
     p_neighborhood_name: input.pin?.neighborhood ?? null,
     p_street: input.pin?.street ?? null,
+    p_device_kind: input.newDevice?.kind ?? null,
+    p_brand: input.newDevice?.brand.trim() || null,
   })
   if (error) throw new Error(error.message)
   return data as { id: string; request_number: string }
@@ -124,4 +131,20 @@ export async function uploadServicePhoto(userId: string, file: File): Promise<st
 export function riyadhDate(addDays = 0, now = Date.now()): string {
   const r = new Date(now + 3 * 3600 * 1000)
   return new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth(), r.getUTCDate()) + addDays * 86400000).toISOString().slice(0, 10)
+}
+
+export async function addMyDevice(input: { kind: DeviceKind; brand: string; stages: number | null; startedOn: string | null }): Promise<string> {
+  const { data, error } = await supabase.rpc('device_add_mine', {
+    p_kind: input.kind,
+    p_brand: input.brand.trim() || null,
+    p_stages: input.stages,
+    p_started_on: input.startedOn,
+  })
+  if (error) throw new Error(error.message)
+  return data as string
+}
+
+export async function removeMyDevice(id: string): Promise<void> {
+  const { error } = await supabase.rpc('device_remove_mine', { p_device_id: id })
+  if (error) throw new Error(error.message)
 }

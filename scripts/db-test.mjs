@@ -766,5 +766,40 @@ const pinRow = (await rows(`select r.neighborhood_name, a.neighborhood_id is not
 ok(pinRow?.in_service_area === true && pinRow.neighborhood_name === 'حي العزيزية' && pinRow.linked, 'a pin in Mecca is saved as the customer’s address, linked to the neighbourhood')
 
 
+// --- Any device (other companies) ------------------------------------------------
+console.log('Any device')
+await as('authenticated', B)
+ok((await errorOf(`select public.device_add_mine('fridge')`))?.includes('invalid_device_kind'), 'the device type must be from the list')
+const ext = (await rows(`select public.device_add_mine('under_sink', ' أكوا  برو ', 5) as id`))[0].id
+const extRow = (await rows(`select name_ar, product_id, brand, stages, date_uncertain, warranty_until from customer_devices where id = '${ext}'`))[0]
+ok(extRow.product_id === null && extRow.brand === 'أكوا برو' && extRow.stages === 5 && extRow.name_ar === 'منقي تحت المغسلة · أكوا برو',
+  'the customer adds another company’s device (type, brand, stages)')
+ok(extRow.date_uncertain === true && extRow.warranty_until === null, 'no date given → «تاريخ غير مؤكد», and no warranty')
+const extF = await rows(`select name_ar, life_months from device_filters where device_id = '${ext}'`)
+ok(extF.length === 1 && extF[0].name_ar === 'طقم الفلاتر' && extF[0].life_months === 6, 'it gets one filter set with the default life (6 months)')
+await as('authenticated', A)
+ok((await errorOf(`select public.device_remove_mine('${ext}')`))?.includes('device_not_found'), 'cannot remove someone else’s device')
+await as('authenticated', B)
+const homeB = (await rows(`select id from addresses where customer_id = '${B}' and in_service_area limit 1`))[0].id
+const inline = (await rows(`select public.request_service('maintenance', null, '${homeB}', '${workDay}', 'evening', null, null, null, 'عميل ب', null, null, null, null, 'central', 'بيور', null) as r`))[0].r
+const inRow = (await rows(`select r.device_id, d.device_kind, d.brand from service_requests r join customer_devices d on d.id = r.device_id where r.id = '${inline.id}'`))[0]
+ok(inRow?.device_kind === 'central' && inRow.brand === 'بيور', 'booking maintenance for «جهاز ثاني» saves that device and links it')
+ok((await errorOf(`select public.request_service('maintenance', null, '${homeB}', '${workDay}', 'evening', null, null, null, 'عميل ب')`))?.includes('device_required'),
+  'maintenance still needs a device (saved or described)')
+ok((await errorOf(`select public.device_remove_mine('${inRow.device_id}')`))?.includes('device_has_open_request'), 'a device with an open request cannot be removed')
+await rows(`select public.device_remove_mine('${ext}')`)
+ok((await count(`select 1 from customer_devices where id = '${ext}' and is_active`)) === 0, 'the customer removes a device they added (archived)')
+await asCs()
+const sx = (await rows(`select public.device_add_staff_external('0566666666', 'cooler', 'كولر', null, ${TODAY} - 400) as id`))[0].id
+ok((await rows(`select owner_phone, date_uncertain from customer_devices where id = '${sx}'`))[0].owner_phone === '+966566666666', 'staff add another company’s device by phone')
+ok((await rows(`select * from public.maintenance_due()`)).some((d) => d.device_id === sx), 'other companies’ devices appear in the due-maintenance list')
+const sp = (await rows(`select public.staff_request_service('0566666666', 'أبو خالد', 'emergency', ${TODAY}, 'morning', null, 'غير ذلك', null, null, 'الشوقية', null, 'other', 'ماركة', null) as r`))[0].r
+ok((await rows(`select d.device_kind from service_requests r join customer_devices d on d.id = r.device_id where r.id = '${sp.id}'`))[0]?.device_kind === 'other',
+  'a phone report can describe a new device too')
+await as('authenticated', B)
+ok(await denied(`select public.device_add_staff_external('0566666666', 'cooler')`) ||
+  (await errorOf(`select public.device_add_staff_external('0566666666', 'cooler')`))?.includes('not_allowed'), 'a customer cannot add devices for other phones')
+
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

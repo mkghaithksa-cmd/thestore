@@ -1,11 +1,13 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import {
+  DEVICE_KIND_LABELS,
   OUTCOME_LABELS,
   PERIOD_LABELS,
   SERVICE_KIND_LABELS,
   SERVICE_STATUS_LABELS,
   serviceErrorMessage,
   type ContactOutcome,
+  type DeviceKind,
   type ServiceKind,
   type ServicePeriod,
   type ServiceRequest,
@@ -31,7 +33,7 @@ import {
 import { useStaffAuth } from '../lib/staffAuth'
 import { supabase } from '../lib/supabase'
 
-type Row = ServiceRequest & { device: { name_ar: string; model: string | null } | null }
+type Row = ServiceRequest & { device: { name_ar: string; model: string | null; product_id: string | null; brand: string | null } | null }
 type Tab = 'requests' | 'due' | 'phone'
 type Filter = 'open' | 'new' | 'today' | 'done' | 'cancelled' | 'all'
 
@@ -114,7 +116,7 @@ function Requests() {
 
   const load = useCallback(async () => {
     const [r, t] = await Promise.all([
-      supabase.from('service_requests').select('*, device:customer_devices(name_ar, model)').order('created_at', { ascending: false }).limit(300),
+      supabase.from('service_requests').select('*, device:customer_devices(name_ar, model, product_id, brand)').order('created_at', { ascending: false }).limit(300),
       fetchTechnicians(),
     ])
     if (r.error) throw new Error(r.error.message)
@@ -186,7 +188,14 @@ function Requests() {
                       </div>
                     </td>
                     <td>
-                      {r.device ? r.device.name_ar : <span className="muted">بدون جهاز مسجل</span>}
+                      {r.device ? (
+                        <>
+                          {r.device.name_ar}
+                          <span className={`badge ms ${r.device.product_id ? 'b-ok' : 'b-gray'}`}>{r.device.product_id ? 'غيث' : 'شركة أخرى'}</span>
+                        </>
+                      ) : (
+                        <span className="muted">الجهاز غير معروف</span>
+                      )}
                       {r.fault_type && <div className="muted">{r.fault_type}</div>}
                     </td>
                     <td>{r.neighborhood_name ?? '—'}</td>
@@ -302,7 +311,7 @@ function RequestDetail({ r, techs, onChanged }: { r: Row; techs: Technician[]; o
         <div className="stack-sm">
           <b>الطلب</b>
           <span>
-            {r.device ? `${r.device.name_ar}${r.device.model ? ` (${r.device.model})` : ''}` : 'جهاز غير مسجل'}
+            {r.device ? `${r.device.name_ar}${r.device.model ? ` (${r.device.model})` : ''} · ${r.device.product_id ? 'جهاز غيث' : 'جهاز شركة أخرى'}` : 'الجهاز غير معروف'}
             {r.fault_type ? ` · ${r.fault_type}` : ''}
           </span>
           {r.kind === 'emergency' && <span className="muted">رسوم الفحص {Number(r.inspection_fee)} ر.س قبل الضريبة، تنحصّل عند الزيارة.</span>}
@@ -626,6 +635,8 @@ function PhoneReport({ onDone }: { onDone: () => void }) {
   const [kind, setKind] = useState<ServiceKind>('emergency')
   const [name, setName] = useState('')
   const [deviceId, setDeviceId] = useState('')
+  const [otherKind, setOtherKind] = useState<DeviceKind>('under_sink')
+  const [otherBrand, setOtherBrand] = useState('')
   const [fault, setFault] = useState('')
   const [description, setDescription] = useState('')
   const [day, setDay] = useState(riyadhDate())
@@ -665,6 +676,7 @@ function PhoneReport({ onDone }: { onDone: () => void }) {
     if (!found) return
     setError(null)
     if (kind === 'emergency' && !fault) return setError('اختر نوع العطل.')
+    if (kind === 'maintenance' && !deviceId) return setError('اختر الجهاز أو «جهاز شركة أخرى».')
     if (!addressId && !hood.trim()) return setError('اختر عنوان محفوظ أو اكتب الحي.')
     setBusy(true)
     const { data, error: err } = await supabase.rpc('staff_request_service', {
@@ -673,12 +685,14 @@ function PhoneReport({ onDone }: { onDone: () => void }) {
       p_kind: kind,
       p_preferred_date: day,
       p_preferred_period: period,
-      p_device_id: deviceId || null,
+      p_device_id: deviceId && deviceId !== 'other' ? deviceId : null,
       p_fault_type: kind === 'emergency' ? fault : null,
       p_description: description.trim() || null,
       p_address_id: addressId || null,
       p_neighborhood_name: addressId ? null : hood.trim(),
       p_street: addressId ? null : street.trim() || null,
+      p_device_kind: deviceId === 'other' ? otherKind : null,
+      p_brand: deviceId === 'other' ? otherBrand.trim() || null : null,
     })
     setBusy(false)
     if (err) return setError(serviceErrorMessage(err.message))
@@ -740,14 +754,33 @@ function PhoneReport({ onDone }: { onDone: () => void }) {
             <div className="field">
               <label htmlFor="ph-dev">الجهاز</label>
               <select id="ph-dev" className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
-                <option value="">بدون جهاز مسجل</option>
+                <option value="">{kind === 'emergency' ? 'ما يعرف / بدون تحديد' : 'اختر'}</option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name_ar} · {when(d.started_on)}
                   </option>
                 ))}
+                <option value="other">جهاز شركة أخرى (جديد)</option>
               </select>
             </div>
+            {deviceId === 'other' && (
+              <>
+                <div className="field">
+                  <label htmlFor="ph-kind">نوع الجهاز</label>
+                  <select id="ph-kind" className="input" value={otherKind} onChange={(e) => setOtherKind(e.target.value as DeviceKind)}>
+                    {(Object.keys(DEVICE_KIND_LABELS) as DeviceKind[]).map((k) => (
+                      <option key={k} value={k}>
+                        {DEVICE_KIND_LABELS[k]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="ph-brand">الشركة / الماركة</label>
+                  <input id="ph-brand" className="input" maxLength={60} value={otherBrand} onChange={(e) => setOtherBrand(e.target.value)} />
+                </div>
+              </>
+            )}
             {kind === 'emergency' && (
               <div className="field">
                 <label htmlFor="ph-fault">نوع العطل</label>

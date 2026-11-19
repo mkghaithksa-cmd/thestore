@@ -334,6 +334,47 @@ function FaultTypesCard({ list, canEdit, onSaved }: { list: string[]; canEdit: b
   )
 }
 
+function FilterLifeCard({ value, canEdit, onSaved }: { value: number; canEdit: boolean; onSaved: () => void }) {
+  const [v, setV] = useState(String(value))
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  useEffect(() => setV(String(value)), [value])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    const n = Number(v)
+    if (!Number.isInteger(n) || n < 1 || n > 60) return setError('اكتب عدد أشهر من 1 إلى 60.')
+    setError(null)
+    const { error: err } = await supabase.from('settings').update({ default_filter_life_months: n }).eq('id', 1)
+    if (err) return setError(errText(err.message))
+    setSaved(true)
+    onSaved()
+  }
+
+  return (
+    <form className="card stack" onSubmit={save}>
+      <h2 className="h3">عمر الفلاتر الافتراضي</h2>
+      <span className="muted">
+        للأجهزة اللي ما نعرف فلاترها (أجهزة الشركات الأخرى، أو موديلات ما سجّلنا فلاترها). ينحسب منه موعد التذكير، والفني يعدّله لكل جهاز بعد الزيارة.
+        يطبّق على الأجهزة اللي تنضاف بعد الحفظ.
+      </span>
+      <div className="row wrapr align-end">
+        <div className="field">
+          <label htmlFor="dfl">بالأشهر</label>
+          <input id="dfl" className="input num" inputMode="numeric" style={{ width: 100 }} disabled={!canEdit} value={v} onChange={(e) => { setSaved(false); setV(e.target.value.replace(/[^0-9]/g, '')) }} />
+        </div>
+        {canEdit && (
+          <button className="btn field-btn" disabled={v === String(value)}>
+            حفظ
+          </button>
+        )}
+        {saved && v === String(value) && <span className="ok-text field-btn">تم الحفظ ✓</span>}
+      </div>
+      {error && <p className="form-error">{error}</p>}
+    </form>
+  )
+}
+
 export function Settings() {
   const { can } = useStaffAuth()
   const canEdit = can('settings', 'edit')
@@ -375,6 +416,7 @@ export function Settings() {
           <WorkDaysCard days={days} canEdit={canEdit} onSaved={load} />
           <NeighborhoodsCard list={hoods} canAdd={can('settings', 'add')} canEdit={canEdit} onSaved={load} />
           <FaultTypesCard list={settings.fault_types ?? []} canEdit={canEdit} onSaved={load} />
+          <FilterLifeCard value={settings.default_filter_life_months ?? 6} canEdit={canEdit} onSaved={load} />
         </>
       )}
     </RequirePage>

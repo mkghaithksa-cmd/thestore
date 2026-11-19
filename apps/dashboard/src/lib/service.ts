@@ -61,7 +61,11 @@ export interface StaffDevice {
   id: string
   customer_id: string | null
   owner_phone: string | null
-  product_id: string
+  product_id: string | null
+  device_kind: import('@ghaith/shared').DeviceKind | null
+  brand: string | null
+  stages: number | null
+  added_by: string | null
   name_ar: string
   model: string | null
   installed: boolean

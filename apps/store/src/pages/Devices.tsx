@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  DEVICE_KIND_LABELS,
   OPEN_SERVICE_STATUSES,
   SERVICE_KIND_LABELS,
   SERVICE_STATUS_LABELS,
@@ -9,11 +10,12 @@ import {
   productPath,
   serviceErrorMessage,
   type DeviceFilter,
+  type DeviceKind,
   type ServiceRequest,
 } from '@ghaith/shared'
 import { fetchSettings } from '../lib/catalog'
 import { formatDate } from '../lib/orders'
-import { fetchMyDevicesFull, fetchMyRequests, riyadhDate, snoozeMyDevice, type MyDeviceFull } from '../lib/service'
+import { addMyDevice, fetchMyDevicesFull, fetchMyRequests, removeMyDevice, riyadhDate, snoozeMyDevice, type MyDeviceFull } from '../lib/service'
 import { usePageMeta } from '../lib/seo'
 import { useAsync } from '../lib/useAsync'
 
@@ -66,6 +68,19 @@ function DeviceCard({ d, open, alertDays, onChange }: { d: MyDeviceFull; open: S
   const dueSoon = nextDue !== undefined && daysUntil(nextDue) <= alertDays
   const snoozed = d.next_contact_on && d.next_contact_on > today
 
+  async function remove() {
+    if (!window.confirm('حذف الجهاز من «أجهزتي»؟')) return
+    setBusy(true)
+    setError(null)
+    try {
+      await removeMyDevice(d.id)
+      onChange()
+    } catch (e) {
+      setError(serviceErrorMessage((e as Error).message))
+      setBusy(false)
+    }
+  }
+
   async function snooze(days: number) {
     setBusy(true)
     setError(null)
@@ -86,9 +101,15 @@ function DeviceCard({ d, open, alertDays, onChange }: { d: MyDeviceFull; open: S
         <div className="stack-sm">
           <b>{d.product ? <Link to={productPath(d.product)}>{d.name_ar}</Link> : d.name_ar}</b>
           <span className="muted">
-            {d.model && <span dir="ltr">{d.model} · </span>}
-            {d.installed ? 'ركّبناه' : 'استلمته'} في {formatDate(d.started_on)}
-            {d.date_uncertain && ' (تقريبي)'}
+            {d.product_id ? (
+              <>
+                {d.model && <span dir="ltr">{d.model} · </span>}
+                {d.installed ? 'ركّبناه' : 'استلمته'} في {formatDate(d.started_on)}
+                {d.date_uncertain && ' (تقريبي)'}
+              </>
+            ) : (
+              <>جهاز من شركة أخرى{d.date_uncertain ? '' : ` · من ${formatDate(d.started_on)}`}</>
+            )}
           </span>
         </div>
         <div className="stack-sm end">
@@ -114,7 +135,7 @@ function DeviceCard({ d, open, alertDays, onChange }: { d: MyDeviceFull; open: S
           ))}
         </ul>
       ) : (
-        <p className="muted">ما عندنا بيانات فلاتر هذا الجهاز بعد. نضيفها في أول زيارة صيانة.</p>
+        <p className="muted">ما عندنا بيانات فلاتر هذا الجهاز بعد.</p>
       )}
 
       {open ? (
@@ -137,6 +158,11 @@ function DeviceCard({ d, open, alertDays, onChange }: { d: MyDeviceFull; open: S
             <Link to={`/service/new?kind=emergency&device=${d.id}`} className="btn sm ghost">
               بلّغ عن عطل
             </Link>
+            {!d.product_id && (
+              <button type="button" className="linkbtn danger" disabled={busy} onClick={remove}>
+                حذف الجهاز
+              </button>
+            )}
             {dueSoon && !snoozed && !snoozing && (
               <button type="button" className="linkbtn" onClick={() => setSnoozing(true)}>
                 أجّل التذكير
@@ -173,6 +199,7 @@ function DeviceCard({ d, open, alertDays, onChange }: { d: MyDeviceFull; open: S
 export function Devices() {
   usePageMeta('أجهزتي')
   const { state, reload } = useAsync(load)
+  const [adding, setAdding] = useState(false)
 
   return (
     <div className="stack narrow">
@@ -196,11 +223,23 @@ export function Devices() {
           </button>
         </div>
       )}
-      {state.status === 'success' && state.data.devices.length === 0 && (
+      {state.status === 'success' && (adding ? (
+        <AddDeviceForm
+          onDone={(saved) => {
+            setAdding(false)
+            if (saved) reload()
+          }}
+        />
+      ) : (
+        <button type="button" className="btn sm ghost self-start" onClick={() => setAdding(true)}>
+          + أضف جهاز عندك (من أي شركة)
+        </button>
+      ))}
+      {state.status === 'success' && state.data.devices.length === 0 && !adding && (
         <div className="notice">
           <b>ما عندك أجهزة مسجلة بعد.</b>
           <span className="muted">
-            لما يوصلك جهاز أو نركّبه لك يظهر هنا، ومعه مواعيد صيانته وفلاتره. عندك جهاز قديم منّا؟ اتصل بنا ونضيفه لك.
+            أضف جهازك (منّا أو من أي شركة) ونذكّرك بموعد تغيير الفلاتر، وتقدر تحجز صيانة أو تبلّغ عن عطل بضغطة.
           </span>
           <Link to="/service/new?kind=emergency" className="btn sm self-start">
             بلّغ عن عطل
@@ -218,5 +257,80 @@ export function Devices() {
           />
         ))}
     </div>
+  )
+}
+
+const KINDS = Object.keys(DEVICE_KIND_LABELS) as DeviceKind[]
+
+/** «أضف جهازك»: any device the customer already has, from any company. */
+function AddDeviceForm({ onDone }: { onDone: (saved: boolean) => void }) {
+  const [kind, setKind] = useState<DeviceKind>('under_sink')
+  const [brand, setBrand] = useState('')
+  const [stages, setStages] = useState('')
+  const [known, setKnown] = useState(false)
+  const [started, setStarted] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    if (known && !started) return setError('اختر التاريخ، أو اختر «ما أذكر».')
+    setBusy(true)
+    setError(null)
+    try {
+      await addMyDevice({ kind, brand, stages: stages ? Number(stages) : null, startedOn: known ? started : null })
+      onDone(true)
+    } catch (err) {
+      setError(serviceErrorMessage((err as Error).message))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className="card stack-sm" onSubmit={save}>
+      <h2 className="h3">أضف جهازك</h2>
+      <span className="muted">نوعه:</span>
+      <div className="seg" role="radiogroup" aria-label="نوع الجهاز">
+        {KINDS.map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={kind === k} className={kind === k ? 'on' : undefined} onClick={() => setKind(k)}>
+            {DEVICE_KIND_LABELS[k]}
+          </button>
+        ))}
+      </div>
+      <div className="row wrapr">
+        <input className="input grow" aria-label="الشركة أو الماركة (اختياري)" placeholder="الشركة أو الماركة (اختياري)" maxLength={60} value={brand} onChange={(e) => setBrand(e.target.value)} />
+        <select className="input" style={{ maxWidth: 170 }} aria-label="عدد المراحل (اختياري)" value={stages} onChange={(e) => setStages(e.target.value)}>
+          <option value="">عدد المراحل؟</option>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            <option key={n} value={n}>
+              {n} مراحل
+            </option>
+          ))}
+        </select>
+      </div>
+      <span className="muted">متى آخر مرة تغيّرت فلاتره (أو ركّبته)؟</span>
+      <div className="seg">
+        <button type="button" className={!known ? 'on' : undefined} onClick={() => setKnown(false)}>
+          ما أذكر
+        </button>
+        <button type="button" className={known ? 'on' : undefined} onClick={() => setKnown(true)}>
+          أذكر التاريخ
+        </button>
+      </div>
+      {known && <input className="input" type="date" aria-label="التاريخ" max={riyadhDate()} value={started} onChange={(e) => setStarted(e.target.value)} />}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="row">
+        <button className="btn sm" disabled={busy}>
+          حفظ الجهاز
+        </button>
+        <button type="button" className="btn sm ghost" onClick={() => onDone(false)}>
+          إلغاء
+        </button>
+      </div>
+    </form>
   )
 }

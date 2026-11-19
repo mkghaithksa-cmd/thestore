@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { serviceErrorMessage, type DeviceFilter } from '@ghaith/shared'
+import { DEVICE_KIND_LABELS, serviceErrorMessage, type DeviceFilter, type DeviceKind } from '@ghaith/shared'
 import { RequirePage } from '../components/Layout'
 import { localPhone, lookupPhone, normalizePhone, riyadhDate, when, type PhoneLookup, type StaffDevice } from '../lib/service'
 import { useStaffAuth } from '../lib/staffAuth'
@@ -161,7 +161,7 @@ function CustomerCard({ data, products, onChanged }: { data: PhoneLookup; produc
         </div>
         {can('customers', 'add') && !adding && (
           <button className="btn sm" onClick={() => setAdding(true)}>
-            + إضافة جهاز قديم
+            + إضافة جهاز
           </button>
         )}
       </div>
@@ -185,7 +185,11 @@ function CustomerCard({ data, products, onChanged }: { data: PhoneLookup; produc
 }
 
 function AddDevice({ phone, products, onDone }: { phone: string; products: Product[]; onDone: (saved: boolean) => void }) {
+  const [source, setSource] = useState<'ours' | 'other'>('ours')
   const [productId, setProductId] = useState('')
+  const [kind, setKind] = useState<DeviceKind>('under_sink')
+  const [brand, setBrand] = useState('')
+  const [stages, setStages] = useState('')
   const [known, setKnown] = useState(true)
   const [started, setStarted] = useState('')
   const [installed, setInstalled] = useState(true)
@@ -195,17 +199,27 @@ function AddDevice({ phone, products, onDone }: { phone: string; products: Produ
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    if (!productId) return setError('اختر الجهاز.')
+    if (source === 'ours' && !productId) return setError('اختر الجهاز.')
     if (known && !started) return setError('اكتب تاريخ التركيب، أو اختر «ما يعرف التاريخ».')
     setBusy(true)
     setError(null)
-    const { error: err } = await supabase.rpc('device_add_staff', {
-      p_phone: phone,
-      p_product_id: productId,
-      p_started_on: known ? started : null,
-      p_installed: installed,
-      p_notes: notes.trim() || null,
-    })
+    const { error: err } =
+      source === 'ours'
+        ? await supabase.rpc('device_add_staff', {
+            p_phone: phone,
+            p_product_id: productId,
+            p_started_on: known ? started : null,
+            p_installed: installed,
+            p_notes: notes.trim() || null,
+          })
+        : await supabase.rpc('device_add_staff_external', {
+            p_phone: phone,
+            p_kind: kind,
+            p_brand: brand.trim() || null,
+            p_stages: stages ? Number(stages) : null,
+            p_started_on: known ? started : null,
+            p_notes: notes.trim() || null,
+          })
     setBusy(false)
     if (err) return setError(serviceErrorMessage(err.message))
     onDone(true)
@@ -213,8 +227,38 @@ function AddDevice({ phone, products, onDone }: { phone: string; products: Produ
 
   return (
     <form className="act card inset" onSubmit={save}>
-      <b>إضافة جهاز قديم</b>
+      <b>إضافة جهاز</b>
+      <div className="chips" role="radiogroup" aria-label="مصدر الجهاز">
+        <button type="button" role="radio" aria-checked={source === 'ours'} className={source === 'ours' ? 'on' : undefined} onClick={() => setSource('ours')}>
+          من منتجات غيث
+        </button>
+        <button type="button" role="radio" aria-checked={source === 'other'} className={source === 'other' ? 'on' : undefined} onClick={() => setSource('other')}>
+          من شركة أخرى
+        </button>
+      </div>
       <div className="grid-form">
+        {source === 'other' ? (
+          <>
+            <div className="field">
+              <label htmlFor="ad-k">نوع الجهاز</label>
+              <select id="ad-k" className="input" value={kind} onChange={(e) => setKind(e.target.value as DeviceKind)}>
+                {(Object.keys(DEVICE_KIND_LABELS) as DeviceKind[]).map((k) => (
+                  <option key={k} value={k}>
+                    {DEVICE_KIND_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="ad-b">الشركة / الماركة</label>
+              <input id="ad-b" className="input" maxLength={60} value={brand} onChange={(e) => setBrand(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="ad-s">عدد المراحل</label>
+              <input id="ad-s" className="input num" inputMode="numeric" maxLength={2} value={stages} onChange={(e) => setStages(e.target.value.replace(/[^0-9]/g, ''))} />
+            </div>
+          </>
+        ) : (
         <div className="field">
           <label htmlFor="ad-p">الجهاز</label>
           <select id="ad-p" className="input" value={productId} onChange={(e) => setProductId(e.target.value)}>
@@ -227,8 +271,9 @@ function AddDevice({ phone, products, onDone }: { phone: string; products: Produ
             ))}
           </select>
         </div>
+        )}
         <div className="field">
-          <label htmlFor="ad-d">تاريخ التركيب</label>
+          <label htmlFor="ad-d">{source === 'other' ? 'آخر تغيير فلاتر / التركيب' : 'تاريخ التركيب'}</label>
           <input id="ad-d" type="date" className="input" max={riyadhDate()} disabled={!known} value={started} onChange={(e) => setStarted(e.target.value)} />
           <label className="check tight">
             <input type="checkbox" checked={!known} onChange={(e) => setKnown(!e.target.checked)} /> ما يعرف التاريخ (ينحفظ «تاريخ غير مؤكد»)
@@ -237,12 +282,18 @@ function AddDevice({ phone, products, onDone }: { phone: string; products: Produ
         <div className="field">
           <label htmlFor="ad-n">ملاحظات</label>
           <input id="ad-n" className="input" maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          <label className="check tight">
-            <input type="checkbox" checked={installed} onChange={(e) => setInstalled(e.target.checked)} /> ركّبناه نحن
-          </label>
+          {source === 'ours' && (
+            <label className="check tight">
+              <input type="checkbox" checked={installed} onChange={(e) => setInstalled(e.target.checked)} /> ركّبناه نحن
+            </label>
+          )}
         </div>
       </div>
-      <p className="muted">الفلاتر تنضاف تلقائياً حسب موديل الجهاز، وتقدر تعدّل عمرها وآخر تغيير بعد الحفظ.</p>
+      <p className="muted">
+        {source === 'ours'
+          ? 'الفلاتر تنضاف تلقائياً حسب موديل الجهاز، وتقدر تعدّل عمرها وآخر تغيير بعد الحفظ.'
+          : 'ينضاف له «طقم الفلاتر» بالعمر الافتراضي من الإعدادات. عدّله أو أضف فلاتر بعد الحفظ.'}
+      </p>
       {error && <p className="form-error">{error}</p>}
       <div className="row">
         <button className="btn sm" disabled={busy}>
@@ -284,11 +335,13 @@ function DeviceBox({ d, filterProducts, onChanged }: { d: StaffDevice; filterPro
           <b>
             {d.name_ar}
             {d.model && <span className="muted"> ({d.model})</span>}
+            <span className={`badge ms ${d.product_id ? 'b-ok' : 'b-gray'}`}>{d.product_id ? 'غيث' : 'شركة أخرى'}</span>
+            {d.stages ? <span className="muted"> · {d.stages} مراحل</span> : null}
             {!d.is_active && <span className="badge b-gray ms">مؤرشف</span>}
           </b>
           <span className="muted">
             {d.installed ? 'تركيب' : 'تسليم'} {when(d.started_on)}
-            {d.order_id ? ' · من طلب في المتجر' : ' · أضافه موظف'}
+            {d.order_id ? ' · من طلب في المتجر' : d.added_by && d.added_by !== d.customer_id ? ' · أضافه موظف' : ' · أضافه العميل'}
             {d.warranty_until ? ` · ضمان لين ${when(d.warranty_until)}` : ''}
           </span>
           {d.date_uncertain && <span className="warn-text">تاريخ غير مؤكد</span>}

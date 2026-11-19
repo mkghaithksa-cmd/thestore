@@ -83,6 +83,8 @@ export interface StoreSettings {
   seller_vat_number: string | null
   /** Fault types offered in the report form (editable from settings). */
   fault_types: string[]
+  /** Default filter life (months) for devices with no known filters, e.g. other companies. */
+  default_filter_life_months: number
   updated_at: string
 }
 

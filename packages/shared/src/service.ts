@@ -4,6 +4,14 @@ export type ServiceKind = 'emergency' | 'maintenance'
 export type ServiceStatus = 'new' | 'scheduled' | 'in_progress' | 'done' | 'cancelled'
 export type ServicePeriod = 'morning' | 'evening'
 export type ContactOutcome = 'agreed' | 'postponed' | 'declined' | 'no_answer'
+export type DeviceKind = 'under_sink' | 'central' | 'cooler' | 'other'
+
+export const DEVICE_KIND_LABELS: Record<DeviceKind, string> = {
+  under_sink: 'منقي تحت المغسلة',
+  central: 'جهاز مركزي للبيت',
+  cooler: 'برادة مياه',
+  other: 'غير ذلك',
+}
 
 export interface ServiceRequest {
   id: string
@@ -129,6 +137,10 @@ export const SERVICE_ERRORS: Record<string, string> = {
   product_not_found: 'المنتج غير موجود.',
   invalid_life: 'عمر الفلتر من 1 إلى 60 شهر.',
   filter_not_found: 'الفلتر غير موجود.',
+  invalid_device_kind: 'اختر نوع الجهاز.',
+  invalid_brand: 'اسم الشركة طويل (60 حرف كحد أقصى).',
+  invalid_stages: 'عدد المراحل من 1 إلى 12.',
+  too_many_devices: 'وصلت الحد الأعلى للأجهزة (20). تواصل معنا.',
   invalid_fault_types: 'كل نوع عطل من 2 إلى 40 حرف، وما تكون القائمة فاضية.',
 }
 
