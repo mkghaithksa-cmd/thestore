@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { orderErrorMessage, type Fulfillment } from '@ghaith/shared'
+import { AddressConfirm } from '../components/AddressConfirm'
 import { CatalogStatus } from '../components/CatalogStatus'
+import { saveAddress } from '../lib/addresses'
 import { useCart } from '../lib/cart'
 import { formatSar } from '../lib/catalog'
 import { fetchMyCustomer } from '../lib/customer'
@@ -18,7 +20,7 @@ export function Checkout() {
   usePageMeta('إتمام الطلب')
   const cart = useCart()
   const navigate = useNavigate()
-  const { location, openDialog } = useLocationChoice()
+  const { location, openDialog, addresses, reloadAddresses } = useLocationChoice()
   const { state, reload } = useCatalog()
   const extra = useAsync(async () => {
     const [customer, hoods, days] = await Promise.all([fetchMyCustomer(), fetchNeighborhoods(), fetchWorkDays()])
@@ -53,8 +55,20 @@ export function Checkout() {
   const pinLat = location?.lat
   const pinLng = location?.lng
   const pinZone = location?.zone
+  const saved = addresses.find((a) => a.id === location?.addressId) ?? null
+  const savedHood = saved?.neighborhood_name ?? ''
+  const savedStreet = saved?.street ?? ''
+  const savedNote = saved?.building_note ?? ''
+  useEffect(() => {
+    if (!savedHood && !savedStreet && !savedNote) return
+    setHood((v) => v || savedHood)
+    setStreet((v) => v || savedStreet)
+    setNotes((v) => v || savedNote)
+  }, [savedHood, savedStreet, savedNote])
   useEffect(() => {
     if (pinLat === undefined || pinLng === undefined) return
+    // A saved address already has its neighbourhood: no map lookup needed.
+    if (savedHood) return
     let live = true
     setLookup('busy')
     addressFromPin(pinLat, pinLng).then((a) => {
@@ -77,7 +91,7 @@ export function Checkout() {
     return () => {
       live = false
     }
-  }, [pinLat, pinLng, pinZone])
+  }, [pinLat, pinLng, pinZone, savedHood])
 
   const days = useMemo(() => (extra.state.status === 'success' ? visitDays(extra.state.data.days) : []), [extra.state])
 
@@ -178,6 +192,16 @@ export function Checkout() {
         privacy_accepted: needsConsent ? agreed : false,
       })
       cart.clear()
+      saveAddress({
+        id: location!.addressId ?? null,
+        lat: location!.lat,
+        lng: location!.lng,
+        neighborhood_name: inMecca ? hood.trim() : null,
+        street: street.trim() || null,
+        building_note: notes.trim() || null,
+      })
+        .then(() => reloadAddresses())
+        .catch(() => {})
       navigate(`/orders/${placed.id}?new=1`, { replace: true })
     } catch (err) {
       setError(orderErrorMessage(err instanceof Error ? err.message : null))
@@ -194,6 +218,11 @@ export function Checkout() {
             <h2 className="h3">
               <span className="co-n">1</span> الموقع
             </h2>
+            {location.title && (
+              <p className="co-addr-title">
+                📍 <b>{location.title}</b>
+              </p>
+            )}
             <p>
               {inMecca ? (
                 <b>بيتك داخل منطقة الخدمة في مكة المكرمة: نوصّل الطلب لبابك.</b>
@@ -202,7 +231,7 @@ export function Checkout() {
               )}
             </p>
             <button type="button" className="linkbtn" onClick={() => openDialog()}>
-              تعديل مكان الدبوس
+              {addresses.length > 1 ? 'اختيار عنوان ثاني' : 'تعديل مكان الدبوس'}
             </button>
             {skipped > 0 && (
               <p className="notice warn">
@@ -253,7 +282,7 @@ export function Checkout() {
             </div>
             <div className="field">
               <label htmlFor="co-notes">
-                وصف يساعدنا نوصل <span className="muted">(اختياري)</span>
+                وصف المبنى <span className="muted">(يساعد المندوب{needsVisit ? ' والفني' : ''} يوصل)</span>
               </label>
               <input id="co-notes" className="input" placeholder="مثال: عمارة بيضاء، الدور الثاني" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
             </div>
@@ -359,6 +388,14 @@ export function Checkout() {
               <dd>{formatSar(total)}</dd>
             </div>
           </dl>
+          <AddressConfirm
+            heading={withInstall || hasService ? 'يوصل الطلب والفني إلى' : inMecca ? 'يوصل الطلب إلى' : 'يُشحن الطلب إلى'}
+            title={location.title ?? (inMecca ? hood.trim() || 'مكة المكرمة' : city.trim() || location.city)}
+            lines={[inMecca ? [hood.trim(), street.trim()].filter(Boolean).join('، ') : street.trim(), notes.trim()]}
+            lat={location.lat}
+            lng={location.lng}
+            onChange={() => openDialog()}
+          />
           {needsConsent && (
             <label className="check">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
@@ -380,7 +417,7 @@ export function Checkout() {
             </p>
           )}
           <button type="submit" className="btn block" disabled={busy || !rows.length}>
-            {busy ? 'جاري إنشاء الطلب…' : 'تأكيد الطلب'}
+            {busy ? 'جاري إنشاء الطلب…' : 'العنوان صحيح، أكّد الطلب'}
           </button>
           <p className="muted center">بعد التأكيد يكون طلبك بانتظار الدفع لمدة 24 ساعة.</p>
           <Link to="/cart" className="link center">

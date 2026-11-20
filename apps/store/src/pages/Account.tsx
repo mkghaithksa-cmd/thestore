@@ -125,6 +125,10 @@ export function Account() {
         <b>أجهزتي</b>
         <span className="link">←</span>
       </Link>
+      <Link to="/account/addresses" className="card row between">
+        <b>عناويني</b>
+        <span className="link">←</span>
+      </Link>
       <Link to="/service" className="card row between">
         <b>طلبات الصيانة والبلاغات</b>
         <span className="link">←</span>

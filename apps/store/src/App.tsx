@@ -7,6 +7,7 @@ import { LocationProvider } from './lib/location'
 import { LocationButton, LocationDialog, LocationPrompt } from './components/LocationPicker'
 import { Cart } from './pages/Cart'
 import { Account } from './pages/Account'
+import { Addresses } from './pages/Addresses'
 import { Home } from './pages/Home'
 import { InfoPage } from './pages/InfoPage'
 import { Login } from './pages/Login'
@@ -288,6 +289,14 @@ export default function App() {
               element={
                 <RequireAuth>
                   <Account />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/account/addresses"
+              element={
+                <RequireAuth>
+                  <Addresses />
                 </RequireAuth>
               }
             />

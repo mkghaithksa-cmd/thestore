@@ -51,6 +51,9 @@ export interface MyAddress {
   label: string | null
   neighborhood_name: string | null
   street: string | null
+  building_note: string | null
+  lat: number | null
+  lng: number | null
   is_default: boolean
 }
 
@@ -58,7 +61,9 @@ export interface MyAddress {
 export async function fetchMyMeccaAddresses(): Promise<MyAddress[]> {
   const { data, error } = await supabase
     .from('addresses')
-    .select('id, label, neighborhood_name, street, is_default, neighborhood:service_neighborhoods(name_ar)')
+    .select('id, label, neighborhood_name, street, building_note, lat, lng, is_default, neighborhood:service_neighborhoods(name_ar)')
+    // Only this customer's own (a staff account could otherwise read everyone's).
+    .eq('customer_id', (await supabase.auth.getSession()).data.session?.user.id ?? '')
     .eq('is_active', true)
     .eq('in_service_area', true)
     .order('is_default', { ascending: false })

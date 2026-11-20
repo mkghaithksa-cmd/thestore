@@ -89,7 +89,7 @@ function Delivery({ product, settings }: { product: ProductWithCategory; setting
   const vat = settings.vat_rate
   const change = (
     <button type="button" className="linkbtn" onClick={() => openDialog()}>
-      {location ? 'تغيير الموقع' : 'حدد موقعك'}
+      {location ? 'تغيير العنوان' : product.installable_in_mecca || product.type === 'service' ? 'تأكد إن التركيب متاح عندك' : 'حدد موقعك'}
     </button>
   )
   if (!inMecca && product.type === 'service') {
@@ -104,7 +104,7 @@ function Delivery({ product, settings }: { product: ProductWithCategory; setting
   if (!inMecca) {
     return (
       <div className="delivery">
-        <b>الشحن إلى {location?.city}</b>
+        <b>الشحن إلى {location?.title ?? location?.city}</b>
         <span>رسوم الشحن {formatSar(priceWithVat(settings.shipping_fee, vat))} للطلب شامل الضريبة.</span>
         {product.installable_in_mecca && <span className="muted">خدمة التركيب متاحة داخل مكة المكرمة فقط.</span>}
         {change}
@@ -113,7 +113,7 @@ function Delivery({ product, settings }: { product: ProductWithCategory; setting
   }
   return (
     <div className="delivery">
-      <b>{location ? 'التوصيل داخل مكة المكرمة' : 'التوصيل داخل مكة والشحن لباقي المدن'}</b>
+      <b>{location ? (location.title ? `يوصل إلى: ${location.title}` : 'التوصيل داخل مكة المكرمة') : 'التوصيل داخل مكة والشحن لباقي المدن'}</b>
       {product.installable_in_mecca && (
         <span>
           التركيب متاح داخل مكة برسوم {formatSar(priceWithVat(settings.install_fee, vat))} شامل الضريبة، وتختاره عند إتمام الطلب.

@@ -1057,5 +1057,36 @@ await asAdmin()
 await rows(`select public.approval_decide('${opsOwn.id}', false, 'أعد العد')`)
 ok((await onHand(GH500)) === 4, 'rejected count leaves the balance')
 
+console.log('My addresses: save, merge nearby pins, at most 5, remove')
+await as('authenticated', B)
+const bCount = async () => (await rows(`select id from addresses where is_active`)).length
+const bHome = (await rows(`select id from addresses where is_active order by created_at limit 1`))[0]
+const c0 = await bCount()
+const near = (await rows(`select public.address_save(null, 'البيت', 21.4227, 39.8262, 'العزيزية', 'شارع ٥', 'الدور الثاني، باب بني') as id`))[0].id
+ok(bHome && near === bHome.id && (await bCount()) === c0, 'a pin 20 m from a saved address updates it instead of adding a copy')
+ok((await rows(`select building_note from addresses where id = '${near}'`))[0].building_note === 'الدور الثاني، باب بني', 'the building note is saved')
+ok((await errorOf(`select public.address_save(null, null, null, null, null, null, null)`))?.includes('pin_required'), 'an address needs a pin')
+let lastNew = null
+for (let i = (await bCount()); i < 5; i++) {
+  lastNew = (await rows(`select public.address_save(null, 'عنوان ${i}', ${21.30 + i * 0.01}, 39.70, null, null, null) as id`))[0].id
+}
+ok((await bCount()) === 5, 'up to 5 addresses')
+ok((await errorOf(`select public.address_save(null, 'سادس', 21.60, 39.95, null, null, null)`))?.includes('too_many_addresses'), 'a 6th address is refused')
+await rows(`select public.address_save('${lastNew}', null, 21.31, 39.71, null, null, null, true)`)
+ok((await rows(`select is_default from addresses where id = '${lastNew}'`))[0].is_default === true, 'an address can be made the default')
+ok((await count(`select 1 from addresses where is_active and is_default`)) === 1, 'still one default')
+await rows(`select public.address_remove('${lastNew}')`)
+ok((await bCount()) === 4, 'removing hides the address')
+ok((await count(`select 1 from addresses where is_active and is_default`)) === 1, 'removing the default makes another one default')
+await as('authenticated', A)
+ok((await errorOf(`select public.address_save('${near}', 'x', 21.4, 39.8, null, null, null)`))?.includes('address_not_found'), 'nobody edits another customer’s address')
+ok((await errorOf(`select public.address_remove('${near}')`))?.includes('address_not_found'), 'nobody removes another customer’s address')
+await as('anon')
+ok(await denied(`select public.address_save(null, 'x', 21.4, 39.8, null, null, null)`), 'a visitor cannot save addresses')
+await as('owner')
+const srNote = (await rows(`insert into service_requests (kind, source, contact_name, contact_phone, preferred_date, preferred_period, address_id)
+  values ('maintenance', 'phone', 'تجربة', '+966500000002', current_date + 1, 'morning', '${near}') returning building_note`))[0]
+ok(srNote.building_note === 'الدور الثاني، باب بني', 'a maintenance request takes the building note of its address')
+
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll checks passed')
 process.exit(failures ? 1 : 0)

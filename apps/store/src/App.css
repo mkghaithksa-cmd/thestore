@@ -459,3 +459,32 @@ select.input{background:var(--surface)}
 table.mini{width:100%;max-width:420px;border-collapse:collapse;font-size:14px}
 table.mini td,table.mini th{padding:4px 6px;border-bottom:1px solid var(--n200);text-align:start}
 table.mini td:last-child,table.mini th:last-child{text-align:end;white-space:nowrap}
+/* Saved addresses in the location dialog */
+.addr-pick{display:flex;flex-direction:column;gap:8px}
+.addr-pick>button:not(.btn){display:flex;align-items:center;gap:10px;text-align:start;background:var(--surface);border:1px solid var(--n200);border-radius:12px;padding:12px;cursor:pointer;color:inherit;font:inherit}
+.addr-pick>button:not(.btn):hover{border-color:var(--primary-700)}
+.addr-pick>button.on{border-color:var(--primary-700);background:var(--primary-50)}
+.addr-pick svg{width:20px;height:20px;flex:none;fill:none;stroke:var(--primary-700);stroke-width:1.8}
+.addr-pick span{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.addr-pick small{color:var(--n500);font-size:12.5px}
+.addr-pick em{font-style:normal;font-size:11.5px;background:var(--primary-50);color:var(--primary-700);border-radius:99px;padding:2px 8px}
+/* «عناويني» */
+.addr-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.addr-card{display:flex;flex-direction:column;gap:6px}
+.addr-card.main{border-color:var(--primary-700)}
+.addr-name{font-size:16px}
+.addr-actions{margin-top:6px}
+.field-label{font-size:14px;font-weight:500}
+.field .chips{margin-bottom:4px}
+.empty-state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:28px 16px}
+.warn-text{color:var(--warn-700);font-size:13px}
+/* "Your order goes here" */
+.addr-confirm{display:flex;gap:12px;align-items:stretch;border:1px solid var(--primary-100);background:var(--primary-50);border-radius:12px;padding:10px;margin-block:12px}
+.mini-map{width:110px;min-height:96px;border-radius:8px;flex:none;background:var(--n100);overflow:hidden}
+.mini-map .leaflet-control-attribution{font-size:8px;padding:0 3px}
+.addr-confirm-body{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:13.5px}
+.addr-confirm-body small{color:var(--n500);font-size:12px}
+.addr-confirm-body .linkbtn{align-self:flex-start;font-size:13px;padding-top:4px}
+.mini-pin span{display:block;width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--primary-700);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.co-addr-title{margin:0 0 4px}
+.d-block{display:block}

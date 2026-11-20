@@ -9,6 +9,8 @@ import {
   type ServiceKind,
   type ServicePeriod,
 } from '@ghaith/shared'
+import { AddressConfirm } from '../components/AddressConfirm'
+import { saveAddress } from '../lib/addresses'
 import { useAuth } from '../lib/auth'
 import { fetchSettings, formatSar } from '../lib/catalog'
 import { fetchMyCustomer } from '../lib/customer'
@@ -48,7 +50,7 @@ export function ServiceNew() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { session } = useAuth()
-  const { location, openDialog } = useLocationChoice()
+  const { location, openDialog, reloadAddresses } = useLocationChoice()
   const { state, reload } = useAsync(loadForm)
 
   const [kind, setKind] = useState<ServiceKind>(params.get('kind') === 'maintenance' ? 'maintenance' : 'emergency')
@@ -65,6 +67,7 @@ export function ServiceNew() {
   const [pickAddress, setPickAddress] = useState(false)
   const [hood, setHood] = useState('')
   const [street, setStreet] = useState('')
+  const [note, setNote] = useState('')
   const [description, setDescription] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
   const [name, setName] = useState('')
@@ -77,10 +80,11 @@ export function ServiceNew() {
   // Sensible defaults so most customers only tap the problem and send.
   useEffect(() => {
     if (!data) return
-    setAddressId((a) => a || (data.addresses[0]?.id ?? 'pin'))
+    setAddressId((a) => a || (data.addresses.find((x) => x.id === location?.addressId)?.id ?? data.addresses[0]?.id ?? 'pin'))
     setName((n) => n || data.customer?.full_name || '')
     const free = data.devices.filter((d) => !data.open.some((r) => r.device_id === d.id))
     setDevice((d) => d || (free.length === 1 ? free[0].id : data.devices.length === 0 ? 'other' : ''))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
   // Emergency: as soon as possible — today, or tomorrow morning late at night.
@@ -171,6 +175,7 @@ export function ServiceNew() {
   const faults = (data.settings.fault_types ?? []).filter((f) => emergency || f !== 'تغيير فلاتر')
   const usePin = addressId === 'pin'
   const address = data.addresses.find((a) => a.id === addressId)
+  const buildingNote = note.trim() || address?.building_note || ''
   const fee = Number(data.settings.inspection_fee) * (1 + Number(data.settings.vat_rate))
 
   async function submit(e: FormEvent) {
@@ -187,6 +192,14 @@ export function ServiceNew() {
     setBusy(true)
     try {
       const photoPath = photo && session ? await uploadServicePhoto(session.user.id, photo) : null
+      // Keep the address (and its building note) in «عناويني»; the request copies the note for the technician.
+      let useAddressId = usePin ? null : addressId
+      if (usePin && location) {
+        useAddressId = await saveAddress({ lat: location.lat, lng: location.lng, neighborhood_name: hood.trim(), street: street.trim(), building_note: note.trim() || null }).catch(() => null)
+      } else if (address && note.trim() && note.trim() !== (address.building_note ?? '')) {
+        await saveAddress({ id: address.id, lat: address.lat!, lng: address.lng!, label: address.label, neighborhood_name: address.neighborhood_name, street: address.street, building_note: note.trim() }).catch(() => null)
+      }
+      if (useAddressId) reloadAddresses()
       const r = await requestService({
         kind,
         deviceId: device !== 'other' && device !== 'unknown' ? device : null,
@@ -197,8 +210,8 @@ export function ServiceNew() {
         description,
         photoPath,
         contactName: name,
-        addressId: usePin ? null : addressId,
-        pin: usePin && location ? { lat: location.lat, lng: location.lng, neighborhood: hood.trim(), street: street.trim() } : null,
+        addressId: useAddressId,
+        pin: !useAddressId && location ? { lat: location.lat, lng: location.lng, neighborhood: hood.trim(), street: street.trim() } : null,
       })
       navigate(`/service?new=${encodeURIComponent(r.request_number)}`, { replace: true })
     } catch (err) {
@@ -317,6 +330,7 @@ export function ServiceNew() {
             <span>
               <b>{address.label || address.neighborhood_name || 'عنواني'}</b>
               {address.street && <span className="muted"> · {address.street}</span>}
+              {address.building_note && <small className="muted d-block">{address.building_note}</small>}
             </span>
             <button type="button" className="linkbtn" onClick={() => setPickAddress(true)}>
               تغيير
@@ -377,6 +391,16 @@ export function ServiceNew() {
             )}
           </>
         )}
+        {(usePin ? pinInMecca : address && !address.building_note) && (
+          <input
+            className="input"
+            aria-label="وصف المبنى"
+            placeholder="وصف المبنى للفني: مثال عمارة بيضاء، الدور الثاني"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={200}
+          />
+        )}
         {!data.customer.full_name && (
           <input className="input" autoComplete="name" aria-label="اسمك" placeholder="اسمك" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
         )}
@@ -408,13 +432,23 @@ export function ServiceNew() {
           رسوم الفحص {formatSar(Math.round(fee * 100) / 100)} شامل الضريبة، تندفع عند الزيارة. بدون دفع مسبق.
         </p>
       )}
+      {(address && !usePin && address.lat !== null && address.lng !== null) || (usePin && location && pinInMecca) ? (
+        <AddressConfirm
+          heading="يزورك الفني في"
+          title={usePin ? hood.trim() || 'الموقع على الخريطة' : address!.label || address!.neighborhood_name || 'عنواني'}
+          lines={usePin ? [street.trim(), note.trim()] : [[address!.neighborhood_name, address!.street].filter(Boolean).join('، '), buildingNote]}
+          lat={usePin ? location!.lat : address!.lat!}
+          lng={usePin ? location!.lng : address!.lng!}
+          onChange={() => (usePin ? openDialog() : setPickAddress(true))}
+        />
+      ) : null}
       {error && (
         <p className="form-error" role="alert">
           {error}
         </p>
       )}
       <button className="btn block" disabled={busy}>
-        {busy ? 'نرسل…' : emergency ? 'أرسل البلاغ' : 'احجز الصيانة'}
+        {busy ? 'نرسل…' : emergency ? 'العنوان صحيح، أرسل البلاغ' : 'العنوان صحيح، احجز الصيانة'}
       </button>
     </form>
   )
