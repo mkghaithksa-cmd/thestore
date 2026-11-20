@@ -59,11 +59,15 @@ export function Checkout() {
   const savedHood = saved?.neighborhood_name ?? ''
   const savedStreet = saved?.street ?? ''
   const savedNote = saved?.building_note ?? ''
+  // Switching addresses replaces what the previous one filled in (not what the customer typed).
+  const fromSaved = useRef({ hood: '', street: '', note: '' })
   useEffect(() => {
-    if (!savedHood && !savedStreet && !savedNote) return
-    setHood((v) => v || savedHood)
-    setStreet((v) => v || savedStreet)
-    setNotes((v) => v || savedNote)
+    const was = fromSaved.current
+    const take = (cur: string, old: string, nu: string) => (!cur.trim() || cur === old ? nu : cur)
+    setHood((v) => take(v, was.hood, savedHood))
+    setStreet((v) => take(v, was.street, savedStreet))
+    setNotes((v) => take(v, was.note, savedNote))
+    fromSaved.current = { hood: savedHood, street: savedStreet, note: savedNote }
   }, [savedHood, savedStreet, savedNote])
   useEffect(() => {
     if (pinLat === undefined || pinLng === undefined) return

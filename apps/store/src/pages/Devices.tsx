@@ -153,7 +153,8 @@ function DeviceCard({
     <section className={`card stack-sm device-card ${h.tone}`}>
       <div className="dev-head">
         <div className="dev-img" aria-hidden="true">
-          {img ? <img src={img} alt="" loading="lazy" /> : <span>💧</span>}
+          <span>💧</span>
+          {img && <img src={img} alt="" loading="lazy" onError={(e) => (e.currentTarget.hidden = true)} />}
         </div>
         <div className="stack-sm dev-name">
           <b>{d.product ? <Link to={productPath(d.product)}>{d.name_ar}</Link> : d.name_ar}</b>

@@ -125,6 +125,70 @@ export function Addresses() {
     }
   }
 
+  const form = draft && (
+    <form className="card stack" onSubmit={submit} noValidate>
+      <b>{draft.id ? 'تعديل العنوان' : 'عنوان جديد'}</b>
+      {mapOpen ? (
+        <Suspense fallback={<div className="map-loading">جاري تحميل الخريطة…</div>}>
+          <MapPicker
+            initial={draft.lat !== null && draft.lng !== null ? { lat: draft.lat, lng: draft.lng } : null}
+            onConfirm={pinned}
+            onCancel={() => (draft.lat === null ? setDraft(null) : setMapOpen(false))}
+            cancelLabel={draft.lat === null ? 'إلغاء' : 'رجوع'}
+          />
+        </Suspense>
+      ) : (
+        <>
+          <div className="row between wrapr">
+            <span className="muted">{draft.lat !== null ? '📍 المكان محدد على الخريطة' : 'ما تحدد المكان'}</span>
+            <button type="button" className="linkbtn" onClick={() => setMapOpen(true)}>
+              {draft.lat !== null ? 'تعديل مكان الدبوس' : 'حدد على الخريطة'}
+            </button>
+          </div>
+          <div className="field">
+            <span className="field-label">اسم العنوان</span>
+            <div className="chips">
+              {LABEL_CHOICES.map((l) => (
+                <button key={l} type="button" className={draft.label === l ? 'on' : undefined} onClick={() => setDraft({ ...draft, label: l })}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <input className="input" aria-label="اسم العنوان" placeholder="أو اكتب اسم ثاني" maxLength={50} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
+          </div>
+          <div className="field">
+            <label htmlFor="ad-hood">الحي</label>
+            <input id="ad-hood" className="input" maxLength={80} value={draft.hood} onChange={(e) => setDraft({ ...draft, hood: e.target.value })} />
+          </div>
+          <div className="field">
+            <label htmlFor="ad-street">
+              الشارع ورقم البيت <span className="muted">(اختياري)</span>
+            </label>
+            <input id="ad-street" className="input" maxLength={300} value={draft.street} onChange={(e) => setDraft({ ...draft, street: e.target.value })} />
+          </div>
+          <div className="field">
+            <label htmlFor="ad-note">وصف المبنى</label>
+            <input id="ad-note" className="input" placeholder="مثال: عمارة بيضاء، الدور الثاني، الباب البني" maxLength={200} value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+            <span className="muted">يساعد المندوب والفني يوصلون لك بدون اتصال.</span>
+          </div>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="row wrapr">
+            <button className="btn" disabled={busy}>
+              {busy ? 'جاري الحفظ…' : 'حفظ'}
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setDraft(null)}>
+              إلغاء
+            </button>
+          </div>
+        </>
+      )}
+    </form>
+  )
+
   return (
     <div className="stack narrow">
       <div className="row between wrapr">
@@ -149,7 +213,9 @@ export function Addresses() {
 
       <ul className="addr-list">
         {addresses.map((a) =>
-          draft?.id === a.id ? null : (
+          draft?.id === a.id ? (
+            <li key={a.id}>{form}</li>
+          ) : (
             <li key={a.id} className={`card addr-card${a.is_default ? ' main' : ''}`}>
               <div className="row between wrapr">
                 <b className="addr-name">{addressTitle(a)}</b>
@@ -182,69 +248,7 @@ export function Addresses() {
         )}
       </ul>
 
-      {draft && (
-        <form className="card stack" onSubmit={submit} noValidate>
-          <b>{draft.id ? 'تعديل العنوان' : 'عنوان جديد'}</b>
-          {mapOpen ? (
-            <Suspense fallback={<div className="map-loading">جاري تحميل الخريطة…</div>}>
-              <MapPicker
-                initial={draft.lat !== null && draft.lng !== null ? { lat: draft.lat, lng: draft.lng } : null}
-                onConfirm={pinned}
-                onCancel={() => (draft.lat === null ? setDraft(null) : setMapOpen(false))}
-                cancelLabel={draft.lat === null ? 'إلغاء' : 'رجوع'}
-              />
-            </Suspense>
-          ) : (
-            <>
-              <div className="row between wrapr">
-                <span className="muted">{draft.lat !== null ? '📍 المكان محدد على الخريطة' : 'ما تحدد المكان'}</span>
-                <button type="button" className="linkbtn" onClick={() => setMapOpen(true)}>
-                  {draft.lat !== null ? 'تعديل مكان الدبوس' : 'حدد على الخريطة'}
-                </button>
-              </div>
-              <div className="field">
-                <span className="field-label">اسم العنوان</span>
-                <div className="chips">
-                  {LABEL_CHOICES.map((l) => (
-                    <button key={l} type="button" className={draft.label === l ? 'on' : undefined} onClick={() => setDraft({ ...draft, label: l })}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                <input className="input" aria-label="اسم العنوان" placeholder="أو اكتب اسم ثاني" maxLength={50} value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
-              </div>
-              <div className="field">
-                <label htmlFor="ad-hood">الحي</label>
-                <input id="ad-hood" className="input" maxLength={80} value={draft.hood} onChange={(e) => setDraft({ ...draft, hood: e.target.value })} />
-              </div>
-              <div className="field">
-                <label htmlFor="ad-street">
-                  الشارع ورقم البيت <span className="muted">(اختياري)</span>
-                </label>
-                <input id="ad-street" className="input" maxLength={300} value={draft.street} onChange={(e) => setDraft({ ...draft, street: e.target.value })} />
-              </div>
-              <div className="field">
-                <label htmlFor="ad-note">وصف المبنى</label>
-                <input id="ad-note" className="input" placeholder="مثال: عمارة بيضاء، الدور الثاني، الباب البني" maxLength={200} value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
-                <span className="muted">يساعد المندوب والفني يوصلون لك بدون اتصال.</span>
-              </div>
-              {error && (
-                <p className="form-error" role="alert">
-                  {error}
-                </p>
-              )}
-              <div className="row wrapr">
-                <button className="btn" disabled={busy}>
-                  {busy ? 'جاري الحفظ…' : 'حفظ'}
-                </button>
-                <button type="button" className="btn ghost" onClick={() => setDraft(null)}>
-                  إلغاء
-                </button>
-              </div>
-            </>
-          )}
-        </form>
-      )}
+      {draft && !draft.id && form}
 
       {!draft && addresses.length > 0 && addresses.length < MAX_ADDRESSES && (
         <button className="btn ghost block" onClick={startNew}>

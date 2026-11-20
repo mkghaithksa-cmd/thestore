@@ -26,7 +26,7 @@ export function LocationButton() {
       <PinIcon />
       <span className="loc-label">
         <small>{!location ? 'موقعك' : location.zone === 'outside' ? 'الشحن إلى' : 'التوصيل إلى'}</small>
-        <b>{location ? (location.title ?? location.city) : 'حدد موقعك'}</b>
+        <b>{location ? (location.title?.split(' – ')[0] ?? location.city) : 'حدد موقعك'}</b>
       </span>
     </button>
   )
@@ -205,7 +205,7 @@ export function LocationDialog() {
                     {[a.street, a.building_note].filter(Boolean).join(' · ') || (a.in_service_area ? 'داخل مكة' : 'خارج مكة: شحن فقط')}
                   </small>
                 </span>
-                {a.is_default && <em>الأساسي</em>}
+                {a.is_default ? <em>الأساسي</em> : !a.in_service_area && <em className="off">شحن فقط</em>}
               </button>
             ))}
             {addresses.length < MAX_ADDRESSES ? (

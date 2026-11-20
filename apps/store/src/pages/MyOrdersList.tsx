@@ -254,7 +254,7 @@ export function Orders() {
                 {e.steps.length > 0 && (
                   <div className="ord-steps" aria-label={`المرحلة ${e.step + 1} من ${e.steps.length}: ${e.steps[e.step] ?? ''}`}>
                     {e.steps.map((s, i) => (
-                      <span key={s} className={i < e.step ? 'done' : i === e.step ? 'now' : undefined} title={s} />
+                      <span key={s} className={i < e.step || (i === e.step && i === e.steps.length - 1) ? 'done' : i === e.step ? 'now' : undefined} title={s} />
                     ))}
                   </div>
                 )}
