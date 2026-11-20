@@ -13,7 +13,8 @@ import {
   type DeviceKind,
   type ServiceRequest,
 } from '@ghaith/shared'
-import { fetchSettings } from '../lib/catalog'
+import { fetchSettings, mainImageUrl } from '../lib/catalog'
+import { useCatalog } from '../lib/useCatalog'
 import { formatDate } from '../lib/orders'
 import { addMyDevice, fetchMyDevicesFull, fetchMyRequests, removeMyDevice, riyadhDate, snoozeMyDevice, type MyDeviceFull } from '../lib/service'
 import { usePageMeta } from '../lib/seo'
@@ -48,15 +49,15 @@ function FilterBar({ f, alertDays }: { f: DeviceFilter; alertDays: number }) {
       <div
         className={`fbar-track ${tone}`}
         role="meter"
-        aria-label={`استهلاك ${f.name_ar}`}
+        aria-label={`الباقي من عمر ${f.name_ar}`}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={Math.min(used, 100)}
+        aria-valuenow={Math.max(0, 100 - Math.min(used, 100))}
       >
-        <span style={{ width: `${Math.min(used, 100)}%` }} />
+        <span style={{ width: `${Math.max(0, 100 - Math.min(used, 100))}%` }} />
       </div>
       <small className="muted">
-        آخر تغيير {formatDate(f.last_changed_on)} · عمره {f.life_months} {f.life_months > 10 ? 'شهر' : 'أشهر'} · مستهلك {Math.min(used, 100)}٪
+        باقي من عمره {Math.max(0, 100 - Math.min(used, 100))}٪ · آخر تغيير {formatDate(f.last_changed_on)} · يعيش {f.life_months} {f.life_months > 10 ? 'شهر' : 'أشهر'}
       </small>
     </li>
   )
@@ -68,19 +69,51 @@ const SNOOZE = [
   { days: 60, label: 'شهرين' },
 ]
 
+/** The filter closest to its end decides the device's health. */
+function health(d: MyDeviceFull, alertDays: number): { pct: number; tone: 'ok' | 'warn' | 'bad' | 'none'; text: string } {
+  if (!d.filters.length) return { pct: 0, tone: 'none', text: 'بدون بيانات' }
+  const worst = d.filters.reduce((a, f) => (filterUsage(f) > filterUsage(a) ? f : a))
+  const pct = Math.max(0, 100 - Math.min(filterUsage(worst), 100))
+  const left = daysUntil(d.filters[0].next_due_on)
+  const tone = left < 0 ? 'bad' : left <= alertDays ? 'warn' : 'ok'
+  return { pct, tone, text: tone === 'bad' ? 'متأخر' : tone === 'warn' ? 'قرّب' : 'ممتاز' }
+}
+
+function HealthRing({ pct, tone, text }: ReturnType<typeof health>) {
+  const r = 22
+  const c = 2 * Math.PI * r
+  return (
+    <div className={`ring ${tone}`} role="img" aria-label={`حالة الفلاتر: ${text}${tone === 'none' ? '' : `، باقي ${pct}٪`}`}>
+      <svg viewBox="0 0 56 56" aria-hidden="true">
+        <circle cx="28" cy="28" r={r} className="ring-bg" />
+        {tone !== 'none' && <circle cx="28" cy="28" r={r} className="ring-fg" strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 28 28)" />}
+      </svg>
+      <span>
+        {tone === 'none' ? '—' : `${pct}٪`}
+        <small>{text}</small>
+      </span>
+    </div>
+  )
+}
+
 function DeviceCard({
   d,
   open,
+  history,
+  img,
   alertDays,
   remind,
   onChange,
 }: {
   d: MyDeviceFull
   open: ServiceRequest | undefined
+  history: ServiceRequest[]
+  img: string | null
   alertDays: number
   remind: (due: string) => boolean
   onChange: () => void
 }) {
+  const h = health(d, alertDays)
   const [snoozing, setSnoozing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -117,9 +150,12 @@ function DeviceCard({
   }
 
   return (
-    <section className="card stack-sm device-card">
-      <div className="row between wrapr">
-        <div className="stack-sm">
+    <section className={`card stack-sm device-card ${h.tone}`}>
+      <div className="dev-head">
+        <div className="dev-img" aria-hidden="true">
+          {img ? <img src={img} alt="" loading="lazy" /> : <span>💧</span>}
+        </div>
+        <div className="stack-sm dev-name">
           <b>{d.product ? <Link to={productPath(d.product)}>{d.name_ar}</Link> : d.name_ar}</b>
           <span className="muted">
             {d.product_id ? (
@@ -132,8 +168,7 @@ function DeviceCard({
               <>جهاز من شركة أخرى{d.date_uncertain ? '' : ` · من ${formatDate(d.started_on)}`}</>
             )}
           </span>
-        </div>
-        <div className="stack-sm end">
+          <div className="row wrapr">
           {d.warranty_until ? (
             d.warranty_until >= today ? (
               <span className="tag ok">بالضمان لين {formatDate(d.warranty_until)}</span>
@@ -141,12 +176,9 @@ function DeviceCard({
               <span className="tag off">انتهى الضمان</span>
             )
           ) : null}
-          {d.order_id && (
-            <Link to={`/orders/${d.order_id}`} className="link">
-              الطلب
-            </Link>
-          )}
+          </div>
         </div>
+        <HealthRing {...h} />
       </div>
 
       {d.filters.length > 0 ? (
@@ -157,6 +189,38 @@ function DeviceCard({
         </ul>
       ) : (
         <p className="muted">ما عندنا بيانات فلاتر هذا الجهاز بعد.</p>
+      )}
+
+      {(history.length > 0 || d.order_id) && (
+        <details className="dev-history">
+          <summary>سجل الجهاز</summary>
+          <ol>
+            {history.map((r) => (
+              <li key={r.id}>
+                <b>{formatDate(r.done_at ?? r.scheduled_at ?? r.created_at)}</b>
+                <span>
+                  {SERVICE_KIND_LABELS[r.kind]}
+                  {r.fault_type ? `: ${r.fault_type}` : ''} · {SERVICE_STATUS_LABELS[r.status]}
+                </span>
+              </li>
+            ))}
+            <li>
+              <b>{formatDate(d.started_on)}</b>
+              <span>
+                {d.installed ? 'ركّبناه عندك' : d.product_id ? 'استلمته' : 'سجّلته في أجهزتي'}
+                {d.order_id && (
+                  <>
+                    {' '}
+                    ·{' '}
+                    <Link to={`/orders/${d.order_id}`} className="link">
+                      الطلب
+                    </Link>
+                  </>
+                )}
+              </span>
+            </li>
+          </ol>
+        </details>
       )}
 
       {open ? (
@@ -220,7 +284,18 @@ function DeviceCard({
 export function Devices() {
   usePageMeta('أجهزتي')
   const { state, reload } = useAsync(load)
+  const catalog = useCatalog()
   const [adding, setAdding] = useState(false)
+  const img = (productId: string | null) => {
+    if (!productId || catalog.state.status !== 'success') return null
+    const p = catalog.state.data.products.find((x) => x.id === productId)
+    return p ? mainImageUrl(p) : null
+  }
+  const devices = state.status === 'success' ? state.data.devices : []
+  const next = devices
+    .flatMap((d) => d.filters.map((f) => ({ d, f })))
+    .sort((a, b) => a.f.next_due_on.localeCompare(b.f.next_due_on))[0]
+  const nextLeft = next ? daysUntil(next.f.next_due_on) : null
 
   return (
     <div className="stack narrow">
@@ -235,7 +310,33 @@ export function Devices() {
           </Link>
         </div>
       </div>
-      {state.status === 'loading' && <p className="muted">جاري التحميل…</p>}
+      {state.status === 'loading' && (
+        <div className="stack" aria-hidden="true">
+          <div className="card skel" />
+          <div className="card skel" />
+        </div>
+      )}
+      {state.status === 'success' && devices.length > 0 && (
+        <div className={`card dev-summary ${nextLeft !== null && nextLeft < 0 ? 'bad' : nextLeft !== null && nextLeft <= state.data.alertDays ? 'warn' : ''}`}>
+          <div>
+            <b>{devices.length === 1 ? 'عندك جهاز واحد' : devices.length === 2 ? 'عندك جهازين' : `عندك ${devices.length} أجهزة`}</b>
+            {next && nextLeft !== null && (
+              <span>
+                {nextLeft < 0
+                  ? `فلتر «${next.f.name_ar}» متأخر ${-nextLeft} يوم`
+                  : nextLeft === 0
+                    ? `فلتر «${next.f.name_ar}» موعده اليوم`
+                    : `أقرب تغيير فلتر بعد ${nextLeft} يوم (${next.d.name_ar})`}
+              </span>
+            )}
+          </div>
+          {next && nextLeft !== null && nextLeft <= state.data.alertDays && (
+            <Link to={`/service/new?kind=maintenance&device=${next.d.id}`} className="btn sm">
+              احجز تغيير الفلاتر
+            </Link>
+          )}
+        </div>
+      )}
       {state.status === 'error' && (
         <div className="notice bad" role="alert">
           <b>تعذّر تحميل أجهزتك.</b>
@@ -257,7 +358,8 @@ export function Devices() {
         </button>
       ))}
       {state.status === 'success' && state.data.devices.length === 0 && !adding && (
-        <div className="notice">
+        <div className="card empty-state">
+          <span className="empty-ic" aria-hidden="true">💧</span>
           <b>ما عندك أجهزة مسجلة بعد.</b>
           <span className="muted">
             أضف جهازك (منّا أو من أي شركة) ونذكّرك بموعد تغيير الفلاتر، وتقدر تحجز صيانة أو تبلّغ عن عطل بضغطة.
@@ -275,6 +377,8 @@ export function Devices() {
             alertDays={state.data.alertDays}
             remind={state.data.remind}
             open={state.data.requests.find((r) => r.device_id === d.id && OPEN_SERVICE_STATUSES.includes(r.status))}
+            history={state.data.requests.filter((r) => r.device_id === d.id && !OPEN_SERVICE_STATUSES.includes(r.status))}
+            img={img(d.product_id)}
             onChange={reload}
           />
         ))}

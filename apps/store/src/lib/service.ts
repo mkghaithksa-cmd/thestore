@@ -19,11 +19,13 @@ export interface MyDeviceFull {
 }
 
 export async function fetchMyDevicesFull(): Promise<MyDeviceFull[]> {
+  const uid = (await supabase.auth.getSession()).data.session?.user.id ?? ''
   const { data, error } = await supabase
     .from('customer_devices')
     .select(
       'id, name_ar, model, product_id, device_kind, brand, installed, started_on, date_uncertain, warranty_until, order_id, next_contact_on, product:products(sku), filters:device_filters(*)',
     )
+    .eq('customer_id', uid)
     .eq('is_active', true)
     .order('started_on', { ascending: false })
   if (error) throw error
