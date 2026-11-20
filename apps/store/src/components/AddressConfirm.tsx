@@ -19,7 +19,7 @@ export function AddressConfirm({
   lines: (string | null | undefined)[]
   lat: number
   lng: number
-  onChange: () => void
+  onChange?: () => void
 }) {
   const text = lines.filter(Boolean)
   return (
@@ -35,9 +35,11 @@ export function AddressConfirm({
             {t}
           </span>
         ))}
-        <button type="button" className="linkbtn" onClick={onChange}>
-          تغيير العنوان
-        </button>
+        {onChange && (
+          <button type="button" className="linkbtn" onClick={onChange}>
+            تغيير العنوان
+          </button>
+        )}
       </div>
     </div>
   )

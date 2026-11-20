@@ -34,7 +34,8 @@ export async function fetchMyDevicesFull(): Promise<MyDeviceFull[]> {
 }
 
 export async function fetchMyRequests(): Promise<ServiceRequest[]> {
-  const { data, error } = await supabase.from('service_requests').select('*').order('created_at', { ascending: false }).limit(50)
+  const uid = (await supabase.auth.getSession()).data.session?.user.id ?? ''
+  const { data, error } = await supabase.from('service_requests').select('*').eq('customer_id', uid).order('created_at', { ascending: false }).limit(50)
   if (error) throw error
   return (data ?? []) as ServiceRequest[]
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   OPEN_SERVICE_STATUSES,
@@ -17,6 +17,24 @@ import { useAsync } from '../lib/useAsync'
 
 export { ServiceNew } from './ServiceNew'
 
+/** «طلباتي» links to /service#sr-<id>: scroll there once the list has loaded. */
+function useScrollToHash() {
+  useEffect(() => {
+    const id = window.location.hash.slice(1)
+    if (!id) return
+    let tries = 0
+    const t = setInterval(() => {
+      const el = document.getElementById(id)
+      if (el || ++tries > 20) {
+        clearInterval(t)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        el?.classList.add('flash')
+      }
+    }, 150)
+    return () => clearInterval(t)
+  }, [])
+}
+
 async function loadList() {
   const requests = await fetchMyRequests()
   const [events, workOrders] = await Promise.all([
@@ -28,6 +46,7 @@ async function loadList() {
 
 /** /service — the customer's fault reports and maintenance visits. */
 export function ServiceList() {
+  useScrollToHash()
   usePageMeta('طلبات الصيانة')
   const [params] = useSearchParams()
   const created = params.get('new')
@@ -93,7 +112,7 @@ export function ServiceList() {
           const wo = state.data.workOrders.find((w) => w.request_id === r.id)
           const changes = state.data.events.filter((e) => e.request_id === r.id && e.from_status === 'scheduled' && e.to_status === 'scheduled')
           return (
-            <section key={r.id} className="card stack-sm">
+            <section key={r.id} id={`sr-${r.id}`} className="card stack-sm sr-card">
               <div className="row between wrapr">
                 <b>
                   {SERVICE_KIND_LABELS[r.kind]} <span dir="ltr">{r.request_number}</span>

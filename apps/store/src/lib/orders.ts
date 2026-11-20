@@ -91,10 +91,22 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlacedOrder> {
   return data as PlacedOrder
 }
 
+/** The signed-in user's id: "my" lists filter on it (a staff account could otherwise read everyone's). */
+async function myId(): Promise<string> {
+  return (await supabase.auth.getSession()).data.session?.user.id ?? ''
+}
+
 export async function fetchMyOrders(): Promise<Order[]> {
-  const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100)
+  const { data, error } = await supabase.from('orders').select('*').eq('customer_id', await myId()).order('created_at', { ascending: false }).limit(100)
   if (error) throw error
   return (data ?? []) as Order[]
+}
+
+export async function fetchOrderItems(orderIds: string[]): Promise<OrderItem[]> {
+  if (!orderIds.length) return []
+  const { data, error } = await supabase.from('order_items').select('*').in('order_id', orderIds)
+  if (error) throw error
+  return (data ?? []) as OrderItem[]
 }
 
 export async function fetchOrder(id: string): Promise<{ order: Order; items: OrderItem[] } | null> {

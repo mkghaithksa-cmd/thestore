@@ -1,18 +1,20 @@
 import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   effectiveStatus,
   FULFILLMENT_LABELS,
   ORDER_STATUS_LABELS,
   orderErrorMessage,
-  orderGroup,
   orderStages,
   type OrderEvent,
   type OrderItem,
   type OrderStatus,
 } from '@ghaith/shared'
+import { BUSINESS } from '@ghaith/shared'
+import { AddressConfirm } from '../components/AddressConfirm'
+import { useCart } from '../lib/cart'
 import { formatSar } from '../lib/catalog'
-import { cancelMyOrder, fetchMyOrders, fetchMyReviews, fetchOrder, fetchOrderEvents, formatDate, submitReview, type MyReview } from '../lib/orders'
+import { cancelMyOrder, fetchMyReviews, fetchOrder, fetchOrderEvents, formatDate, submitReview, type MyReview } from '../lib/orders'
 import { usePageMeta } from '../lib/seo'
 import { useAsync } from '../lib/useAsync'
 
@@ -22,76 +24,7 @@ function StatusTag({ status }: { status: OrderStatus }) {
   return <span className={`tag ${STATUS_CLS[status] ?? ''}`}>{ORDER_STATUS_LABELS[status]}</span>
 }
 
-type Tab = 'active' | 'done' | 'cancelled'
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'active', label: 'جارية' },
-  { key: 'done', label: 'مكتملة' },
-  { key: 'cancelled', label: 'ملغاة' },
-]
-
-export function Orders() {
-  usePageMeta('طلباتي')
-  const { state, reload } = useAsync(fetchMyOrders)
-  const [tab, setTab] = useState<Tab>('active')
-
-  const list = state.status === 'success' ? state.data : []
-  const inTab = (t: Tab) => list.filter((o) => orderGroup(effectiveStatus(o)) === t)
-
-  return (
-    <div className="stack narrow">
-      <div className="row between wrapr">
-        <h1 className="page-h">طلباتي</h1>
-        <Link to="/devices" className="link">
-          أجهزتي
-        </Link>
-      </div>
-      {state.status === 'loading' && <p className="muted">جاري التحميل…</p>}
-      {state.status === 'error' && (
-        <div className="notice bad" role="alert">
-          <b>تعذّر تحميل طلباتك.</b>
-          <button className="btn sm" onClick={reload}>
-            إعادة المحاولة
-          </button>
-        </div>
-      )}
-      {state.status === 'success' && list.length === 0 && (
-        <div className="notice">
-          <b>لا توجد طلبات بعد.</b>
-          <span className="muted">عند إتمام أول طلب سيظهر هنا مع حالته.</span>
-          <Link to="/products" className="btn sm">
-            تصفح المنتجات
-          </Link>
-        </div>
-      )}
-      {list.length > 0 && (
-        <>
-          <div className="seg" role="tablist" aria-label="حالة الطلبات">
-            {TABS.map((t) => (
-              <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : undefined} onClick={() => setTab(t.key)}>
-                {t.label} ({inTab(t.key).length})
-              </button>
-            ))}
-          </div>
-          {inTab(tab).length === 0 && <p className="muted">ما في طلبات هنا.</p>}
-          {inTab(tab).map((o) => (
-            <Link key={o.id} to={`/orders/${o.id}`} className="card order-row">
-              <div className="stack-sm">
-                <b dir="ltr">{o.order_number}</b>
-                <span className="muted">
-                  {formatDate(o.created_at)} · {FULFILLMENT_LABELS[o.fulfillment]}
-                </span>
-              </div>
-              <div className="stack-sm end">
-                <StatusTag status={effectiveStatus(o)} />
-                <b>{formatSar(Number(o.total))}</b>
-              </div>
-            </Link>
-          ))}
-        </>
-      )}
-    </div>
-  )
-}
+export { Orders } from './MyOrdersList'
 
 async function loadOrder(id: string) {
   const [data, events, reviews] = await Promise.all([fetchOrder(id), fetchOrderEvents(id), fetchMyReviews()])
@@ -106,6 +39,8 @@ export function OrderPage() {
   const { state, reload } = useAsync(() => loadOrder(id), [id])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cart = useCart()
+  const navigate = useNavigate()
   usePageMeta(state.status === 'success' && state.data ? `الطلب ${state.data.order.order_number}` : 'الطلب')
 
   if (state.status === 'loading') return <p className="muted">جاري التحميل…</p>
@@ -256,7 +191,16 @@ export function OrderPage() {
       )}
 
       <section className="card">
-        <h2 className="h3">التوصيل</h2>
+        <h2 className="h3">{o.fulfillment === 'shipping' ? 'الشحن' : 'التوصيل'}</h2>
+        {o.lat !== null && o.lng !== null && (
+          <AddressConfirm
+            heading={o.fulfillment === 'shipping' ? 'يُشحن إلى' : 'يوصل إلى'}
+            title={[o.neighborhood_name, o.city === 'makkah' ? 'مكة المكرمة' : o.city].filter(Boolean).join('، ')}
+            lines={[o.street, o.address_notes]}
+            lat={o.lat}
+            lng={o.lng}
+          />
+        )}
         <dl className="sum">
           <div>
             <dt>الاسم</dt>
@@ -304,9 +248,28 @@ export function OrderPage() {
         <p className="muted">بدأنا تجهيز طلبك. لأي تعديل أو إلغاء تواصل معنا.</p>
       )}
 
-      <Link to="/orders" className="link">
-        كل طلباتي
-      </Link>
+      <div className="row wrapr between">
+        <Link to="/orders" className="link">
+          كل طلباتي
+        </Link>
+        <div className="row wrapr">
+          {(received || status === 'cancelled') && (
+            <button
+              type="button"
+              className="btn sm ghost"
+              onClick={() => {
+                items.filter((i) => i.type !== 'service').forEach((i) => cart.add(i.product_id, i.qty))
+                navigate('/cart')
+              }}
+            >
+              اطلب مرة ثانية
+            </button>
+          )}
+          <a className="btn sm ghost" href={`https://wa.me/966${BUSINESS.phones[0].slice(1)}?text=${encodeURIComponent(`استفسار عن الطلب ${o.order_number}`)}`} target="_blank" rel="noreferrer">
+            تواصل معنا واتساب
+          </a>
+        </div>
+      </div>
     </div>
   )
 }
