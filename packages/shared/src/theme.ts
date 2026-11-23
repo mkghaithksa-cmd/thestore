@@ -1,6 +1,7 @@
 // Light / dark appearance. Both apps share one saved choice (same site).
-// "auto" follows the phone or computer setting. index.html applies the
-// saved choice before the page draws, so there is no flash.
+// Light unless the visitor picks otherwise; "auto" follows the phone or
+// computer setting. index.html applies the saved choice before the page
+// draws, so there is no flash.
 export type ThemeChoice = 'auto' | 'light' | 'dark'
 
 const KEY = 'ghaith-theme'
@@ -14,9 +15,9 @@ export const THEME_LABELS: Record<ThemeChoice, string> = {
 export function getThemeChoice(): ThemeChoice {
   try {
     const v = localStorage.getItem(KEY)
-    return v === 'light' || v === 'dark' ? v : 'auto'
+    return v === 'dark' || v === 'auto' ? v : 'light'
   } catch {
-    return 'auto'
+    return 'light'
   }
 }
 
@@ -34,8 +35,7 @@ export function applyTheme(choice: ThemeChoice): void {
 
 export function setThemeChoice(choice: ThemeChoice): void {
   try {
-    if (choice === 'auto') localStorage.removeItem(KEY)
-    else localStorage.setItem(KEY, choice)
+    localStorage.setItem(KEY, choice)
   } catch {
     // Private mode: the choice lasts for this page only.
   }

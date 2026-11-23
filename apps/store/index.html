@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/brand/icon-48.png" />
     <link rel="apple-touch-icon" href="/brand/icon-180.png" />
     <meta name="theme-color" content="#0a2a4f" />
-    <script>try{var t=localStorage.getItem("ghaith-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+    <script>var t="light";try{t=localStorage.getItem("ghaith-theme")||"light"}catch(e){}if(t!=="auto")document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>غيث لتنقية المياه</title>
     <meta name="description" content="أجهزة تنقية وتحلية المياه المنزلية وفلاترها وقطع غيارها، مع التركيب والصيانة داخل مكة المكرمة والشحن لكل مدن المملكة." />
