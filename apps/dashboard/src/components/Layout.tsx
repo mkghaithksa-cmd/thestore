@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { STAFF_PAGES, formatSaudiPhoneLocal, type StaffPage } from '@ghaith/shared'
 import { useStaffAuth } from '../lib/staffAuth'
+import { ThemeToggle } from './ThemeToggle'
 
 /** Sidebar links; users_roles has two screens. */
 const NAV = STAFF_PAGES.flatMap((p): { to: string; page: StaffPage; label: string; approve?: boolean }[] =>
@@ -55,15 +56,19 @@ export function Layout() {
           <b>{me.profile.full_name}</b>
           <span>{me.roleName}</span>
           <span dir="ltr">{formatSaudiPhoneLocal(me.profile.phone)}</span>
-          <button className="btn sm ghost" onClick={signOut}>
-            تسجيل الخروج
-          </button>
+          <div className="row">
+            <button className="btn sm ghost" onClick={signOut}>
+              تسجيل الخروج
+            </button>
+            <ThemeToggle className="icon-btn" />
+          </div>
         </div>
       </aside>
       <div className="work">
         <button className="menu-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           ☰ القائمة
         </button>
+        <ThemeToggle className="icon-btn menu-theme" />
         <Outlet />
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom'
 import { STAFF_CODE_LENGTH, normalizeSaudiPhone, staffErrorMessage, toAsciiDigits } from '@ghaith/shared'
 import { FunctionError } from '../lib/functions'
 import { useStaffAuth } from '../lib/staffAuth'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 function lockMessage(details: Record<string, unknown>): string {
   const until = typeof details.locked_until === 'string' ? new Date(details.locked_until) : null
@@ -47,6 +48,7 @@ export function Login() {
 
   return (
     <div className="login-page">
+      <ThemeToggle className="icon-btn login-theme" />
       <form className="card login-card" onSubmit={onSubmit} noValidate>
         <BrandMark />
         <h1 className="h2">دخول الموظفين</h1>

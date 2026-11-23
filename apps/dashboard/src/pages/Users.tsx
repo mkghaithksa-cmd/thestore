@@ -10,6 +10,7 @@ import {
   type StaffProfile,
 } from '@ghaith/shared'
 import { RequirePage } from '../components/Layout'
+import { TechniciansCard } from '../components/TechniciansCard'
 import { FunctionError, callFunction, rpcErrorCode } from '../lib/functions'
 import { useStaffAuth } from '../lib/staffAuth'
 import { supabase } from '../lib/supabase'
@@ -212,7 +213,7 @@ export function Users() {
       <div className="ph">
         <div>
           <h1>المستخدمون</h1>
-          <p>الموظفون يدخلون بالجوال ورمز من {STAFF_CODE_LENGTH} أرقام. لا يُحذف موظف، يُوقف فقط.</p>
+          <p>الموظفون يدخلون بالجوال ورمز من {STAFF_CODE_LENGTH} أرقام. لا يُحذف موظف، يُوقف فقط. الفنيين في آخر الصفحة.</p>
         </div>
       </div>
 
@@ -326,6 +327,8 @@ export function Users() {
           </table>
         )}
       </div>
+
+      <TechniciansCard canAdd={canAdd} canEdit={canEdit} />
     </RequirePage>
   )
 }

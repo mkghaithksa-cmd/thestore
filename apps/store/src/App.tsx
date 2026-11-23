@@ -22,6 +22,7 @@ import { ProductPage } from './pages/ProductPage'
 import { Products } from './pages/Products'
 import './App.css'
 import { TechPage } from './pages/Tech'
+import { ThemeToggle } from './components/ThemeToggle'
 
 function AccountButton() {
   const { session, loading } = useAuth()
@@ -156,6 +157,7 @@ function Header() {
         </nav>
         <div className="hact">
           <LocationButton />
+          <ThemeToggle />
           <CartButton />
           <AccountButton />
         </div>

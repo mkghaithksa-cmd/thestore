@@ -19,12 +19,21 @@ body{font-size:14px;line-height:1.65}
 .who .btn{margin-top:8px}
 .work{padding:24px;min-width:0;display:flex;flex-direction:column;gap:16px}
 .menu-btn{display:none}
+.icon-btn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--n300);background:var(--surface);color:var(--n700);cursor:pointer;padding:0}
+.icon-btn:hover{background:var(--primary-50);color:var(--primary-700)}
+.icon-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.who .row{gap:8px;align-items:center;margin-top:8px}
+.who .row .btn{margin-top:0}
+.work{position:relative}
+.menu-theme{display:none}
+.login-theme{position:fixed;top:16px;inset-inline-end:16px}
 @media (max-width:860px){
   .shell{grid-template-columns:1fr}
   .side{position:fixed;inset-block:0;inset-inline-start:0;width:260px;z-index:20;transform:translateX(100%);transition:transform .2s}
   .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(15,23,42,.35)}
   .menu-btn{display:inline-flex;align-self:flex-start;background:var(--surface);border:1px solid var(--n300);border-radius:8px;padding:6px 12px;cursor:pointer}
   .work{padding:16px}
+  .menu-theme{display:inline-grid;position:absolute;top:16px;inset-inline-end:16px}
 }
 
 .ph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}

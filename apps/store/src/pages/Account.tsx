@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 import { completeMyProfile, fetchMyCustomer } from '../lib/customer'
 import { useAsync } from '../lib/useAsync'
 import { ServiceLinks } from './Maintenance'
+import { ThemePicker } from '../components/ThemeToggle'
 
 function CompleteProfileForm({ customer, onDone }: { customer: Customer; onDone: (c: Customer) => void }) {
   const [name, setName] = useState(customer.full_name ?? '')
@@ -93,6 +94,11 @@ export function Account() {
       </div>
 
       <ServiceLinks compact />
+
+      <div className="card row between wrapr">
+        <b>المظهر</b>
+        <ThemePicker />
+      </div>
 
       {state.status === 'loading' && <p className="muted">جاري التحميل…</p>}
       {state.status === 'error' && (

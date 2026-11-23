@@ -305,7 +305,7 @@ export function Home() {
               <section className="card stack-sm">
                 <b>الفنيين هذا الشهر</b>
                 {h.technicians.length === 0 ? (
-                  <span className="muted">ما فيه فنيين. أضفهم من الإعدادات.</span>
+                  <span className="muted">ما فيه فنيين. أضفهم من <Link to="/users" className="link">المستخدمين</Link>.</span>
                 ) : (
                   <table className="mini techs">
                     <thead>

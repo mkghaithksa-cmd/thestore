@@ -167,6 +167,7 @@ a{color:inherit;text-decoration:none}
 .cart-btn{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:10px;background:var(--n100);color:var(--n700)}
 .cart-btn:hover{background:var(--primary-50);color:var(--primary-700)}
 .cart-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.theme-btn{border:0;cursor:pointer;padding:0;font:inherit}
 .badge{position:absolute;top:-4px;inset-inline-end:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:var(--primary-700);color:var(--btn-text);font-size:11.5px;font-weight:700;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .qty{display:inline-flex;align-items:center;border:1px solid var(--n300);border-radius:10px;background:var(--surface);height:44px;overflow:hidden}
 .qty button{width:40px;height:100%;border:0;background:none;font-size:20px;cursor:pointer;color:var(--n700)}
@@ -266,7 +267,8 @@ a{color:inherit;text-decoration:none}
 .delivery .linkbtn{align-self:flex-start;font-size:13px}
 .delivery.off{border-color:var(--warn-500);background:var(--warn-50);color:var(--warn-700)}
 .cart-line.unavailable{opacity:.7}
-@media (max-width:520px){.loc-label small{display:none}.loc-btn{max-width:120px}}
+@media (max-width:520px){.loc-label small{display:none}.loc-btn{max-width:112px;height:38px;padding:0 8px}.hdr .hact{gap:6px}.cart-btn{width:38px;height:38px}.hdr .hact .btn{padding-inline:12px}}
+@media (max-width:360px){.loc-btn{max-width:92px}.hdr .wrap{gap:6px}}
 /* Map pin */
 .loc-dialog.wide{width:min(720px,calc(100vw - 32px))}
 .map-picker{display:flex;flex-direction:column;gap:10px}
