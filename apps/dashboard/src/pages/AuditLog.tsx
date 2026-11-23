@@ -1,19 +1,11 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RequirePage } from '../components/Layout'
+import { changedFields, fieldLabel, recordFields, recordTitle, resolveNames, showValue, type AuditRow, type Names } from '../lib/auditText'
 import { sar, when } from '../lib/service'
 import { supabase } from '../lib/supabase'
 
-interface Row {
-  id: number
-  actor: string | null
-  action: 'INSERT' | 'UPDATE' | 'DELETE'
-  entity: string
-  entity_id: string | null
-  before: Record<string, unknown> | null
-  after: Record<string, unknown> | null
-  created_at: string
-}
+type Row = AuditRow
 
 const ENTITY_LABELS: Record<string, string> = {
   discount: 'تنبيه خصم',
@@ -51,16 +43,6 @@ const ENTITY_LABELS: Record<string, string> = {
 }
 const ACTION_LABELS = { INSERT: 'إضافة', UPDATE: 'تعديل', DELETE: 'حذف' } as const
 
-/** Fields that change on every save and say nothing to a reader. */
-const NOISE = new Set(['updated_at', 'created_at', 'id'])
-
-function changes(r: Row): { key: string; from: unknown; to: unknown }[] {
-  if (r.action !== 'UPDATE' || !r.before || !r.after) return []
-  return Object.keys(r.after)
-    .filter((k) => !NOISE.has(k) && JSON.stringify(r.before![k]) !== JSON.stringify(r.after![k]))
-    .map((k) => ({ key: k, from: r.before![k], to: r.after![k] }))
-}
-const show = (v: unknown) => (v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v))
 const cut = (s: string, n = 80) => (s.length > n ? s.slice(0, n) + '…' : s)
 
 const PAGE = 100
@@ -69,6 +51,7 @@ const PAGE = 100
 export function AuditLog() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [names, setNames] = useState<Record<string, string>>({})
+  const [refs, setRefs] = useState<Names>({})
   const [params] = useSearchParams()
   const [entity, setEntity] = useState(() => params.get('entity') ?? '')
   const [day, setDay] = useState('')
@@ -98,6 +81,17 @@ export function AuditLog() {
     [entity, day],
   )
   useEffect(() => load(), [load])
+  // Names for the ids in the rows (products, customers, orders…).
+  useEffect(() => {
+    if (!rows?.length) return
+    let live = true
+    resolveNames(rows, { ...names, ...refs }).then((n) => live && Object.keys(n).length && setRefs((old) => ({ ...old, ...n })))
+    return () => {
+      live = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows])
+  const all: Names = { ...refs, ...names }
   useEffect(() => {
     supabase
       .from('staff_profiles')
@@ -105,7 +99,7 @@ export function AuditLog() {
       .then(({ data }) => setNames(Object.fromEntries(((data ?? []) as { user_id: string; full_name: string }[]).map((x) => [x.user_id, x.full_name]))))
   }, [])
 
-  const who = (a: string | null) => (!a ? 'النظام أو الفني' : names[a] ?? 'عميل')
+  const who = (a: string | null) => (!a ? 'النظام أو الفني' : names[a] ?? (refs[a] ? `العميل ${refs[a]}` : 'عميل'))
 
   return (
     <RequirePage page="audit_log">
@@ -171,18 +165,20 @@ export function AuditLog() {
             </thead>
             <tbody>
               {rows.map((r) => {
-                const ch = changes(r)
+                const ch = changedFields(r)
+                const title = recordTitle(r, all)
                 const da = r.entity === 'discount' ? (r.after as { number?: string; discount?: number; reason?: string; total?: number } | null) : null
                 const summary = da
                   ? `خصم ${sar(da.discount ?? 0)} على ${da.number ?? ''} · ${da.reason ?? ''} · الإجمالي بعده ${sar(da.total ?? 0)}`
                   : r.action === 'UPDATE'
-                    ? ch.length === 0
-                      ? '—'
-                      : ch
-                          .slice(0, 2)
-                          .map((c) => `${c.key}: ${cut(show(c.from), 24)} ← ${cut(show(c.to), 24)}`)
-                          .join(' · ') + (ch.length > 2 ? ` (+${ch.length - 2})` : '')
-                    : cut(show((r.after ?? r.before)?.name_ar ?? (r.after ?? r.before)?.order_number ?? (r.after ?? r.before)?.number ?? (r.after ?? r.before)?.request_number ?? r.entity_id), 60)
+                    ? (title ? `«${cut(title, 40)}» · ` : '') +
+                      (ch.length === 0
+                        ? 'بدون تغيير يُذكر'
+                        : ch
+                            .slice(0, 2)
+                            .map((c) => `${fieldLabel(c.key)}: ${cut(showValue(r.entity, c.key, c.from, all), 28)} ← ${cut(showValue(r.entity, c.key, c.to, all), 28)}`)
+                            .join(' · ') + (ch.length > 2 ? ` (و${ch.length - 2} غيرها)` : ''))
+                    : cut(title || (r.action === 'INSERT' ? 'سجل جديد' : 'سجل محذوف'), 70)
                 return (
                   <Fragment key={r.id}>
                     <tr className="clickable" onClick={() => setOpen(open === r.id ? null : r.id)} aria-expanded={open === r.id}>
@@ -211,17 +207,30 @@ export function AuditLog() {
                               <tbody>
                                 {ch.map((c) => (
                                   <tr key={c.key}>
-                                    <td dir="ltr">{c.key}</td>
-                                    <td dir="auto">{cut(show(c.from), 200)}</td>
-                                    <td dir="auto">{cut(show(c.to), 200)}</td>
+                                    <td>{fieldLabel(c.key)}</td>
+                                    <td dir="auto">{cut(showValue(r.entity, c.key, c.from, all), 200)}</td>
+                                    <td dir="auto">{cut(showValue(r.entity, c.key, c.to, all), 200)}</td>
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
                           ) : (
-                            <pre className="audit-json" dir="ltr">
-                              {JSON.stringify(r.after ?? r.before, null, 2)}
-                            </pre>
+                            <table className="mini audit-diff">
+                              <thead>
+                                <tr>
+                                  <th>الحقل</th>
+                                  <th>{r.action === 'DELETE' ? 'كان' : 'القيمة'}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {recordFields(r).map((f) => (
+                                  <tr key={f.key}>
+                                    <td>{fieldLabel(f.key)}</td>
+                                    <td dir="auto">{cut(showValue(r.entity, f.key, f.value, all), 200)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           )}
                         </td>
                       </tr>
